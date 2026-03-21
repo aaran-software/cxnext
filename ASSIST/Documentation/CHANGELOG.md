@@ -23,3 +23,6 @@
 - Added a discipline rule that tables should default to `is_active`, `created_at`, and `updated_at` lifecycle columns
 - Added `.env.example`, local `.env` wiring, `cxnext_db` bootstrap, and verified local login for `sundar@sundar.com`
 - Added automatic `.env` loading for the API runtime so local `/auth/login` works through the normal dev server path
+- Added a lightweight backend ORM wrapper, recorded migration runner, and committed migrations for auth plus shared ecommerce/billing reference tables including geography, contact grouping, product grouping, units, HSN, tax, brands, colours, sizes, currencies, order types, transports, warehouses, destinations, payment terms, and product categories
+- Added shared common-module API contracts plus backend metadata, list, fetch, create, update, deactivate, and restore endpoints for the common geography, contact, product, tax, logistics, warehouse, currency, and payment master tables
+- Added a grouped application menu, common workspace header, and working common-module management screens in `apps/web` using the existing common list/dialog UX connected to the backend common-module APIs

@@ -50,7 +50,7 @@ Describe the concrete outcome to deliver in this task.
 
 ### Title
 
-API runtime env loading and local login smoke fix
+`Application menu and common-module workspace`
 
 ### Status
 
@@ -58,27 +58,31 @@ completed
 
 ### Objective
 
-Fix the local runtime issue causing `http://localhost:4000/auth/login` to refuse connections by ensuring the API loads `.env` automatically in development and by verifying that the API can start and answer health/auth requests with the configured local MariaDB setup.
+Implement the application menu described in `ASSIST/Execution/IDEAS.md` by replacing the placeholder dashboard navigation with a production-oriented common header and grouped common-module sidebar menu, then connect the existing common list UX to the new backend common-module APIs so the master screens are actually usable.
 
 ### In Scope
 
-- Load `.env` automatically for the API runtime
-- Verify the API starts successfully on port `4000`
-- Smoke-test health and login locally
-- Update execution docs and changelog for the runtime fix
+- Prepare the application menu structure for the dashboard shell
+- Add a common header that works across the application workspace
+- Group common modules in the sidebar with chevron toggles and relevant icons
+- Connect the common-module list and upsert UX to the backend metadata and CRUD endpoints
+- Update execution docs and changelog for this increment
 
 ### Out Of Scope
 
-- Auth model redesign
-- Frontend UI changes unrelated to the runtime failure
-- Deployment or production process changes
+- Reworking the public marketing/store shells
+- Full ERP transaction flows beyond common masters
+- Solving every unrelated pre-existing frontend typecheck issue outside the common-module workspace
 
 ### Dependencies
 
 - `ASSIST/AI_RULES.md`
-- Local `.env`
+- `ASSIST/Execution/IDEAS.md`
+- `apps/web`
 - `apps/api`
+- `packages/shared`
 
 ### Risks
 
-- Fixing env loading must not break existing build or tsup behavior
+- The old generic form code still depends on missing primitives and stale data shapes, so the UI layer needs careful cleanup before it can compile cleanly
+- The app menu structure needs to stay scalable for future ERP modules instead of being hardcoded only for the current common-module set

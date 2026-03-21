@@ -8,7 +8,9 @@ import type {
 } from '@shared/index'
 import type { RowDataPacket } from 'mysql2'
 import { randomUUID } from 'node:crypto'
-import { ensureDatabaseSchema, getDatabasePool, tableNames } from './database'
+import { ensureDatabaseSchema } from '../../../shared/database/database'
+import { db } from '../../../shared/database/orm'
+import { authTableNames } from '../../../shared/database/table-names'
 
 interface UserRow extends RowDataPacket {
   id: string
@@ -42,8 +44,7 @@ export class AuthUserRepository {
   async findByEmail(email: string) {
     await ensureDatabaseSchema()
 
-    const databasePool = getDatabasePool()
-    const [userRows] = await databasePool.execute<UserRow[]>(
+    const userRows = await db.query<UserRow>(
       `
         SELECT
           id,
@@ -56,7 +57,7 @@ export class AuthUserRepository {
           is_active,
           created_at,
           updated_at
-        FROM ${tableNames.users}
+        FROM ${authTableNames.users}
         WHERE email = ?
       `,
       [email],
@@ -89,8 +90,7 @@ export class AuthUserRepository {
   async findByEmailAndActorType(email: string, actorType: ActorType) {
     await ensureDatabaseSchema()
 
-    const databasePool = getDatabasePool()
-    const [userRows] = await databasePool.execute<UserRow[]>(
+    const userRows = await db.query<UserRow>(
       `
         SELECT
           id,
@@ -103,7 +103,7 @@ export class AuthUserRepository {
           is_active,
           created_at,
           updated_at
-        FROM ${tableNames.users}
+        FROM ${authTableNames.users}
         WHERE email = ? AND actor_type = ?
         LIMIT 1
       `,
@@ -129,7 +129,6 @@ export class AuthUserRepository {
   }) {
     await ensureDatabaseSchema()
 
-    const databasePool = getDatabasePool()
     const id = randomUUID()
     const roleKeyByActorType: Record<ActorType, RoleKey> = {
       admin: 'admin_owner',
@@ -139,9 +138,9 @@ export class AuthUserRepository {
     }
     const roleKey = roleKeyByActorType[input.actorType]
 
-    await databasePool.execute(
+    await db.execute(
       `
-        INSERT INTO ${tableNames.users} (
+        INSERT INTO ${authTableNames.users} (
           id,
           email,
           display_name,
@@ -163,9 +162,9 @@ export class AuthUserRepository {
       ],
     )
 
-    await databasePool.execute(
+    await db.execute(
       `
-        INSERT INTO ${tableNames.userRoles} (id, user_id, role_id)
+        INSERT INTO ${authTableNames.userRoles} (id, user_id, role_id)
         VALUES (?, ?, ?)
       `,
       [`${id}:${roleKey}`, id, roleKey],
@@ -180,8 +179,7 @@ export class AuthUserRepository {
   }
 
   private async getUserRolesAndPermissions(userId: string) {
-    const databasePool = getDatabasePool()
-    const [rows] = await databasePool.execute<RoleRow[]>(
+    const rows = await db.query<RoleRow>(
       `
         SELECT
           r.role_key,
@@ -191,14 +189,14 @@ export class AuthUserRepository {
           p.permission_key,
           p.name AS permission_name,
           p.summary AS permission_summary
-        FROM ${tableNames.userRoles} ur
-        INNER JOIN ${tableNames.roles} r
+        FROM ${authTableNames.userRoles} ur
+        INNER JOIN ${authTableNames.roles} r
           ON r.id = ur.role_id
           AND r.is_active = 1
-        LEFT JOIN ${tableNames.rolePermissions} rp
+        LEFT JOIN ${authTableNames.rolePermissions} rp
           ON rp.role_id = r.id
           AND rp.is_active = 1
-        LEFT JOIN ${tableNames.permissions} p
+        LEFT JOIN ${authTableNames.permissions} p
           ON p.id = rp.permission_id
           AND p.is_active = 1
         WHERE ur.user_id = ?

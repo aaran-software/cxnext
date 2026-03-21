@@ -5,10 +5,10 @@ import {
 } from '@shared/index'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import { environment } from '../config/environment'
-import type { AuthUserRepository } from '../infrastructure/auth-user-repository'
-import { ApplicationError } from '../infrastructure/errors'
-import { isDatabaseEnabled } from '../infrastructure/database'
+import type { AuthUserRepository } from '../data/auth-user-repository'
+import { environment } from '../../../shared/config/environment'
+import { isDatabaseEnabled } from '../../../shared/database/database'
+import { ApplicationError } from '../../../shared/errors/application-error'
 
 interface TokenClaims {
   sub: string

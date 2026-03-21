@@ -8,6 +8,8 @@ import { WebLayout } from '@/app/layouts/web-layout'
 import { AboutPage } from '@/features/marketing/pages/about-page'
 import { ContactPage } from '@/features/marketing/pages/contact-page'
 import { DashboardPage } from '@/features/dashboard/pages/dashboard-page'
+import { CommonModulePage } from '@/features/common-modules/pages/common-module-page'
+import { CommonModulesHomePage } from '@/features/common-modules/pages/common-modules-home-page'
 import { LoginPage } from '@/features/auth/pages/login-page'
 import { NotFoundPage } from '@/features/marketing/pages/not-found-page'
 import { PlaceholderPage } from '@/features/store/pages/placeholder-page'
@@ -24,6 +26,8 @@ const dashboardRoutes = {
       element: <AppLayout />,
       children: [
         { index: true, element: <DashboardPage /> },
+        { path: 'common', element: <CommonModulesHomePage /> },
+        { path: 'common/:moduleKey', element: <CommonModulePage /> },
         { path: '*', element: <DashboardPage /> },
       ],
     },

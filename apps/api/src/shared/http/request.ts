@@ -1,5 +1,5 @@
 import type { IncomingMessage } from 'node:http'
-import { ApplicationError } from './errors'
+import { ApplicationError } from '../errors/application-error'
 
 export async function readJsonBody(request: IncomingMessage): Promise<unknown> {
   const chunks: string[] = []

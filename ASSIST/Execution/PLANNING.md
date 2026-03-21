@@ -53,38 +53,39 @@ State the intended result in one paragraph.
 
 ### Task
 
-`API runtime env loading and local login smoke fix`
+`Application menu and common-module workspace`
 
 ### Goal
 
-Make the local auth stack actually runnable without manual env injection. The API should read `.env` automatically when started through the normal dev workflow, then successfully respond on port `4000` so the frontend login fetch no longer fails with connection refusal.
+Replace the placeholder app navigation with a scalable application menu and common header, then connect the existing common-master list UX to the new backend APIs so the dashboard shell becomes a working common-module workspace. The increment should preserve the current UX direction, use grouped chevron menus with relevant icons, and avoid duplicating backend field rules where shared contracts already exist.
 
 ### Assumptions
 
-- The browser error is caused by the API not running or not booting cleanly with env values
-- A `dotenv`-based runtime load is acceptable in this repository
-- The current local MariaDB settings in `.env` are correct
+- The dashboard shell under `frontendTarget=app` is the primary surface for the requested application menu
+- The common-module backend metadata can drive most of the frontend module wiring
+- The existing `CommonList` and `CommonUpsertDialog` components are the intended base UX and should be retained where practical
+- A small set of missing UI primitives can be added locally without changing the overall design language
 
 ### Constraints
 
-- Preserve build and typecheck behavior
-- Keep the fix minimal and focused on the runtime failure
-- Re-verify with a live local API smoke test
+- Keep the existing route structure and auth shell intact
+- Preserve the common-list UX instead of inventing a new table/form experience
+- Keep module structure scalable for future ERP areas beyond common masters
+- Do not turn this increment into a full dashboard redesign or unrelated frontend cleanup effort
 
 ### Plan
 
-1. Add runtime `.env` loading for the API
-2. Start the API locally and verify `/health`
-3. Verify `/auth/login` works for the seeded Sundar account
-4. Update walkthrough and changelog with the runtime fix
+1. Update execution docs to reflect the menu and common-module workspace task
+2. Add the missing UI primitives and API helpers required by the common-master screens
+3. Introduce scalable common-module frontend definitions and pages driven by shared/backend contracts
+4. Replace placeholder sidebar data with grouped chevron menu sections and a common app header
+5. Run `npm run build:web`, then record walkthrough details, validation, and remaining risks
 
 ### Validation
 
-- Local API smoke test
-- `npm run lint`
-- `npm run typecheck`
-- `npm run build`
+- `npm run build:web`
 
 ### Open Questions
 
-- Whether the team wants a dedicated smoke-test script committed after this fix
+- Whether non-common ERP modules should share the same sidebar grouping model or move to a higher-level module registry later
+- Whether the frontend should fully derive field layouts from backend metadata or keep a thin local presentation layer for labels and column rendering

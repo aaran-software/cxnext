@@ -9,61 +9,9 @@ Read this file full and
 Update PLANNING , TASK and WALKTHROUGH before start
 
 
-1. at first application we plan to build ecommerce with all required so plan according to this
-2. create all tables below as common modules
-- city ,
-- district ,
-- state with state code ,
-- pincode ,
-- country with country code,
-- contact_groups
-- contact_types,
-- product_groups
-- product type,
-- units,
-- hsncode with description,
-- tax
-- brands
-- colours
-- sizes
-- currencies
-- order_types
-- styles
-- transports
-- warehouses
-- destinations
-- payment_terms
-
-- products with
-- OwnerUserId
-- VendorUserId
-- GroupId
-- TypeId
-- CategoryId
-- UnitId
-- CurrencyId
-- GstPercentId
-- BrandId
-- HsnCodeId
-- Sku
-- Name
-- Slug
-- ShortDescription
-- Description
-- BasePrice
-- CostPrice
-- IsPublished
-
-# contact_addresses
-- contact_id
-- address_type
-- country_id
-- state_id
-- district_id
-- city_id
-- address_line1
-- address_line2
-- pincode_id
-
+1. Prepare Application Menu for our system 
+2. create Common Header and connect all common modules menu in this
+3. make menu header and toggle like chevron
+4. complete with relevant icons
 
 

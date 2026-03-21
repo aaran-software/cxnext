@@ -10,7 +10,7 @@ export function writeJson(
     'content-type': 'application/json; charset=utf-8',
     'access-control-allow-origin': environment.corsOrigin,
     'access-control-allow-headers': 'authorization, content-type',
-    'access-control-allow-methods': 'GET, POST, OPTIONS',
+    'access-control-allow-methods': 'GET, POST, PATCH, DELETE, OPTIONS',
   })
   response.end(JSON.stringify(payload))
 }
@@ -19,7 +19,7 @@ export function writeEmpty(response: ServerResponse, statusCode: number) {
   response.writeHead(statusCode, {
     'access-control-allow-origin': environment.corsOrigin,
     'access-control-allow-headers': 'authorization, content-type',
-    'access-control-allow-methods': 'GET, POST, OPTIONS',
+    'access-control-allow-methods': 'GET, POST, PATCH, DELETE, OPTIONS',
   })
   response.end()
 }
