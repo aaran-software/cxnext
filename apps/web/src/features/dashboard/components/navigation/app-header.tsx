@@ -1,6 +1,6 @@
 import type { CommonModuleKey } from '@shared/index'
 import { Link, useLocation } from 'react-router-dom'
-import { Building2, ChevronRight, ContactRound, Home, LayoutDashboard, Package } from 'lucide-react'
+import { Building2, ChevronRight, ContactRound, Home, Image, LayoutDashboard, Package } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
@@ -72,6 +72,27 @@ function resolveCurrentTitle(pathname: string) {
     }
   }
 
+  if (pathname === '/dashboard/media' || pathname === '/dashboard/media/') {
+    return {
+      section: 'Catalog',
+      title: 'Media Manager',
+    }
+  }
+
+  if (pathname === '/dashboard/media/new') {
+    return {
+      section: 'Catalog',
+      title: 'New Media Asset',
+    }
+  }
+
+  if (/^\/dashboard\/media\/[^/]+\/edit$/.test(pathname)) {
+    return {
+      section: 'Catalog',
+      title: 'Edit Media Asset',
+    }
+  }
+
   if (pathname === '/dashboard/products/new') {
     return {
       section: 'Catalog',
@@ -137,6 +158,12 @@ export function AppHeader() {
           <Link to="/dashboard/products">
             <Package className="size-4" />
             Products
+          </Link>
+        </Button>
+        <Button variant="outline" size="sm" asChild>
+          <Link to="/dashboard/media">
+            <Image className="size-4" />
+            Media
           </Link>
         </Button>
         <Button variant="outline" size="sm" asChild>

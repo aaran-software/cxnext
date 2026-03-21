@@ -1,4 +1,5 @@
 import type {
+  CommonModuleKey,
   CommonModuleItem,
   Product,
   ProductAttributeInput,
@@ -26,6 +27,9 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { AutocompleteLookup } from '@/components/lookups/AutocompleteLookup'
+import { createFieldErrors, inputErrorClassName, isBlank, setFieldError, summarizeFieldErrors, type FieldErrors, warningCardClassName } from '@/shared/forms/validation'
+import { createCommonLookupOption, toLookupOption } from '@/shared/forms/common-lookup'
 import {
   createProduct,
   getProduct,
@@ -69,20 +73,20 @@ function createDefaultValues(): ProductFormValues {
   return {
     name: '',
     slug: '',
-    description: null,
-    shortDescription: null,
-    brandId: null,
-    categoryId: null,
-    productGroupId: null,
-    productTypeId: null,
-    unitId: null,
-    hsnCodeId: null,
-    styleId: null,
+    description: '',
+    shortDescription: '',
+    brandId: '1',
+    categoryId: '1',
+    productGroupId: '1',
+    productTypeId: '1',
+    unitId: '1',
+    hsnCodeId: '1',
+    styleId: '1',
     sku: '',
     hasVariants: false,
     basePrice: 0,
     costPrice: 0,
-    taxId: null,
+    taxId: '1',
     isFeatured: false,
     isActive: true,
     images: [],
@@ -108,6 +112,18 @@ function toErrorMessage(error: unknown) {
   if (error instanceof HttpError) return error.message
   if (error instanceof Error) return error.message
   return 'Failed to save product.'
+}
+
+function FieldError({ message }: { message?: string }) {
+  return message ? <p className="text-[0.8rem] text-destructive">{message}</p> : null
+}
+
+function validateProduct(values: ProductFormValues) {
+  const errors = createFieldErrors()
+
+  if (isBlank(values.name)) setFieldError(errors, 'name', 'Name is required.')
+
+  return errors
 }
 
 function Section({
@@ -154,30 +170,35 @@ function LookupSelect({
   label,
   value,
   options,
-  placeholder = 'Not set',
+  moduleKey,
+  placeholder = '-',
+  onItemsChange,
   onChange,
 }: {
   label: string
   value: string | null
   options: CommonModuleItem[]
+  moduleKey?: CommonModuleKey
   placeholder?: string
+  onItemsChange?: (items: CommonModuleItem[]) => void
   onChange: (value: string | null) => void
 }) {
   return (
     <div className="grid gap-2">
       <Label>{label}</Label>
-      <select
+      <AutocompleteLookup
         value={value ?? ''}
-        onChange={(event) => onChange(event.target.value || null)}
-        className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
-      >
-        <option value="">{placeholder}</option>
-        {options.map((option) => (
-          <option key={option.id} value={option.id}>
-            {String(option.name ?? option.code ?? option.id)}
-          </option>
-        ))}
-      </select>
+        onChange={(nextValue) => onChange(nextValue || null)}
+        options={options.map(toLookupOption)}
+        allowEmptyOption
+        emptyOptionLabel="-"
+        placeholder={`Search ${label.toLowerCase()}`}
+        createOption={moduleKey ? async (labelValue) => {
+          const { item, option } = await createCommonLookupOption(moduleKey, labelValue)
+          onItemsChange?.([...options, item])
+          return option
+        } : undefined}
+      />
     </div>
   )
 }
@@ -226,20 +247,20 @@ function toFormValues(product: Product): ProductFormValues {
   return {
     name: product.name,
     slug: product.slug,
-    description: product.description,
-    shortDescription: product.shortDescription,
-    brandId: product.brandId,
-    categoryId: product.categoryId,
-    productGroupId: product.productGroupId,
-    productTypeId: product.productTypeId,
-    unitId: product.unitId,
-    hsnCodeId: product.hsnCodeId,
-    styleId: product.styleId,
+    description: product.description ?? '',
+    shortDescription: product.shortDescription ?? '',
+    brandId: product.brandId ?? '1',
+    categoryId: product.categoryId ?? '1',
+    productGroupId: product.productGroupId ?? '1',
+    productTypeId: product.productTypeId ?? '1',
+    unitId: product.unitId ?? '1',
+    hsnCodeId: product.hsnCodeId ?? '1',
+    styleId: product.styleId ?? '1',
     sku: product.sku,
     hasVariants: product.hasVariants,
     basePrice: product.basePrice,
     costPrice: product.costPrice,
-    taxId: product.taxId,
+    taxId: product.taxId ?? '1',
     isFeatured: product.isFeatured,
     isActive: product.isActive,
     images: product.images.map((image) => ({ imageUrl: image.imageUrl, isPrimary: image.isPrimary, sortOrder: image.sortOrder })),
@@ -278,6 +299,7 @@ export function ProductFormPage() {
   const [loading, setLoading] = useState(isEditMode)
   const [saving, setSaving] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>(createFieldErrors())
   const [brands, setBrands] = useState<CommonModuleItem[]>([])
   const [categories, setCategories] = useState<CommonModuleItem[]>([])
   const [productGroups, setProductGroups] = useState<CommonModuleItem[]>([])
@@ -354,6 +376,12 @@ export function ProductFormPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const nextFieldErrors = validateProduct(values)
+    setFieldErrors(nextFieldErrors)
+    if (Object.keys(nextFieldErrors).length > 0) {
+      setErrorMessage('Validation failed.')
+      return
+    }
     setSaving(true)
     setErrorMessage(null)
 
@@ -375,21 +403,21 @@ export function ProductFormPage() {
       <>
         <Section title="Product Basics" description="Primary catalog identity, master references, and product status.">
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="grid gap-2"><Label>Name</Label><Input value={values.name} onChange={(event) => setValues((current) => ({ ...current, name: event.target.value }))} required /></div>
-            <div className="grid gap-2"><Label>Slug</Label><Input value={values.slug} onChange={(event) => setValues((current) => ({ ...current, slug: event.target.value }))} required /></div>
-            <div className="grid gap-2"><Label>SKU</Label><Input value={values.sku} onChange={(event) => setValues((current) => ({ ...current, sku: event.target.value }))} required /></div>
-            <LookupSelect label="Brand" value={values.brandId} options={brands} onChange={(value) => setValues((current) => ({ ...current, brandId: value }))} />
-            <LookupSelect label="Category" value={values.categoryId} options={categories} onChange={(value) => setValues((current) => ({ ...current, categoryId: value }))} />
-            <LookupSelect label="Product Group" value={values.productGroupId} options={productGroups} onChange={(value) => setValues((current) => ({ ...current, productGroupId: value }))} />
-            <LookupSelect label="Product Type" value={values.productTypeId} options={productTypes} onChange={(value) => setValues((current) => ({ ...current, productTypeId: value }))} />
-            <LookupSelect label="Unit" value={values.unitId} options={units} onChange={(value) => setValues((current) => ({ ...current, unitId: value }))} />
-            <LookupSelect label="HSN Code" value={values.hsnCodeId} options={hsnCodes} onChange={(value) => setValues((current) => ({ ...current, hsnCodeId: value }))} />
-            <LookupSelect label="Tax" value={values.taxId} options={taxes} onChange={(value) => setValues((current) => ({ ...current, taxId: value }))} />
-            <LookupSelect label="Style" value={values.styleId} options={styles} onChange={(value) => setValues((current) => ({ ...current, styleId: value }))} />
+            <div className="grid min-h-[4.75rem] gap-2"><Label className={fieldErrors.name ? 'text-destructive' : undefined}>Name</Label><Input className={inputErrorClassName(Boolean(fieldErrors.name))} value={values.name} onChange={(event) => setValues((current) => ({ ...current, name: event.target.value }))} /><FieldError message={fieldErrors.name} /></div>
+            <div className="grid gap-2"><Label>Slug</Label><Input value={values.slug} onChange={(event) => setValues((current) => ({ ...current, slug: event.target.value }))} /></div>
+            <div className="grid gap-2"><Label>SKU</Label><Input value={values.sku} onChange={(event) => setValues((current) => ({ ...current, sku: event.target.value }))} /></div>
+            <LookupSelect label="Brand" value={values.brandId} options={brands} moduleKey="brands" onItemsChange={setBrands} onChange={(value) => setValues((current) => ({ ...current, brandId: value ?? '1' }))} />
+            <LookupSelect label="Category" value={values.categoryId} options={categories} moduleKey="productCategories" onItemsChange={setCategories} onChange={(value) => setValues((current) => ({ ...current, categoryId: value ?? '1' }))} />
+            <LookupSelect label="Product Group" value={values.productGroupId} options={productGroups} moduleKey="productGroups" onItemsChange={setProductGroups} onChange={(value) => setValues((current) => ({ ...current, productGroupId: value ?? '1' }))} />
+            <LookupSelect label="Product Type" value={values.productTypeId} options={productTypes} moduleKey="productTypes" onItemsChange={setProductTypes} onChange={(value) => setValues((current) => ({ ...current, productTypeId: value ?? '1' }))} />
+            <LookupSelect label="Unit" value={values.unitId} options={units} moduleKey="units" onItemsChange={setUnits} onChange={(value) => setValues((current) => ({ ...current, unitId: value ?? '1' }))} />
+            <LookupSelect label="HSN Code" value={values.hsnCodeId} options={hsnCodes} moduleKey="hsnCodes" onItemsChange={setHsnCodes} onChange={(value) => setValues((current) => ({ ...current, hsnCodeId: value ?? '1' }))} />
+            <LookupSelect label="Tax" value={values.taxId} options={taxes} moduleKey="taxes" onItemsChange={setTaxes} onChange={(value) => setValues((current) => ({ ...current, taxId: value ?? '1' }))} />
+            <LookupSelect label="Style" value={values.styleId} options={styles} moduleKey="styles" onItemsChange={setStyles} onChange={(value) => setValues((current) => ({ ...current, styleId: value ?? '1' }))} />
             <div className="grid gap-2"><Label>Base Price</Label><Input type="number" step="0.01" value={values.basePrice} onChange={(event) => setValues((current) => ({ ...current, basePrice: Number(event.target.value || 0) }))} /></div>
             <div className="grid gap-2"><Label>Cost Price</Label><Input type="number" step="0.01" value={values.costPrice} onChange={(event) => setValues((current) => ({ ...current, costPrice: Number(event.target.value || 0) }))} /></div>
-            <div className="grid gap-2 md:col-span-2"><Label>Short Description</Label><Input value={values.shortDescription ?? ''} onChange={(event) => setValues((current) => ({ ...current, shortDescription: event.target.value || null }))} /></div>
-            <div className="grid gap-2 md:col-span-2"><Label>Description</Label><Textarea rows={4} value={values.description ?? ''} onChange={(event) => setValues((current) => ({ ...current, description: event.target.value || null }))} /></div>
+            <div className="grid gap-2 md:col-span-2"><Label>Short Description</Label><Input value={values.shortDescription} onChange={(event) => setValues((current) => ({ ...current, shortDescription: event.target.value }))} /></div>
+            <div className="grid gap-2 md:col-span-2"><Label>Description</Label><Textarea rows={4} value={values.description} onChange={(event) => setValues((current) => ({ ...current, description: event.target.value }))} /></div>
             <label className="flex items-center gap-3"><Checkbox checked={values.hasVariants} onCheckedChange={(checked) => setValues((current) => ({ ...current, hasVariants: Boolean(checked) }))} /><span className="text-sm font-medium">Has variants</span></label>
             <label className="flex items-center gap-3"><Checkbox checked={values.isFeatured} onCheckedChange={(checked) => setValues((current) => ({ ...current, isFeatured: Boolean(checked) }))} /><span className="text-sm font-medium">Featured product</span></label>
             <label className="flex items-center gap-3 md:col-span-2"><Checkbox checked={values.isActive} onCheckedChange={(checked) => setValues((current) => ({ ...current, isActive: Boolean(checked) }))} /><span className="text-sm font-medium">Active product</span></label>
@@ -549,7 +577,7 @@ export function ProductFormPage() {
             <Row key={`stock-item-${index}`} onRemove={() => setValues((current) => ({ ...current, stockItems: current.stockItems.filter((_, rowIndex) => rowIndex !== index) }))}>
               <div className="grid gap-4 md:grid-cols-4">
                 <VariantSelect label="Variant Scope" value={item.variantClientKey} variants={values.variants} onChange={(value) => setValues((current) => ({ ...current, stockItems: current.stockItems.map((entry, rowIndex) => rowIndex === index ? { ...entry, variantClientKey: value } : entry) }))} />
-                <LookupSelect label="Warehouse" value={item.warehouseId} options={warehouses} placeholder="Select warehouse" onChange={(value) => setValues((current) => ({ ...current, stockItems: current.stockItems.map((entry, rowIndex) => rowIndex === index ? { ...entry, warehouseId: value ?? '' } : entry) }))} />
+                <LookupSelect label="Warehouse" value={item.warehouseId} options={warehouses} moduleKey="warehouses" onItemsChange={setWarehouses} placeholder="Select warehouse" onChange={(value) => setValues((current) => ({ ...current, stockItems: current.stockItems.map((entry, rowIndex) => rowIndex === index ? { ...entry, warehouseId: value ?? '' } : entry) }))} />
                 <div className="grid gap-2"><Label>Quantity</Label><Input type="number" step="0.01" value={item.quantity} onChange={(event) => setValues((current) => ({ ...current, stockItems: current.stockItems.map((entry, rowIndex) => rowIndex === index ? { ...entry, quantity: Number(event.target.value || 0) } : entry) }))} /></div>
                 <div className="grid gap-2"><Label>Reserved Quantity</Label><Input type="number" step="0.01" value={item.reservedQuantity} onChange={(event) => setValues((current) => ({ ...current, stockItems: current.stockItems.map((entry, rowIndex) => rowIndex === index ? { ...entry, reservedQuantity: Number(event.target.value || 0) } : entry) }))} /></div>
               </div>
@@ -561,7 +589,7 @@ export function ProductFormPage() {
             <Row key={`movement-${index}`} onRemove={() => setValues((current) => ({ ...current, stockMovements: current.stockMovements.filter((_, rowIndex) => rowIndex !== index) }))}>
               <div className="grid gap-4 md:grid-cols-4">
                 <VariantSelect label="Variant Scope" value={movement.variantClientKey} variants={values.variants} onChange={(value) => setValues((current) => ({ ...current, stockMovements: current.stockMovements.map((entry, rowIndex) => rowIndex === index ? { ...entry, variantClientKey: value } : entry) }))} />
-                <LookupSelect label="Warehouse" value={movement.warehouseId} options={warehouses} onChange={(value) => setValues((current) => ({ ...current, stockMovements: current.stockMovements.map((entry, rowIndex) => rowIndex === index ? { ...entry, warehouseId: value } : entry) }))} />
+                <LookupSelect label="Warehouse" value={movement.warehouseId} options={warehouses} moduleKey="warehouses" onItemsChange={setWarehouses} onChange={(value) => setValues((current) => ({ ...current, stockMovements: current.stockMovements.map((entry, rowIndex) => rowIndex === index ? { ...entry, warehouseId: value } : entry) }))} />
                 <div className="grid gap-2"><Label>Movement Type</Label><Input value={movement.movementType} onChange={(event) => setValues((current) => ({ ...current, stockMovements: current.stockMovements.map((entry, rowIndex) => rowIndex === index ? { ...entry, movementType: event.target.value } : entry) }))} /></div>
                 <div className="grid gap-2"><Label>Quantity</Label><Input type="number" step="0.01" value={movement.quantity} onChange={(event) => setValues((current) => ({ ...current, stockMovements: current.stockMovements.map((entry, rowIndex) => rowIndex === index ? { ...entry, quantity: Number(event.target.value || 0) } : entry) }))} /></div>
                 <div className="grid gap-2"><Label>Reference Type</Label><Input value={movement.referenceType ?? ''} onChange={(event) => setValues((current) => ({ ...current, stockMovements: current.stockMovements.map((entry, rowIndex) => rowIndex === index ? { ...entry, referenceType: event.target.value || null } : entry) }))} /></div>
@@ -646,7 +674,20 @@ export function ProductFormPage() {
         </div>
       </div>
 
-      {errorMessage ? <Card><CardContent className="p-4 text-sm text-destructive">{errorMessage}</CardContent></Card> : null}
+      {errorMessage ? (
+        <Card className={`${warningCardClassName} rounded-md`}>
+          <CardContent className="rounded-md p-4 text-sm">
+            <p className="font-medium">{errorMessage}</p>
+            {Object.keys(fieldErrors).length > 0 ? (
+              <ul className="mt-2 list-disc space-y-1 pl-5">
+                {summarizeFieldErrors(fieldErrors).map((message) => (
+                  <li key={message}>{message}</li>
+                ))}
+              </ul>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <AnimatedTabs defaultTabValue="overview" tabs={productTabs} />
 

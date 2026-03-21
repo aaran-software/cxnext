@@ -11,6 +11,14 @@ import type {
   ContactListResponse,
   ContactResponse,
   ContactUpsertPayload,
+  Media,
+  MediaFolder,
+  MediaFolderListResponse,
+  MediaFolderResponse,
+  MediaFolderUpsertPayload,
+  MediaListResponse,
+  MediaResponse,
+  MediaUpsertPayload,
   Product,
   ProductListResponse,
   ProductResponse,
@@ -246,4 +254,67 @@ export async function deactivateProduct(id: string) {
 
 export async function restoreProduct(id: string) {
   await request<ProductResponse>(`/products/${id}/restore`, { method: 'POST' })
+}
+
+export async function listMedia() {
+  const response = await request<MediaListResponse>('/media')
+  return response.items
+}
+
+export async function getMedia(id: string) {
+  const response = await request<MediaResponse>(`/media/${id}`)
+  return response.item
+}
+
+export async function createMedia(payload: MediaUpsertPayload) {
+  const response = await request<MediaResponse>('/media', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  return response.item
+}
+
+export async function updateMedia(id: string, payload: MediaUpsertPayload) {
+  const response = await request<MediaResponse>(`/media/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+  return response.item
+}
+
+export async function deactivateMedia(id: string) {
+  await request<MediaResponse>(`/media/${id}`, { method: 'DELETE' })
+}
+
+export async function restoreMedia(id: string) {
+  await request<MediaResponse>(`/media/${id}/restore`, { method: 'POST' })
+}
+
+export async function listMediaFolders() {
+  const response = await request<MediaFolderListResponse>('/media/folders')
+  return response.items
+}
+
+export async function createMediaFolder(payload: MediaFolderUpsertPayload) {
+  const response = await request<MediaFolderResponse>('/media/folders', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  return response.item
+}
+
+export async function updateMediaFolder(id: string, payload: MediaFolderUpsertPayload) {
+  const response = await request<MediaFolderResponse>(`/media/folders/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+  return response.item
+}
+
+export async function deactivateMediaFolder(id: string) {
+  await request<MediaFolderResponse>(`/media/folders/${id}`, { method: 'DELETE' })
+}
+
+export async function restoreMediaFolder(id: string) {
+  await request<MediaFolderResponse>(`/media/folders/${id}/restore`, { method: 'POST' })
 }

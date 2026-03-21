@@ -1,0 +1,98 @@
+import type { CommonModuleItem, CommonModuleKey, CommonModuleUpsertPayload } from '@shared/index'
+import { createCommonModuleItem } from '@/shared/api/client'
+
+export type LookupOption = {
+  value: string
+  label: string
+}
+
+export function toLookupOption(item: CommonModuleItem): LookupOption {
+  const name = typeof item.name === 'string' ? item.name : null
+  const code = typeof item.code === 'string' ? item.code : null
+
+  return {
+    value: String(item.id),
+    label: name ?? code ?? String(item.id),
+  }
+}
+
+function normalizeLabel(label: string) {
+  return label.trim().replace(/\s+/g, ' ')
+}
+
+function toCode(label: string) {
+  const normalized = normalizeLabel(label)
+  const slug = normalized
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+
+  return slug || normalized || '-'
+}
+
+function buildCommonLookupPayload(
+  moduleKey: CommonModuleKey,
+  rawLabel: string,
+): CommonModuleUpsertPayload {
+  const label = normalizeLabel(rawLabel)
+  const code = toCode(label)
+
+  switch (moduleKey) {
+    case 'countries':
+      return { code, name: label, phone_code: '-' }
+    case 'states':
+      return { country_id: '1', code, name: label }
+    case 'districts':
+      return { state_id: '1', code, name: label }
+    case 'cities':
+      return { state_id: '1', district_id: '1', code, name: label }
+    case 'pincodes':
+      return { country_id: '1', state_id: '1', district_id: '1', city_id: '1', code, area_name: label }
+    case 'contactGroups':
+    case 'contactTypes':
+    case 'productGroups':
+    case 'productCategories':
+    case 'productTypes':
+    case 'brands':
+    case 'styles':
+    case 'transports':
+    case 'destinations':
+    case 'orderTypes':
+      return { code, name: label, description: '-' }
+    case 'units':
+      return { code, name: label, symbol: '-', description: '-' }
+    case 'hsnCodes':
+      return { code, name: label, description: '-' }
+    case 'taxes':
+      return { code, name: label, tax_type: 'gst', rate_percent: 0, description: '-' }
+    case 'colours':
+      return { code, name: label, hex_code: null, description: '-' }
+    case 'sizes':
+      return { code, name: label, sort_order: 0, description: '-' }
+    case 'currencies':
+      return { code: code.toUpperCase(), name: label, symbol: '-', decimal_places: 2 }
+    case 'warehouses':
+      return {
+        code,
+        name: label,
+        country_id: '1',
+        state_id: '1',
+        district_id: '1',
+        city_id: '1',
+        pincode_id: '1',
+        address_line1: '-',
+        address_line2: '-',
+        description: '-',
+      }
+    case 'paymentTerms':
+      return { code, name: label, due_days: 0, description: '-' }
+  }
+}
+
+export async function createCommonLookupOption(moduleKey: CommonModuleKey, label: string) {
+  const item = await createCommonModuleItem(moduleKey, buildCommonLookupPayload(moduleKey, label))
+  return {
+    item,
+    option: toLookupOption(item),
+  }
+}

@@ -14,6 +14,161 @@ export const productFoundationMigration: Migration = {
   name: 'Product master foundation',
   async up({ db }) {
     await db.execute(`
+      CREATE TABLE IF NOT EXISTS ${commonTableNames.productCategories} (
+        id VARCHAR(64) PRIMARY KEY,
+        code VARCHAR(32) NOT NULL UNIQUE,
+        name VARCHAR(120) NOT NULL UNIQUE,
+        description VARCHAR(255) NULL,
+        ${lifecycleColumnsSql()}
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `)
+
+    await db.execute(
+      `
+        INSERT INTO ${commonTableNames.productCategories} (id, code, name, description)
+        VALUES (?, ?, ?, ?), (?, ?, ?, ?), (?, ?, ?, ?), (?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          code = VALUES(code),
+          name = VALUES(name),
+          description = VALUES(description),
+          is_active = 1
+      `,
+      [
+        'product-category:menswear', 'MENSWEAR', 'Menswear', 'Menswear catalog category.',
+        'product-category:womenswear', 'WOMENSWEAR', 'Womenswear', 'Womenswear catalog category.',
+        'product-category:footwear', 'FOOTWEAR', 'Footwear', 'Footwear category.',
+        'product-category:accessories', 'ACCESSORIES', 'Accessories', 'Accessory category.',
+      ],
+    )
+
+    await db.execute(
+      `
+        INSERT INTO ${commonTableNames.brands} (id, code, name, description)
+        VALUES (?, ?, ?, ?), (?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          code = VALUES(code),
+          name = VALUES(name),
+          description = VALUES(description),
+          is_active = 1
+      `,
+      [
+        'brand:codexsun', 'CODEXSUN', 'CODEXSUN', 'Default internal brand.',
+        'brand:generic', 'GENERIC', 'Generic', 'Unbranded merchandise.',
+      ],
+    )
+
+    await db.execute(
+      `
+        INSERT INTO ${commonTableNames.productGroups} (id, code, name, description)
+        VALUES (?, ?, ?, ?), (?, ?, ?, ?), (?, ?, ?, ?), (?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          code = VALUES(code),
+          name = VALUES(name),
+          description = VALUES(description),
+          is_active = 1
+      `,
+      [
+        'product-group:apparel', 'APPAREL', 'Apparel', 'Fashion and garment products.',
+        'product-group:electronics', 'ELECTRONICS', 'Electronics', 'Consumer electronics and accessories.',
+        'product-group:home', 'HOME', 'Home & Living', 'Home and living products.',
+        'product-group:grocery', 'GROCERY', 'Grocery', 'Grocery and essentials.',
+      ],
+    )
+
+    await db.execute(
+      `
+        INSERT INTO ${commonTableNames.productTypes} (id, code, name, description)
+        VALUES (?, ?, ?, ?), (?, ?, ?, ?), (?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          code = VALUES(code),
+          name = VALUES(name),
+          description = VALUES(description),
+          is_active = 1
+      `,
+      [
+        'product-type:finished-goods', 'FINISHED_GOODS', 'Finished Goods', 'Sellable finished inventory.',
+        'product-type:service', 'SERVICE', 'Service', 'Service or non-stock item.',
+        'product-type:bundle', 'BUNDLE', 'Bundle', 'Composite product bundle.',
+      ],
+    )
+
+    await db.execute(
+      `
+        INSERT INTO ${commonTableNames.units} (id, code, name, symbol, description)
+        VALUES (?, ?, ?, ?, ?), (?, ?, ?, ?, ?), (?, ?, ?, ?, ?), (?, ?, ?, ?, ?), (?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          code = VALUES(code),
+          name = VALUES(name),
+          symbol = VALUES(symbol),
+          description = VALUES(description),
+          is_active = 1
+      `,
+      [
+        'unit:nos', 'NOS', 'Numbers', 'Nos', 'Counted units.',
+        'unit:pcs', 'PCS', 'Pieces', 'Pcs', 'Pieces.',
+        'unit:box', 'BOX', 'Box', 'Box', 'Box quantity.',
+        'unit:kg', 'KG', 'Kilogram', 'kg', 'Weight in kilograms.',
+        'unit:ltr', 'LTR', 'Litre', 'L', 'Liquid litre unit.',
+      ],
+    )
+
+    await db.execute(
+      `
+        INSERT INTO ${commonTableNames.hsnCodes} (id, code, name, description)
+        VALUES (?, ?, ?, ?), (?, ?, ?, ?), (?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          code = VALUES(code),
+          name = VALUES(name),
+          description = VALUES(description),
+          is_active = 1
+      `,
+      [
+        'hsn:610910', '610910', 'Cotton T-Shirts', 'Knitted or crocheted T-shirts of cotton.',
+        'hsn:420221', '420221', 'Handbags', 'Handbags with outer surface of leather.',
+        'hsn:851712', '851712', 'Smartphones', 'Telephones for cellular networks or other wireless networks.',
+      ],
+    )
+
+    await db.execute(
+      `
+        INSERT INTO ${commonTableNames.styles} (id, code, name, description)
+        VALUES (?, ?, ?, ?), (?, ?, ?, ?), (?, ?, ?, ?), (?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          code = VALUES(code),
+          name = VALUES(name),
+          description = VALUES(description),
+          is_active = 1
+      `,
+      [
+        'style:casual', 'CASUAL', 'Casual', 'Casual product style.',
+        'style:formal', 'FORMAL', 'Formal', 'Formal product style.',
+        'style:ethnic', 'ETHNIC', 'Ethnic', 'Ethnic product style.',
+        'style:sport', 'SPORT', 'Sport', 'Sport or athleisure style.',
+      ],
+    )
+
+    await db.execute(
+      `
+        INSERT INTO ${commonTableNames.taxes} (id, code, name, tax_type, rate_percent, description)
+        VALUES (?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          code = VALUES(code),
+          name = VALUES(name),
+          tax_type = VALUES(tax_type),
+          rate_percent = VALUES(rate_percent),
+          description = VALUES(description),
+          is_active = 1
+      `,
+      [
+        'tax:gst-0', 'GST_0', 'GST 0%', 'GST', 0, 'Nil-rated GST.',
+        'tax:gst-5', 'GST_5', 'GST 5%', 'GST', 5, 'Low-rate GST.',
+        'tax:gst-12', 'GST_12', 'GST 12%', 'GST', 12, 'Standard GST slab.',
+        'tax:gst-18', 'GST_18', 'GST 18%', 'GST', 18, 'Standard GST slab.',
+        'tax:gst-28', 'GST_28', 'GST 28%', 'GST', 28, 'High GST slab.',
+      ],
+    )
+
+    await db.execute(`
       CREATE TABLE IF NOT EXISTS ${productTableNames.products} (
         id VARCHAR(64) PRIMARY KEY,
         uuid VARCHAR(64) NOT NULL UNIQUE,

@@ -53,35 +53,35 @@ State the intended result in one paragraph.
 
 ### Task
 
-`Product master across backend and frontend`
+`Media manager module across backend and frontend`
 
 ### Goal
 
-Deliver the product aggregate requested in `ASSIST/Execution/IDEAS.md` as a production-oriented vertical slice. The increment should first verify which requested masters already exist in the common-module foundation, then add only the missing product-specific tables, expose transactional CRUD APIs for the product aggregate including variants, images, pricing, discounts, offers, stock, SEO, and tags, and add frontend list plus full-page create/edit flows that align with the existing dashboard workspace and return to the product list after save.
+Deliver the media manager requested in `ASSIST/Execution/IDEAS.md` as a production-oriented vertical slice. The increment should add storage-aware tables for folders, files, tags, usage, and versions, expose transactional CRUD APIs for the media aggregate, add frontend list plus full-page create/edit flows that align with the existing dashboard workspace and return to the media list after save, and establish filesystem directories plus a public-serving path for stored media references.
 
 ### Assumptions
 
-- Product categories, brands, taxes, warehouses, styles, sizes, colours, units, product types, and HSN codes should be reused from the existing common masters instead of recreated
-- The product aggregate should be implemented as a dedicated backend feature rather than forced into the generic common-module registry
-- The first increment can support soft lifecycle management at the product root while replacing active child rows transactionally on edit
-- Stock movements can be stored as part of the aggregate record model in this increment without yet implementing operational inventory posting workflows
-- The frontend product form can use a dedicated page layout instead of the popup-based common-module dialog
+- The first increment should model media metadata and storage paths without yet implementing multipart upload ingestion
+- The media aggregate should be implemented as a dedicated backend feature rather than folded into the generic common-module registry
+- Files can support both `public` and `private` storage scopes, with public assets exposed through the API server and private assets stored without anonymous serving
+- Child collections can follow the existing aggregate-write pattern by deactivating previous rows and inserting fresh active rows on edit
+- The frontend media form can use a dedicated page layout and reuse the shared animated tabs pattern where it improves usability
 
 ### Constraints
 
 - Keep shared request and response contracts in `packages/shared`
-- Preserve transactional integrity for multi-table product writes
+- Preserve transactional integrity for multi-table media writes
 - Reuse the dashboard/application workspace rather than creating a separate shell
-- Reuse existing common-module records wherever the requested IDEA tables already exist
-- Keep the implementation focused on master data capture instead of full ecommerce or ERP execution workflows
+- Keep the implementation production-oriented without overstating upload or optimization capabilities that do not yet exist
+- Add the requested filesystem folders and public path handling without using destructive setup steps
 
 ### Plan
 
-1. Update execution docs for the product master task and confirm which requested common tables already exist
-2. Add shared product schemas plus a dedicated backend migration and seed data for the missing product-specific tables
-3. Implement backend repository, service, and HTTP routes for product CRUD
-4. Add frontend product list and full-page upsert screens, and connect them into the dashboard navigation
-5. Run `npm run build:api` and `npm run build:web`, then record walkthrough details and residual risks
+1. Update execution docs for the media manager task and inspect the current shared, backend, frontend, and storage extension points
+2. Add shared media schemas plus a dedicated backend migration, seed data, and storage configuration for media-specific tables and directories
+3. Implement backend repository, service, static public-media serving, and HTTP routes for media CRUD
+4. Add frontend media list and full-page upsert screens, then connect them into the dashboard routes and navigation
+5. Run `npm run build:api` and `npm run build:web`, then record walkthrough details, residual risks, and storage assumptions
 
 ### Validation
 
@@ -90,5 +90,5 @@ Deliver the product aggregate requested in `ASSIST/Execution/IDEAS.md` as a prod
 
 ### Open Questions
 
-- Whether stock movements should later become append-only operational records created by transactions instead of editable aggregate children
-- Whether product attributes should later be normalized further into admin-managed masters instead of being maintained only through product forms
+- Whether private media should later be exposed through signed URLs or authenticated streaming endpoints
+- Whether upload ingestion and optimization should be implemented in a later increment as background jobs instead of synchronous request handling

@@ -30,3 +30,4 @@
 - Added a dedicated contact aggregate feature with new contact-related tables and placeholder seed data, backend contact CRUD routes, and frontend contact list plus full-page create/edit screens
 - Added a dedicated product aggregate feature that reuses the existing common product masters, adds product-specific tables and placeholder seed data, exposes backend product CRUD routes, and provides frontend product list plus full-page create/edit screens
 - Added a shared animated tab component and reorganized the company, contact, and product master forms into grouped tabs for easier data entry
+- Added a dedicated media manager feature with storage-aware media tables, filesystem bootstrap for public and private storage, backend media and folder CRUD routes plus public asset streaming, and frontend dashboard pages for media asset and folder management

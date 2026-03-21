@@ -71,3 +71,12 @@ export const productTableNames = {
   tags: 'product_tags',
   tagMap: 'product_tag_map',
 } as const
+
+export const mediaTableNames = {
+  files: 'media_files',
+  folders: 'media_folders',
+  tags: 'media_tags',
+  tagMap: 'media_tag_map',
+  usage: 'media_usage',
+  versions: 'media_versions',
+} as const

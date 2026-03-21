@@ -219,6 +219,9 @@ export const productSchema = productSummarySchema.extend({
 })
 
 const nullableTrimmedString = z.string().trim().nullish().transform((value) => value || null)
+const requiredString = z.string().trim().min(1)
+const dashString = z.string().trim().nullish().transform((value) => value?.trim() || '-')
+const defaultUnknownId = z.string().trim().nullish().transform((value) => value?.trim() || '1')
 const decimalValue = z.number().finite()
 
 export const productImageInputSchema = z.object({
@@ -322,21 +325,21 @@ export const productReviewInputSchema = z.object({
 
 export const productUpsertPayloadSchema = z.object({
   name: z.string().trim().min(2),
-  slug: z.string().trim().min(2),
-  description: nullableTrimmedString,
-  shortDescription: nullableTrimmedString,
-  brandId: nullableTrimmedString,
-  categoryId: nullableTrimmedString,
-  productGroupId: nullableTrimmedString,
-  productTypeId: nullableTrimmedString,
-  unitId: nullableTrimmedString,
-  hsnCodeId: nullableTrimmedString,
-  styleId: nullableTrimmedString,
-  sku: z.string().trim().min(1),
+  slug: z.string().trim().nullish().transform((value) => value?.trim() || ''),
+  description: dashString,
+  shortDescription: dashString,
+  brandId: defaultUnknownId,
+  categoryId: defaultUnknownId,
+  productGroupId: defaultUnknownId,
+  productTypeId: defaultUnknownId,
+  unitId: defaultUnknownId,
+  hsnCodeId: defaultUnknownId,
+  styleId: defaultUnknownId,
+  sku: z.string().trim().nullish().transform((value) => value?.trim() || ''),
   hasVariants: z.boolean().optional().default(false),
   basePrice: decimalValue.default(0),
   costPrice: decimalValue.default(0),
-  taxId: nullableTrimmedString,
+  taxId: defaultUnknownId,
   isFeatured: z.boolean().optional().default(false),
   isActive: z.boolean().optional().default(true),
   images: z.array(productImageInputSchema).default([]),

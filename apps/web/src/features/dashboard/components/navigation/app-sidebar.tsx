@@ -5,6 +5,7 @@ import {
   Building2,
   ChevronRight,
   ContactRound,
+  Image,
   LayoutDashboard,
   LogOut,
   Package,
@@ -98,6 +99,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <NavLink to="/dashboard/contacts">
                       <ContactRound />
                       <span>Contacts</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="Media">
+                    <NavLink to="/dashboard/media">
+                      <Image />
+                      <span>Media</span>
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

@@ -14,6 +14,8 @@ import { CompanyFormPage } from '@/features/company/pages/company-form-page'
 import { CompanyListPage } from '@/features/company/pages/company-list-page'
 import { ContactFormPage } from '@/features/contact/pages/contact-form-page'
 import { ContactListPage } from '@/features/contact/pages/contact-list-page'
+import { MediaFormPage } from '@/features/media/pages/media-form-page'
+import { MediaListPage } from '@/features/media/pages/media-list-page'
 import { ProductFormPage } from '@/features/product/pages/product-form-page'
 import { ProductListPage } from '@/features/product/pages/product-list-page'
 import { LoginPage } from '@/features/auth/pages/login-page'
@@ -38,6 +40,9 @@ const dashboardRoutes = {
         { path: 'contacts', element: <ContactListPage /> },
         { path: 'contacts/new', element: <ContactFormPage /> },
         { path: 'contacts/:contactId/edit', element: <ContactFormPage /> },
+        { path: 'media', element: <MediaListPage /> },
+        { path: 'media/new', element: <MediaFormPage /> },
+        { path: 'media/:mediaId/edit', element: <MediaFormPage /> },
         { path: 'products', element: <ProductListPage /> },
         { path: 'products/new', element: <ProductFormPage /> },
         { path: 'products/:productId/edit', element: <ProductFormPage /> },

@@ -59,6 +59,16 @@ export class DatabaseOrm {
     return pool
   }
 
+  async close() {
+    if (!pool) {
+      return
+    }
+
+    const activePool = pool
+    pool = null
+    await activePool.end()
+  }
+
   async execute(sql: string, params: SqlPrimitive[] = []) {
     const [result] = await this.getPool().execute<ResultSetHeader>(sql, params)
     return result

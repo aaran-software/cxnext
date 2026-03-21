@@ -9,12 +9,15 @@ import { ContactService } from '../../features/contact/application/contact-servi
 import { ContactRepository } from '../../features/contact/data/contact-repository'
 import { ProductService } from '../../features/product/application/product-service'
 import { ProductRepository } from '../../features/product/data/product-repository'
+import { MediaService } from '../../features/media/application/media-service'
+import { MediaRepository } from '../../features/media/data/media-repository'
 import { AuthService } from '../../features/auth/application/auth-service'
 import { AuthUserRepository } from '../../features/auth/data/auth-user-repository'
 import { GetBootstrapSnapshot } from '../../features/bootstrap/application/get-bootstrap-snapshot'
 import { SystemOverviewRepository } from '../../features/bootstrap/data/system-overview-repository'
 import { ApplicationError } from '../../shared/errors/application-error'
 import { getDatabaseHealth } from '../../shared/database/database'
+import { servePublicMediaAsset } from '../../shared/media/storage'
 import { getBearerToken, readJsonBody } from '../../shared/http/request'
 import { writeEmpty, writeJson } from '../../shared/http/response'
 
@@ -24,6 +27,7 @@ const commonModuleService = new CommonModuleService(new CommonModuleRepository()
 const companyService = new CompanyService(new CompanyRepository())
 const contactService = new ContactService(new ContactRepository())
 const productService = new ProductService(new ProductRepository())
+const mediaService = new MediaService(new MediaRepository())
 
 function parseBooleanFlag(value: string | null) {
   if (!value) {
@@ -83,6 +87,22 @@ export async function routeRequest(
       return
     }
 
+    const mediaPublicMatch = url.pathname.match(/^\/media\/public\/(.+)$/)
+    if (method === 'GET' && mediaPublicMatch) {
+      await servePublicMediaAsset(response, mediaPublicMatch[1])
+      return
+    }
+
+    if (method === 'GET' && url.pathname === '/media') {
+      writeJson(response, 200, await mediaService.list())
+      return
+    }
+
+    if (method === 'GET' && url.pathname === '/media/folders') {
+      writeJson(response, 200, await mediaService.listFolders())
+      return
+    }
+
     const companyRestoreMatch = url.pathname.match(/^\/companies\/([^/]+)\/restore$/)
     if (method === 'POST' && companyRestoreMatch) {
       writeJson(response, 200, await companyService.restore(companyRestoreMatch[1]))
@@ -98,6 +118,18 @@ export async function routeRequest(
     const productRestoreMatch = url.pathname.match(/^\/products\/([^/]+)\/restore$/)
     if (method === 'POST' && productRestoreMatch) {
       writeJson(response, 200, await productService.restore(productRestoreMatch[1]))
+      return
+    }
+
+    const mediaFolderRestoreMatch = url.pathname.match(/^\/media\/folders\/([^/]+)\/restore$/)
+    if (method === 'POST' && mediaFolderRestoreMatch) {
+      writeJson(response, 200, await mediaService.restoreFolder(mediaFolderRestoreMatch[1]))
+      return
+    }
+
+    const mediaRestoreMatch = url.pathname.match(/^\/media\/([^/]+)\/restore$/)
+    if (method === 'POST' && mediaRestoreMatch) {
+      writeJson(response, 200, await mediaService.restore(mediaRestoreMatch[1]))
       return
     }
 
@@ -161,6 +193,41 @@ export async function routeRequest(
       }
     }
 
+    const mediaFolderRecordMatch = url.pathname.match(/^\/media\/folders\/([^/]+)$/)
+    if (mediaFolderRecordMatch) {
+      const folderId = mediaFolderRecordMatch[1]
+
+      if (method === 'PATCH') {
+        writeJson(response, 200, await mediaService.updateFolder(folderId, await readJsonBody(request)))
+        return
+      }
+
+      if (method === 'DELETE') {
+        writeJson(response, 200, await mediaService.deactivateFolder(folderId))
+        return
+      }
+    }
+
+    const mediaRecordMatch = url.pathname.match(/^\/media\/([^/]+)$/)
+    if (mediaRecordMatch) {
+      const mediaId = mediaRecordMatch[1]
+
+      if (method === 'GET') {
+        writeJson(response, 200, await mediaService.getById(mediaId))
+        return
+      }
+
+      if (method === 'PATCH') {
+        writeJson(response, 200, await mediaService.update(mediaId, await readJsonBody(request)))
+        return
+      }
+
+      if (method === 'DELETE') {
+        writeJson(response, 200, await mediaService.deactivate(mediaId))
+        return
+      }
+    }
+
     if (method === 'POST' && url.pathname === '/companies') {
       writeJson(response, 201, await companyService.create(await readJsonBody(request)))
       return
@@ -173,6 +240,16 @@ export async function routeRequest(
 
     if (method === 'POST' && url.pathname === '/products') {
       writeJson(response, 201, await productService.create(await readJsonBody(request)))
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/media') {
+      writeJson(response, 201, await mediaService.create(await readJsonBody(request)))
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/media/folders') {
+      writeJson(response, 201, await mediaService.createFolder(await readJsonBody(request)))
       return
     }
 

@@ -73,8 +73,33 @@ export class ProductService {
 
   private parsePayload(payload: unknown) {
     const parsedPayload = productUpsertPayloadSchema.parse(payload)
-    this.validateClientReferences(parsedPayload)
-    return parsedPayload
+    const normalizedPayload = {
+      ...parsedPayload,
+      slug: parsedPayload.slug || this.toSlug(parsedPayload.name),
+      sku: parsedPayload.sku || this.toSku(parsedPayload.name),
+    }
+    this.validateClientReferences(normalizedPayload)
+    return normalizedPayload
+  }
+
+  private toSlug(value: string) {
+    const slug = value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+
+    return slug || 'product'
+  }
+
+  private toSku(value: string) {
+    const sku = value
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+
+    return sku || 'PRODUCT'
   }
 
   private validateClientReferences(payload: ProductUpsertPayload) {

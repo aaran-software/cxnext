@@ -1,5 +1,9 @@
 import { z } from 'zod'
 
+const requiredString = z.string().trim().min(1)
+const dashString = z.string().trim().nullish().transform((value) => value?.trim() || '-')
+const defaultUnknownId = z.string().trim().nullish().transform((value) => value?.trim() || '1')
+
 export const contactAddressSchema = z.object({
   id: z.string().min(1),
   contactId: z.string().min(1),
@@ -96,64 +100,72 @@ export const contactSchema = contactSummarySchema.extend({
 })
 
 export const contactAddressInputSchema = z.object({
-  addressType: z.string().trim().min(1),
-  addressLine1: z.string().trim().min(1),
-  addressLine2: z.string().trim().nullish().transform((value) => value || null),
-  cityId: z.string().trim().nullish().transform((value) => value || null),
-  stateId: z.string().trim().nullish().transform((value) => value || null),
-  countryId: z.string().trim().nullish().transform((value) => value || null),
-  pincodeId: z.string().trim().nullish().transform((value) => value || null),
+  addressType: dashString,
+  addressLine1: dashString,
+  addressLine2: dashString,
+  cityId: defaultUnknownId,
+  stateId: defaultUnknownId,
+  countryId: defaultUnknownId,
+  pincodeId: defaultUnknownId,
   latitude: z.number().finite().nullable().optional().default(null),
   longitude: z.number().finite().nullable().optional().default(null),
   isDefault: z.boolean().optional().default(false),
 })
 
 export const contactEmailInputSchema = z.object({
-  email: z.email(),
-  emailType: z.string().trim().min(1),
+  email: dashString,
+  emailType: dashString,
   isPrimary: z.boolean().optional().default(false),
 })
 
 export const contactPhoneInputSchema = z.object({
-  phoneNumber: z.string().trim().min(1),
-  phoneType: z.string().trim().min(1),
+  phoneNumber: dashString,
+  phoneType: dashString,
   isPrimary: z.boolean().optional().default(false),
 })
 
 export const contactBankAccountInputSchema = z.object({
-  bankName: z.string().trim().min(1),
-  accountNumber: z.string().trim().min(1),
-  accountHolderName: z.string().trim().min(1),
-  ifsc: z.string().trim().min(1),
-  branch: z.string().trim().nullish().transform((value) => value || null),
+  bankName: dashString,
+  accountNumber: dashString,
+  accountHolderName: dashString,
+  ifsc: dashString,
+  branch: dashString,
   isPrimary: z.boolean().optional().default(false),
 })
 
 export const contactGstDetailInputSchema = z.object({
-  gstin: z.string().trim().min(1),
-  state: z.string().trim().min(1),
+  gstin: dashString,
+  state: dashString,
   isDefault: z.boolean().optional().default(false),
 })
 
 export const contactUpsertPayloadSchema = z.object({
   contactTypeId: z.string().trim().min(1),
   name: z.string().trim().min(2),
-  legalName: z.string().trim().nullish().transform((value) => value || null),
-  pan: z.string().trim().nullish().transform((value) => value || null),
-  gstin: z.string().trim().nullish().transform((value) => value || null),
-  msmeType: z.string().trim().nullish().transform((value) => value || null),
-  msmeNo: z.string().trim().nullish().transform((value) => value || null),
+  legalName: dashString,
+  pan: dashString,
+  gstin: dashString,
+  msmeType: dashString,
+  msmeNo: dashString,
   openingBalance: z.number().finite().default(0),
-  balanceType: z.string().trim().nullish().transform((value) => value || null),
+  balanceType: dashString,
   creditLimit: z.number().finite().default(0),
-  website: z.string().trim().nullish().transform((value) => value || null),
-  description: z.string().trim().nullish().transform((value) => value || null),
+  website: dashString,
+  description: dashString,
   isActive: z.boolean().optional().default(true),
   addresses: z.array(contactAddressInputSchema).default([]),
   emails: z.array(contactEmailInputSchema).default([]),
   phones: z.array(contactPhoneInputSchema).default([]),
   bankAccounts: z.array(contactBankAccountInputSchema).default([]),
   gstDetails: z.array(contactGstDetailInputSchema).default([]),
+}).superRefine((value, context) => {
+  if (value.contactTypeId === 'contact-type:company' && value.gstin === '-') {
+    context.addIssue({
+      code: 'custom',
+      path: ['gstin'],
+      message: 'GSTIN is required for company contacts.',
+    })
+  }
 })
 
 export const contactListResponseSchema = z.object({

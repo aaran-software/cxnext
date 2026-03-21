@@ -14,6 +14,10 @@ export async function ensureDatabaseSchema() {
   await runMigrations()
 }
 
+export async function closeDatabasePool() {
+  await db.close()
+}
+
 export async function getDatabaseHealth(): Promise<DatabaseHealth> {
   if (!db.isEnabled()) {
     return {

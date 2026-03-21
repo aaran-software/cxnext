@@ -6,6 +6,7 @@ import type {
   CompanyLogoInput,
   CompanyPhoneInput,
   CompanyUpsertPayload,
+  CommonModuleKey,
   CommonModuleItem,
 } from '@shared/index'
 import { useEffect, useState } from 'react'
@@ -18,6 +19,9 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { AutocompleteLookup } from '@/components/lookups/AutocompleteLookup'
+import { createFieldErrors, inputErrorClassName, isBlank, setFieldError, summarizeFieldErrors, type FieldErrors, warningCardClassName } from '@/shared/forms/validation'
+import { createCommonLookupOption, toLookupOption } from '@/shared/forms/common-lookup'
 import {
   createCompany,
   getCompany,
@@ -28,15 +32,36 @@ import {
 
 type CompanyFormValues = CompanyUpsertPayload
 
+const addressTypeOptions = [
+  { value: 'head_office', label: 'Head Office' },
+  { value: 'billing', label: 'Billing' },
+  { value: 'shipping', label: 'Shipping' },
+  { value: 'branch', label: 'Branch' },
+]
+
+const emailTypeOptions = [
+  { value: 'admin', label: 'Admin' },
+  { value: 'billing', label: 'Billing' },
+  { value: 'support', label: 'Support' },
+  { value: 'sales', label: 'Sales' },
+]
+
+const phoneTypeOptions = [
+  { value: 'phone', label: 'Phone' },
+  { value: 'mobile', label: 'Mobile' },
+  { value: 'office', label: 'Office' },
+  { value: 'whatsapp', label: 'WhatsApp' },
+]
+
 const emptyLogo = (): CompanyLogoInput => ({ logoUrl: '', logoType: 'primary' })
 const emptyAddress = (): CompanyAddressInput => ({
   addressType: 'head_office',
   addressLine1: '',
-  addressLine2: null,
-  cityId: null,
-  stateId: null,
-  countryId: null,
-  pincodeId: null,
+  addressLine2: '',
+  cityId: '1',
+  stateId: '1',
+  countryId: '1',
+  pincodeId: '1',
   latitude: null,
   longitude: null,
   isDefault: true,
@@ -48,20 +73,20 @@ const emptyBankAccount = (): CompanyBankAccountInput => ({
   accountNumber: '',
   accountHolderName: '',
   ifsc: '',
-  branch: null,
+  branch: '',
   isPrimary: true,
 })
 
 function createDefaultValues(): CompanyFormValues {
   return {
     name: '',
-    legalName: null,
-    registrationNumber: null,
-    pan: null,
-    financialYearStart: null,
-    booksStart: null,
-    website: null,
-    description: null,
+    legalName: '',
+    registrationNumber: '',
+    pan: '',
+    financialYearStart: '',
+    booksStart: '',
+    website: '',
+    description: '',
     isActive: true,
     logos: [],
     addresses: [emptyAddress()],
@@ -83,27 +108,39 @@ function toErrorMessage(error: unknown) {
   return 'Failed to save company.'
 }
 
+function FieldError({ message }: { message?: string }) {
+  return message ? <p className="text-[0.8rem] text-destructive">{message}</p> : null
+}
+
+function validateCompany(values: CompanyFormValues) {
+  const errors = createFieldErrors()
+
+  if (isBlank(values.name)) setFieldError(errors, 'name', 'Name is required.')
+
+  return errors
+}
+
 function toFormValues(company: Company): CompanyFormValues {
   return {
     name: company.name,
-    legalName: company.legalName,
-    registrationNumber: company.registrationNumber,
-    pan: company.pan,
-    financialYearStart: company.financialYearStart,
-    booksStart: company.booksStart,
-    website: company.website,
-    description: company.description,
+    legalName: company.legalName ?? '',
+    registrationNumber: company.registrationNumber ?? '',
+    pan: company.pan ?? '',
+    financialYearStart: company.financialYearStart ?? '',
+    booksStart: company.booksStart ?? '',
+    website: company.website ?? '',
+    description: company.description ?? '',
     isActive: company.isActive,
     logos: company.logos.map((logo) => ({ logoUrl: logo.logoUrl, logoType: logo.logoType })),
     addresses: company.addresses.length
       ? company.addresses.map((address) => ({
           addressType: address.addressType,
           addressLine1: address.addressLine1,
-          addressLine2: address.addressLine2,
-          cityId: address.cityId,
-          stateId: address.stateId,
-          countryId: address.countryId,
-          pincodeId: address.pincodeId,
+          addressLine2: address.addressLine2 ?? '',
+          cityId: address.cityId ?? '1',
+          stateId: address.stateId ?? '1',
+          countryId: address.countryId ?? '1',
+          pincodeId: address.pincodeId ?? '1',
           latitude: address.latitude,
           longitude: address.longitude,
           isDefault: address.isDefault,
@@ -125,7 +162,7 @@ function toFormValues(company: Company): CompanyFormValues {
           accountNumber: account.accountNumber,
           accountHolderName: account.accountHolderName,
           ifsc: account.ifsc,
-          branch: account.branch,
+          branch: account.branch ?? '',
           isPrimary: account.isPrimary,
         }))
       : [emptyBankAccount()],
@@ -176,28 +213,59 @@ function LookupSelect({
   label,
   value,
   options,
+  moduleKey,
+  onItemsChange,
   onChange,
 }: {
   label: string
   value: string | null
   options: CommonModuleItem[]
+  moduleKey?: CommonModuleKey
+  onItemsChange?: (items: CommonModuleItem[]) => void
   onChange: (value: string | null) => void
 }) {
   return (
     <div className="grid gap-2">
       <Label>{label}</Label>
-      <select
+      <AutocompleteLookup
         value={value ?? ''}
-        onChange={(event) => onChange(event.target.value || null)}
-        className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
-      >
-        <option value="">Not set</option>
-        {options.map((option) => (
-          <option key={option.id} value={option.id}>
-            {String(option.name ?? option.code ?? option.id)}
-          </option>
-        ))}
-      </select>
+        onChange={(nextValue) => onChange(nextValue || null)}
+        options={options.map(toLookupOption)}
+        allowEmptyOption
+        emptyOptionLabel="-"
+        placeholder={`Search ${label.toLowerCase()}`}
+        createOption={moduleKey ? async (labelValue) => {
+          const { item, option } = await createCommonLookupOption(moduleKey, labelValue)
+          onItemsChange?.([...options, item])
+          return option
+        } : undefined}
+      />
+    </div>
+  )
+}
+
+function LocalLookupSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string
+  value: string
+  options: { value: string; label: string }[]
+  onChange: (value: string) => void
+}) {
+  return (
+    <div className="grid gap-2">
+      <Label>{label}</Label>
+      <AutocompleteLookup
+        value={value}
+        onChange={(nextValue) => onChange(nextValue || '')}
+        options={options}
+        allowEmptyOption
+        emptyOptionLabel="-"
+        placeholder={`Search ${label.toLowerCase()}`}
+      />
     </div>
   )
 }
@@ -210,6 +278,7 @@ export function CompanyFormPage() {
   const [loading, setLoading] = useState(isEditMode)
   const [saving, setSaving] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>(createFieldErrors())
   const [countries, setCountries] = useState<CommonModuleItem[]>([])
   const [states, setStates] = useState<CommonModuleItem[]>([])
   const [cities, setCities] = useState<CommonModuleItem[]>([])
@@ -271,6 +340,12 @@ export function CompanyFormPage() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const nextFieldErrors = validateCompany(values)
+    setFieldErrors(nextFieldErrors)
+    if (Object.keys(nextFieldErrors).length > 0) {
+      setErrorMessage('Validation failed.')
+      return
+    }
     setSaving(true)
     setErrorMessage(null)
 
@@ -317,7 +392,18 @@ export function CompanyFormPage() {
       </div>
 
       {errorMessage ? (
-        <Card><CardContent className="p-4 text-sm text-destructive">{errorMessage}</CardContent></Card>
+        <Card className={`${warningCardClassName} rounded-md`}>
+          <CardContent className="rounded-md p-4 text-sm">
+            <p className="font-medium">{errorMessage}</p>
+            {Object.keys(fieldErrors).length > 0 ? (
+              <ul className="mt-2 list-disc space-y-1 pl-5">
+                {summarizeFieldErrors(fieldErrors).map((message) => (
+                  <li key={message}>{message}</li>
+                ))}
+              </ul>
+            ) : null}
+          </CardContent>
+        </Card>
       ) : null}
 
       <AnimatedTabs
@@ -334,14 +420,14 @@ export function CompanyFormPage() {
                     <CardDescription>Legal identity and book-opening details.</CardDescription>
                   </CardHeader>
                   <CardContent className="grid gap-4 md:grid-cols-2">
-                    <div className="grid gap-2"><Label>Name</Label><Input value={values.name} onChange={(event) => setValues((current) => ({ ...current, name: event.target.value }))} required /></div>
-                    <div className="grid gap-2"><Label>Legal Name</Label><Input value={values.legalName ?? ''} onChange={(event) => setValues((current) => ({ ...current, legalName: event.target.value || null }))} /></div>
-                    <div className="grid gap-2"><Label>Registration Number</Label><Input value={values.registrationNumber ?? ''} onChange={(event) => setValues((current) => ({ ...current, registrationNumber: event.target.value || null }))} /></div>
-                    <div className="grid gap-2"><Label>PAN</Label><Input value={values.pan ?? ''} onChange={(event) => setValues((current) => ({ ...current, pan: event.target.value || null }))} /></div>
-                    <div className="grid gap-2"><Label>Financial Year Start</Label><Input type="date" value={values.financialYearStart ?? ''} onChange={(event) => setValues((current) => ({ ...current, financialYearStart: event.target.value || null }))} /></div>
-                    <div className="grid gap-2"><Label>Books Start</Label><Input type="date" value={values.booksStart ?? ''} onChange={(event) => setValues((current) => ({ ...current, booksStart: event.target.value || null }))} /></div>
-                    <div className="grid gap-2 md:col-span-2"><Label>Website</Label><Input value={values.website ?? ''} onChange={(event) => setValues((current) => ({ ...current, website: event.target.value || null }))} /></div>
-                    <div className="grid gap-2 md:col-span-2"><Label>Description</Label><Textarea value={values.description ?? ''} onChange={(event) => setValues((current) => ({ ...current, description: event.target.value || null }))} rows={4} /></div>
+                    <div className="grid min-h-[4.75rem] gap-2"><Label className={fieldErrors.name ? 'text-destructive' : undefined}>Name</Label><Input className={inputErrorClassName(Boolean(fieldErrors.name))} value={values.name} onChange={(event) => setValues((current) => ({ ...current, name: event.target.value }))} /><FieldError message={fieldErrors.name} /></div>
+                    <div className="grid gap-2"><Label>Legal Name</Label><Input value={values.legalName} onChange={(event) => setValues((current) => ({ ...current, legalName: event.target.value }))} /></div>
+                    <div className="grid gap-2"><Label>Registration Number</Label><Input value={values.registrationNumber} onChange={(event) => setValues((current) => ({ ...current, registrationNumber: event.target.value }))} /></div>
+                    <div className="grid gap-2"><Label>PAN</Label><Input value={values.pan} onChange={(event) => setValues((current) => ({ ...current, pan: event.target.value }))} /></div>
+                    <div className="grid gap-2"><Label>Financial Year Start</Label><Input type="date" value={values.financialYearStart} onChange={(event) => setValues((current) => ({ ...current, financialYearStart: event.target.value }))} /></div>
+                    <div className="grid gap-2"><Label>Books Start</Label><Input type="date" value={values.booksStart} onChange={(event) => setValues((current) => ({ ...current, booksStart: event.target.value }))} /></div>
+                    <div className="grid gap-2 md:col-span-2"><Label>Website</Label><Input value={values.website} onChange={(event) => setValues((current) => ({ ...current, website: event.target.value }))} /></div>
+                    <div className="grid gap-2 md:col-span-2"><Label>Description</Label><Textarea value={values.description} onChange={(event) => setValues((current) => ({ ...current, description: event.target.value }))} rows={4} /></div>
                     <label className="flex items-center gap-3 md:col-span-2"><Checkbox checked={values.isActive} onCheckedChange={(checked) => setValues((current) => ({ ...current, isActive: Boolean(checked) }))} /><span className="text-sm font-medium">Active company</span></label>
                   </CardContent>
                 </Card>
@@ -368,7 +454,7 @@ export function CompanyFormPage() {
                     <CollectionRow key={`email-${index}`} onRemove={() => setValues((current) => ({ ...current, emails: current.emails.filter((_, rowIndex) => rowIndex !== index) }))}>
                       <div className="grid gap-4 md:grid-cols-2">
                         <div className="grid gap-2"><Label>Email</Label><Input type="email" value={email.email} onChange={(event) => setValues((current) => ({ ...current, emails: current.emails.map((entry, rowIndex) => rowIndex === index ? { ...entry, email: event.target.value } : entry) }))} /></div>
-                        <div className="grid gap-2"><Label>Email Type</Label><Input value={email.emailType} onChange={(event) => setValues((current) => ({ ...current, emails: current.emails.map((entry, rowIndex) => rowIndex === index ? { ...entry, emailType: event.target.value } : entry) }))} /></div>
+                        <LocalLookupSelect label="Email Type" value={email.emailType} options={emailTypeOptions} onChange={(value) => setValues((current) => ({ ...current, emails: current.emails.map((entry, rowIndex) => rowIndex === index ? { ...entry, emailType: value || 'admin' } : entry) }))} />
                       </div>
                     </CollectionRow>
                   ))}
@@ -378,7 +464,7 @@ export function CompanyFormPage() {
                     <CollectionRow key={`phone-${index}`} onRemove={() => setValues((current) => ({ ...current, phones: current.phones.filter((_, rowIndex) => rowIndex !== index) }))}>
                       <div className="grid gap-4 md:grid-cols-3">
                         <div className="grid gap-2"><Label>Phone Number</Label><Input value={phone.phoneNumber} onChange={(event) => setValues((current) => ({ ...current, phones: current.phones.map((entry, rowIndex) => rowIndex === index ? { ...entry, phoneNumber: event.target.value } : entry) }))} /></div>
-                        <div className="grid gap-2"><Label>Phone Type</Label><Input value={phone.phoneType} onChange={(event) => setValues((current) => ({ ...current, phones: current.phones.map((entry, rowIndex) => rowIndex === index ? { ...entry, phoneType: event.target.value } : entry) }))} /></div>
+                        <LocalLookupSelect label="Phone Type" value={phone.phoneType} options={phoneTypeOptions} onChange={(value) => setValues((current) => ({ ...current, phones: current.phones.map((entry, rowIndex) => rowIndex === index ? { ...entry, phoneType: value || 'phone' } : entry) }))} />
                         <label className="flex items-center gap-3 pt-8"><Checkbox checked={phone.isPrimary} onCheckedChange={(checked) => setValues((current) => ({ ...current, phones: current.phones.map((entry, rowIndex) => rowIndex === index ? { ...entry, isPrimary: Boolean(checked) } : entry) }))} /><span className="text-sm font-medium">Primary</span></label>
                       </div>
                     </CollectionRow>
@@ -395,14 +481,14 @@ export function CompanyFormPage() {
                 {values.addresses.map((address, index) => (
                   <CollectionRow key={`address-${index}`} onRemove={() => setValues((current) => ({ ...current, addresses: current.addresses.filter((_, rowIndex) => rowIndex !== index) }))}>
                     <div className="grid gap-4 md:grid-cols-2">
-                      <div className="grid gap-2"><Label>Address Type</Label><Input value={address.addressType} onChange={(event) => setValues((current) => ({ ...current, addresses: current.addresses.map((entry, rowIndex) => rowIndex === index ? { ...entry, addressType: event.target.value } : entry) }))} /></div>
+                      <LocalLookupSelect label="Address Type" value={address.addressType} options={addressTypeOptions} onChange={(value) => setValues((current) => ({ ...current, addresses: current.addresses.map((entry, rowIndex) => rowIndex === index ? { ...entry, addressType: value || 'head_office' } : entry) }))} />
                       <label className="flex items-center gap-3 pt-8"><Checkbox checked={address.isDefault} onCheckedChange={(checked) => setValues((current) => ({ ...current, addresses: current.addresses.map((entry, rowIndex) => rowIndex === index ? { ...entry, isDefault: Boolean(checked) } : entry) }))} /><span className="text-sm font-medium">Default address</span></label>
                       <div className="grid gap-2 md:col-span-2"><Label>Address Line 1</Label><Input value={address.addressLine1} onChange={(event) => setValues((current) => ({ ...current, addresses: current.addresses.map((entry, rowIndex) => rowIndex === index ? { ...entry, addressLine1: event.target.value } : entry) }))} /></div>
-                      <div className="grid gap-2 md:col-span-2"><Label>Address Line 2</Label><Input value={address.addressLine2 ?? ''} onChange={(event) => setValues((current) => ({ ...current, addresses: current.addresses.map((entry, rowIndex) => rowIndex === index ? { ...entry, addressLine2: event.target.value || null } : entry) }))} /></div>
-                      <LookupSelect label="Country" value={address.countryId} options={countries} onChange={(value) => setValues((current) => ({ ...current, addresses: current.addresses.map((entry, rowIndex) => rowIndex === index ? { ...entry, countryId: value } : entry) }))} />
-                      <LookupSelect label="State" value={address.stateId} options={states} onChange={(value) => setValues((current) => ({ ...current, addresses: current.addresses.map((entry, rowIndex) => rowIndex === index ? { ...entry, stateId: value } : entry) }))} />
-                      <LookupSelect label="City" value={address.cityId} options={cities} onChange={(value) => setValues((current) => ({ ...current, addresses: current.addresses.map((entry, rowIndex) => rowIndex === index ? { ...entry, cityId: value } : entry) }))} />
-                      <LookupSelect label="Pincode" value={address.pincodeId} options={pincodes} onChange={(value) => setValues((current) => ({ ...current, addresses: current.addresses.map((entry, rowIndex) => rowIndex === index ? { ...entry, pincodeId: value } : entry) }))} />
+                      <div className="grid gap-2 md:col-span-2"><Label>Address Line 2</Label><Input value={address.addressLine2} onChange={(event) => setValues((current) => ({ ...current, addresses: current.addresses.map((entry, rowIndex) => rowIndex === index ? { ...entry, addressLine2: event.target.value } : entry) }))} /></div>
+                      <LookupSelect label="Country" value={address.countryId} options={countries} moduleKey="countries" onItemsChange={setCountries} onChange={(value) => setValues((current) => ({ ...current, addresses: current.addresses.map((entry, rowIndex) => rowIndex === index ? { ...entry, countryId: value ?? '1' } : entry) }))} />
+                      <LookupSelect label="State" value={address.stateId} options={states} moduleKey="states" onItemsChange={setStates} onChange={(value) => setValues((current) => ({ ...current, addresses: current.addresses.map((entry, rowIndex) => rowIndex === index ? { ...entry, stateId: value ?? '1' } : entry) }))} />
+                      <LookupSelect label="City" value={address.cityId} options={cities} moduleKey="cities" onItemsChange={setCities} onChange={(value) => setValues((current) => ({ ...current, addresses: current.addresses.map((entry, rowIndex) => rowIndex === index ? { ...entry, cityId: value ?? '1' } : entry) }))} />
+                      <LookupSelect label="Pincode" value={address.pincodeId} options={pincodes} moduleKey="pincodes" onItemsChange={setPincodes} onChange={(value) => setValues((current) => ({ ...current, addresses: current.addresses.map((entry, rowIndex) => rowIndex === index ? { ...entry, pincodeId: value ?? '1' } : entry) }))} />
                       <div className="grid gap-2"><Label>Latitude</Label><Input type="number" step="0.0000001" value={address.latitude ?? ''} onChange={(event) => setValues((current) => ({ ...current, addresses: current.addresses.map((entry, rowIndex) => rowIndex === index ? { ...entry, latitude: event.target.value ? Number(event.target.value) : null } : entry) }))} /></div>
                       <div className="grid gap-2"><Label>Longitude</Label><Input type="number" step="0.0000001" value={address.longitude ?? ''} onChange={(event) => setValues((current) => ({ ...current, addresses: current.addresses.map((entry, rowIndex) => rowIndex === index ? { ...entry, longitude: event.target.value ? Number(event.target.value) : null } : entry) }))} /></div>
                     </div>
@@ -419,11 +505,11 @@ export function CompanyFormPage() {
                 {values.bankAccounts.map((account, index) => (
                   <CollectionRow key={`bank-${index}`} onRemove={() => setValues((current) => ({ ...current, bankAccounts: current.bankAccounts.filter((_, rowIndex) => rowIndex !== index) }))}>
                     <div className="grid gap-4 md:grid-cols-2">
-                      <div className="grid gap-2"><Label>Bank Name</Label><Input value={account.bankName} onChange={(event) => setValues((current) => ({ ...current, bankAccounts: current.bankAccounts.map((entry, rowIndex) => rowIndex === index ? { ...entry, bankName: event.target.value } : entry) }))} /></div>
-                      <div className="grid gap-2"><Label>Branch</Label><Input value={account.branch ?? ''} onChange={(event) => setValues((current) => ({ ...current, bankAccounts: current.bankAccounts.map((entry, rowIndex) => rowIndex === index ? { ...entry, branch: event.target.value || null } : entry) }))} /></div>
-                      <div className="grid gap-2"><Label>Account Number</Label><Input value={account.accountNumber} onChange={(event) => setValues((current) => ({ ...current, bankAccounts: current.bankAccounts.map((entry, rowIndex) => rowIndex === index ? { ...entry, accountNumber: event.target.value } : entry) }))} /></div>
-                      <div className="grid gap-2"><Label>Account Holder Name</Label><Input value={account.accountHolderName} onChange={(event) => setValues((current) => ({ ...current, bankAccounts: current.bankAccounts.map((entry, rowIndex) => rowIndex === index ? { ...entry, accountHolderName: event.target.value } : entry) }))} /></div>
-                      <div className="grid gap-2"><Label>IFSC</Label><Input value={account.ifsc} onChange={(event) => setValues((current) => ({ ...current, bankAccounts: current.bankAccounts.map((entry, rowIndex) => rowIndex === index ? { ...entry, ifsc: event.target.value } : entry) }))} /></div>
+                        <div className="grid gap-2"><Label>Bank Name</Label><Input value={account.bankName} onChange={(event) => setValues((current) => ({ ...current, bankAccounts: current.bankAccounts.map((entry, rowIndex) => rowIndex === index ? { ...entry, bankName: event.target.value } : entry) }))} /></div>
+                        <div className="grid gap-2"><Label>Branch</Label><Input value={account.branch} onChange={(event) => setValues((current) => ({ ...current, bankAccounts: current.bankAccounts.map((entry, rowIndex) => rowIndex === index ? { ...entry, branch: event.target.value } : entry) }))} /></div>
+                        <div className="grid gap-2"><Label>Account Number</Label><Input value={account.accountNumber} onChange={(event) => setValues((current) => ({ ...current, bankAccounts: current.bankAccounts.map((entry, rowIndex) => rowIndex === index ? { ...entry, accountNumber: event.target.value } : entry) }))} /></div>
+                        <div className="grid gap-2"><Label>Account Holder Name</Label><Input value={account.accountHolderName} onChange={(event) => setValues((current) => ({ ...current, bankAccounts: current.bankAccounts.map((entry, rowIndex) => rowIndex === index ? { ...entry, accountHolderName: event.target.value } : entry) }))} /></div>
+                        <div className="grid gap-2"><Label>IFSC</Label><Input value={account.ifsc} onChange={(event) => setValues((current) => ({ ...current, bankAccounts: current.bankAccounts.map((entry, rowIndex) => rowIndex === index ? { ...entry, ifsc: event.target.value } : entry) }))} /></div>
                       <label className="flex items-center gap-3 pt-8"><Checkbox checked={account.isPrimary} onCheckedChange={(checked) => setValues((current) => ({ ...current, bankAccounts: current.bankAccounts.map((entry, rowIndex) => rowIndex === index ? { ...entry, isPrimary: Boolean(checked) } : entry) }))} /><span className="text-sm font-medium">Primary account</span></label>
                     </div>
                   </CollectionRow>

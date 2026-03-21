@@ -1,3 +1,4 @@
+import path from 'node:path'
 import { z } from 'zod'
 
 const environmentSchema = z.object({
@@ -24,9 +25,19 @@ const environmentSchema = z.object({
   SEED_DEFAULT_USER_AVATAR_URL: z
     .url()
     .default('https://ui-avatars.com/api/?name=Sundar&background=1f2937&color=ffffff'),
+  MEDIA_STORAGE_ROOT: z.string().min(1).optional(),
+  MEDIA_PUBLIC_BASE_URL: z.string().min(1).optional(),
+  MEDIA_WEB_PUBLIC_SYMLINK: z.string().min(1).optional(),
 })
 
 const parsedEnvironment = environmentSchema.parse(process.env)
+const resolvedStorageRoot = path.resolve(process.cwd(), parsedEnvironment.MEDIA_STORAGE_ROOT ?? 'storage')
+const resolvedWebPublicSymlink = path.resolve(
+  process.cwd(),
+  parsedEnvironment.MEDIA_WEB_PUBLIC_SYMLINK ?? 'apps/web/public/storage',
+)
+const mediaPublicBaseUrl =
+  parsedEnvironment.MEDIA_PUBLIC_BASE_URL ?? `http://localhost:${parsedEnvironment.PORT}/media/public`
 
 export const environment = {
   port: parsedEnvironment.PORT,
@@ -49,5 +60,12 @@ export const environment = {
       password: parsedEnvironment.SEED_DEFAULT_USER_PASSWORD,
       avatarUrl: parsedEnvironment.SEED_DEFAULT_USER_AVATAR_URL,
     },
+  },
+  media: {
+    storageRoot: resolvedStorageRoot,
+    publicDirectory: path.join(resolvedStorageRoot, 'public'),
+    privateDirectory: path.join(resolvedStorageRoot, 'private'),
+    publicBaseUrl: mediaPublicBaseUrl.replace(/\/$/, ''),
+    webPublicSymlink: resolvedWebPublicSymlink,
   },
 }

@@ -50,7 +50,7 @@ Describe the concrete outcome to deliver in this task.
 
 ### Title
 
-`Product master across backend and frontend`
+`Media manager module across backend and frontend`
 
 ### Status
 
@@ -58,22 +58,22 @@ completed
 
 ### Objective
 
-Implement the product master described in `ASSIST/Execution/IDEAS.md` across backend and frontend, reusing existing common reference tables where they already exist and adding the remaining product-specific tables, contracts, CRUD endpoints, and full-page list plus upsert screens that return to the product list after save.
+Implement the media manager described in `ASSIST/Execution/IDEAS.md` across backend and frontend, including shared contracts, storage-aware tables for files, folders, tags, usage, and versions, CRUD routes, dashboard list and upsert screens, and filesystem setup for public and private media storage that returns to the list after save.
 
 ### In Scope
 
-- Check the existing common reference modules and reuse product categories, brands, taxes, warehouses, and related masters instead of duplicating them
-- Add the remaining requested product-related tables through a separate migration and seed a default placeholder product
-- Introduce shared product schemas and backend CRUD routes for the product aggregate
-- Add a frontend product list page using the same list tone as the common modules
-- Add a full-page create/edit product form instead of a popup dialog
+- Add shared media schemas in `packages/shared`
+- Add media-specific tables through a separate migration and seed a default folder and placeholder media record
+- Introduce backend CRUD routes for the media aggregate including folders, tags, usage, and versions
+- Add a frontend media list page and full-page create/edit form in the dashboard workspace
+- Add storage configuration plus `storage/public` and `storage/private` directory support with a public-serving path
 - Update execution docs and changelog for this increment
 
 ### Out Of Scope
 
-- Full inventory posting workflows, valuation logic, or accounting integration beyond storing the requested product aggregate data
-- Reworking unrelated legacy state/auth files that still fail global typecheck
-- Building every downstream commerce workflow that may later consume products
+- Full multipart upload processing, image optimization jobs, or binary transformation pipelines
+- Authorization redesign beyond following the current dashboard access pattern
+- Reworking unrelated legacy typecheck issues outside the media module increment
 
 ### Dependencies
 
@@ -82,10 +82,10 @@ Implement the product master described in `ASSIST/Execution/IDEAS.md` across bac
 - `apps/api`
 - `apps/web`
 - `packages/shared`
-- Existing common-module reference tables and CRUD APIs
+- Existing dashboard routing and navigation
 - MariaDB environment configuration in `.env`
 
 ### Risks
 
-- The product aggregate spans many related tables, so transactional writes and fetch composition need to be kept consistent
-- Variant, stock, pricing, and tag child collections can become difficult to evolve if the initial persistence model is too rigid
+- The media aggregate spans several child collections and filesystem-aware paths, so storage consistency and fetch composition need to be kept aligned
+- Public/private storage handling can become brittle if URL generation and serving paths are not normalized clearly in the first increment

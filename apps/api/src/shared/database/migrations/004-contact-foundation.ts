@@ -110,6 +110,19 @@ export const contactFoundationMigration: Migration = {
 
     await db.execute(
       `
+        INSERT INTO ${commonTableNames.contactTypes} (id, code, name, description)
+        VALUES (?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          code = VALUES(code),
+          name = VALUES(name),
+          description = VALUES(description),
+          is_active = 1
+      `,
+      ['contact-type:company', 'COMPANY', 'Company', 'Organization or legal entity contact.'],
+    )
+
+    await db.execute(
+      `
         INSERT INTO ${contactTableNames.contacts} (
           id, uuid, contact_type_id, name, legal_name, opening_balance, credit_limit, description
         )
