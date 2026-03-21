@@ -7,7 +7,7 @@ import {
   LogOut,
 } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { NavLink } from "react-router-dom"
+import { NavLink, useLocation } from "react-router-dom"
 
 import {
   Sidebar,
@@ -18,7 +18,6 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSub,
@@ -30,11 +29,33 @@ import { useAuth } from "@/features/auth/components/auth-provider"
 import { commonModuleMenuGroups } from "@/features/common-modules/config/common-module-navigation"
 import { BrandMark } from "@/shared/branding/brand-mark"
 
+function getActiveGroupKey(pathname: string) {
+  const moduleMatch = pathname.match(/^\/dashboard\/common\/([^/]+)$/)
+  if (!moduleMatch) {
+    return null
+  }
+
+  const activeItem = commonModuleMenuGroups
+    .flatMap((group) => group.items.map((item) => ({ groupKey: group.key, itemKey: item.key })))
+    .find((entry) => entry.itemKey === moduleMatch[1])
+
+  return activeItem?.groupKey ?? null
+}
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { session, logout } = useAuth()
+  const location = useLocation()
+  const [openGroupKey, setOpenGroupKey] = React.useState<string | null>(() =>
+    getActiveGroupKey(location.pathname),
+  )
+
+  React.useEffect(() => {
+    const activeGroupKey = getActiveGroupKey(location.pathname)
+    setOpenGroupKey(activeGroupKey)
+  }, [location.pathname])
 
   return (
-      <Sidebar variant="inset" {...props}>
+      <Sidebar variant="inset" collapsible="icon" {...props}>
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
@@ -73,28 +94,34 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <SidebarMenuButton asChild tooltip="All masters">
                     <NavLink to="/dashboard/common">
                       <LayoutDashboard />
-                      <span>Master Workspace</span>
+                      <span>Common Workspace</span>
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 {commonModuleMenuGroups.map((group) => (
-                  <Collapsible key={group.key} asChild defaultOpen>
+                  <Collapsible
+                    key={group.key}
+                    asChild
+                    open={openGroupKey === group.key}
+                    onOpenChange={(open) => {
+                      setOpenGroupKey(open ? group.key : null)
+                    }}
+                  >
                     <SidebarMenuItem>
-                      <SidebarMenuButton tooltip={group.title}>
-                        <group.icon />
-                        <span>{group.title}</span>
-                      </SidebarMenuButton>
                       <CollapsibleTrigger asChild>
-                        <SidebarMenuAction className="data-[state=open]:rotate-90">
-                          <ChevronRight />
-                          <span className="sr-only">Toggle {group.title}</span>
-                        </SidebarMenuAction>
+                        <SidebarMenuButton tooltip={group.title} className="justify-between">
+                          <span className="flex items-center gap-2">
+                            <group.icon className="size-4" />
+                            <span>{group.title}</span>
+                          </span>
+                          <ChevronRight className="transition-transform duration-200 group-data-[state=open]/menu-item:rotate-90" />
+                        </SidebarMenuButton>
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                         <SidebarMenuSub>
                           {group.items.map((item) => (
                             <SidebarMenuSubItem key={item.key}>
-                              <SidebarMenuSubButton asChild>
+                              <SidebarMenuSubButton asChild isActive={location.pathname === `/dashboard/common/${item.key}`}>
                                 <NavLink to={`/dashboard/common/${item.key}`}>
                                   <item.icon />
                                   <span>{item.title}</span>

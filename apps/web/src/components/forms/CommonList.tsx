@@ -292,7 +292,7 @@ export function CommonList<TData>({
     <div className="space-y-4 ">
       <section className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between px-3">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground/80">{header.pageTitle}</h1>
+          {/*<h1 className="text-2xl font-semibold tracking-tight text-foreground/80">{header.pageTitle}</h1>*/}
           <p className="max-w-3xl text-sm text-muted-foreground/80">{header.pageDescription}</p>
         </div>
         {header.addLabel && header.onAddClick ? (

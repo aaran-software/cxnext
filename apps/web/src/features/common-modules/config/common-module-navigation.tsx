@@ -21,7 +21,7 @@ import {
 } from 'lucide-react'
 
 export type CommonModuleGroupKey =
-  | 'geography'
+  | 'location'
   | 'contacts'
   | 'catalog'
   | 'inventory'
@@ -43,8 +43,8 @@ export type CommonModuleMenuGroup = {
 
 export const commonModuleMenuGroups: CommonModuleMenuGroup[] = [
   {
-    key: 'geography',
-    title: 'Geography',
+    key: 'location',
+    title: 'Location',
     icon: Globe2,
     items: [
       { key: 'countries', title: 'Countries', icon: Flag, description: 'Country master and dialing defaults.' },
