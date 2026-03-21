@@ -39,6 +39,53 @@ export interface StoredAuthUser {
 }
 
 export class AuthUserRepository {
+  async findByEmail(email: string) {
+    await ensureDatabaseSchema()
+
+    const databasePool = getDatabasePool()
+    const [userRows] = await databasePool.execute<UserRow[]>(
+      `
+        SELECT
+          id,
+          email,
+          display_name,
+          avatar_url,
+          actor_type,
+          password_hash,
+          organization_name,
+          is_active,
+          created_at,
+          updated_at
+        FROM ${tableNames.users}
+        WHERE email = ?
+      `,
+      [email],
+    )
+
+    return Promise.all(
+      userRows.map(async (userRow) => {
+        const rolesAndPermissions = await this.getUserRolesAndPermissions(userRow.id)
+
+        return {
+          user: {
+            id: userRow.id,
+            email: userRow.email,
+            displayName: userRow.display_name,
+            avatarUrl: userRow.avatar_url,
+            actorType: userRow.actor_type,
+            isActive: Boolean(userRow.is_active),
+            organizationName: userRow.organization_name,
+            roles: rolesAndPermissions.roles,
+            permissions: rolesAndPermissions.permissions,
+            createdAt: userRow.created_at.toISOString(),
+            updatedAt: userRow.updated_at.toISOString(),
+          },
+          passwordHash: userRow.password_hash,
+        } satisfies StoredAuthUser
+      }),
+    )
+  }
+
   async findByEmailAndActorType(email: string, actorType: ActorType) {
     await ensureDatabaseSchema()
 
@@ -68,24 +115,8 @@ export class AuthUserRepository {
       return null
     }
 
-    const rolesAndPermissions = await this.getUserRolesAndPermissions(userRow.id)
-
-    return {
-      user: {
-        id: userRow.id,
-        email: userRow.email,
-        displayName: userRow.display_name,
-        avatarUrl: userRow.avatar_url,
-        actorType: userRow.actor_type,
-        isActive: Boolean(userRow.is_active),
-        organizationName: userRow.organization_name,
-        roles: rolesAndPermissions.roles,
-        permissions: rolesAndPermissions.permissions,
-        createdAt: userRow.created_at.toISOString(),
-        updatedAt: userRow.updated_at.toISOString(),
-      },
-      passwordHash: userRow.password_hash,
-    }
+    const [storedUser] = await this.findByEmail(userRow.email)
+    return storedUser ?? null
   }
 
   async create(input: {

@@ -3,20 +3,22 @@ import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ActorTypePicker } from '@/components/auth/actor-type-picker'
-import { useAuth } from '@/components/auth/auth-provider'
+import { ActorTypePicker } from '@/features/auth/components/actor-type-picker'
+import { useAuth } from '@/features/auth/components/auth-provider'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
-export function LoginPage() {
+export function RegisterPage() {
   const navigate = useNavigate()
-  const { login } = useAuth()
+  const { register } = useAuth()
 
-  const [actorType, setActorType] = useState<ActorType>('staff')
+  const [actorType, setActorType] = useState<ActorType>('customer')
+  const [displayName, setDisplayName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [organizationName, setOrganizationName] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -26,13 +28,19 @@ export function LoginPage() {
     setError(null)
 
     try {
-      await login({ email, password, actorType })
+      await register({
+        displayName,
+        email,
+        password,
+        actorType,
+        organizationName: organizationName.trim() || undefined,
+      })
       void navigate('/dashboard', { replace: true })
     } catch (submissionError) {
       setError(
         submissionError instanceof Error
           ? submissionError.message
-          : 'Unable to login right now.',
+          : 'Unable to register right now.',
       )
     } finally {
       setIsSubmitting(false)
@@ -41,37 +49,56 @@ export function LoginPage() {
 
   return (
     <Card className="overflow-hidden">
-      <CardHeader className="p-8">
-        <CardTitle className="text-3xl">Login</CardTitle>
+      <CardHeader className="items-center p-8 text-center">
+        <CardTitle className="text-3xl">Register</CardTitle>
         <CardDescription>
-          Choose the access type first, then authenticate against the API-issued JWT flow.
+          Create a secure CODEXSUN account for approved access to the platform.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6 p-8">
         <form className="space-y-6" onSubmit={(event) => void handleSubmit(event)}>
           <div className="grid gap-2">
-            <Label>Login type</Label>
+            <Label>Account type</Label>
             <ActorTypePicker value={actorType} onChange={setActorType} />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="display-name">Display name</Label>
             <Input
-              id="email"
-              type="email"
-              placeholder="name@example.com"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              id="display-name"
+              value={displayName}
+              onChange={(event) => setDisplayName(event.target.value)}
+              placeholder="Northwind Operator"
               required
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="register-email">Email</Label>
             <Input
-              id="password"
+              id="register-email"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="name@example.com"
+              required
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="organization-name">Organization</Label>
+            <Input
+              id="organization-name"
+              value={organizationName}
+              onChange={(event) => setOrganizationName(event.target.value)}
+              placeholder="Optional for customer accounts"
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="register-password">Password</Label>
+            <Input
+              id="register-password"
               type="password"
-              placeholder="Enter your password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
+              placeholder="Use at least 8 characters"
               required
             />
           </div>
@@ -81,17 +108,18 @@ export function LoginPage() {
             </div>
           ) : null}
           <Button className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? 'Signing in...' : 'Login'}
+            {isSubmitting ? 'Creating account...' : 'Create account'}
             <ArrowRight className="size-4" />
           </Button>
         </form>
         <p className="text-center text-sm text-muted-foreground">
-          Need a new account?{' '}
-          <Link to="/register" className="font-medium text-foreground underline underline-offset-4">
-            Register
+          Already have an account?{' '}
+          <Link to="/login" className="font-medium text-foreground underline underline-offset-4">
+            Login
           </Link>
         </p>
       </CardContent>
     </Card>
   )
 }
+

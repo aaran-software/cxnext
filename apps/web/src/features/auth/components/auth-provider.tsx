@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from 'react'
-import { login, register } from '@/lib/api'
+import { login, register } from '@/shared/api/client'
 
 const STORAGE_KEY = 'cxnext-auth-session-v2'
 
@@ -101,3 +101,4 @@ export function useAuth() {
 
   return context
 }
+

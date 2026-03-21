@@ -56,7 +56,6 @@ export const authRegisterPayloadSchema = z.object({
 export const authLoginPayloadSchema = z.object({
   email: z.email(),
   password: z.string().min(8),
-  actorType: actorTypeSchema,
 })
 
 export const authTokenResponseSchema = z.object({

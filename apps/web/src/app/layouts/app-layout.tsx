@@ -1,7 +1,7 @@
 import { Link, Outlet } from "react-router-dom"
-import { useAuth } from "@/components/auth/auth-provider"
-import { ThemeSwitcher } from "@/components/theme/theme-switcher"
-import { AppSidebar } from "@/components/menu/app/app-sidebar"
+import { useAuth } from "@/features/auth/components/auth-provider"
+import { ThemeSwitcher } from "@/shared/theme/theme-switcher"
+import { AppSidebar } from "@/features/dashboard/components/navigation/app-sidebar"
 import { Button } from "@/components/ui/button"
 import {
   Breadcrumb,
@@ -61,3 +61,4 @@ export function AppLayout() {
       </SidebarProvider>
   )
 }
+

@@ -1,7 +1,7 @@
 import { ArrowRight, CheckCircle2, Layers3, Sparkles, Workflow } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { navigationSections, productModules } from '@shared/index'
-import { ThemeSwitcher } from '@/components/theme/theme-switcher'
+import { ThemeSwitcher } from '@/shared/theme/theme-switcher'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -164,3 +164,4 @@ export function HomePage() {
     </div>
   )
 }
+

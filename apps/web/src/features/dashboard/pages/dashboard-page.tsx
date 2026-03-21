@@ -1,7 +1,7 @@
 import { ArrowUpRight, Clock3, Sparkles } from 'lucide-react'
 import { navigationSections, productModules } from '@shared/index'
-import { RoleGate } from '@/components/auth/role-gate'
-import { useAuth } from '@/components/auth/auth-provider'
+import { RoleGate } from '@/features/auth/components/role-gate'
+import { useAuth } from '@/features/auth/components/auth-provider'
 import { dashboardStats, workspaceSignals } from '@/lib/site'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -196,3 +196,4 @@ export function DashboardPage() {
     </div>
   )
 }
+

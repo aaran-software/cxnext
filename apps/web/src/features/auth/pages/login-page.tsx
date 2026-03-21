@@ -1,24 +1,19 @@
-import type { ActorType } from '@shared/index'
 import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ActorTypePicker } from '@/components/auth/actor-type-picker'
-import { useAuth } from '@/components/auth/auth-provider'
+import { useAuth } from '@/features/auth/components/auth-provider'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
-export function RegisterPage() {
+export function LoginPage() {
   const navigate = useNavigate()
-  const { register } = useAuth()
+  const { login } = useAuth()
 
-  const [actorType, setActorType] = useState<ActorType>('customer')
-  const [displayName, setDisplayName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [organizationName, setOrganizationName] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -28,19 +23,13 @@ export function RegisterPage() {
     setError(null)
 
     try {
-      await register({
-        displayName,
-        email,
-        password,
-        actorType,
-        organizationName: organizationName.trim() || undefined,
-      })
+      await login({ email, password })
       void navigate('/dashboard', { replace: true })
     } catch (submissionError) {
       setError(
         submissionError instanceof Error
           ? submissionError.message
-          : 'Unable to register right now.',
+          : 'Unable to login right now.',
       )
     } finally {
       setIsSubmitting(false)
@@ -49,56 +38,33 @@ export function RegisterPage() {
 
   return (
     <Card className="overflow-hidden">
-      <CardHeader className="p-8">
-        <CardTitle className="text-3xl">Register</CardTitle>
+      <CardHeader className="items-center p-8 text-center">
+        <CardTitle className="text-3xl">Welcome</CardTitle>
         <CardDescription>
-          Create a role-specific account for customer, vendor, staff, or admin access.
+          Access your workspace securely
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6 p-8">
         <form className="space-y-6" onSubmit={(event) => void handleSubmit(event)}>
           <div className="grid gap-2">
-            <Label>Account type</Label>
-            <ActorTypePicker value={actorType} onChange={setActorType} />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="display-name">Display name</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
-              id="display-name"
-              value={displayName}
-              onChange={(event) => setDisplayName(event.target.value)}
-              placeholder="Northwind Operator"
-              required
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="register-email">Email</Label>
-            <Input
-              id="register-email"
+              id="email"
               type="email"
+              placeholder="name@example.com"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              placeholder="name@example.com"
               required
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="organization-name">Organization</Label>
+            <Label htmlFor="password">Password</Label>
             <Input
-              id="organization-name"
-              value={organizationName}
-              onChange={(event) => setOrganizationName(event.target.value)}
-              placeholder="Optional for customer accounts"
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="register-password">Password</Label>
-            <Input
-              id="register-password"
+              id="password"
               type="password"
+              placeholder="Enter your password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              placeholder="Use at least 8 characters"
               required
             />
           </div>
@@ -108,17 +74,18 @@ export function RegisterPage() {
             </div>
           ) : null}
           <Button className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? 'Creating account...' : 'Create account'}
+            {isSubmitting ? 'Signing in...' : 'Login'}
             <ArrowRight className="size-4" />
           </Button>
         </form>
         <p className="text-center text-sm text-muted-foreground">
-          Already have an account?{' '}
-          <Link to="/login" className="font-medium text-foreground underline underline-offset-4">
-            Login
+          Need an account?{' '}
+          <Link to="/register" className="font-medium text-foreground underline underline-offset-4">
+            Request access
           </Link>
         </p>
       </CardContent>
     </Card>
   )
 }
+

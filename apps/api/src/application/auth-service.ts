@@ -53,21 +53,23 @@ export class AuthService {
     this.assertDatabaseEnabled()
 
     const parsedPayload = authLoginPayloadSchema.parse(payload)
-    const storedUser = await this.repository.findByEmailAndActorType(
-      parsedPayload.email,
-      parsedPayload.actorType,
-    )
+    const storedUsers = await this.repository.findByEmail(parsedPayload.email)
 
-    if (!storedUser) {
+    if (storedUsers.length === 0) {
       throw new ApplicationError('Invalid credentials.', { email: parsedPayload.email }, 401)
     }
 
-    const passwordMatches = await bcrypt.compare(
-      parsedPayload.password,
-      storedUser.passwordHash,
-    )
+    let storedUser = null
 
-    if (!passwordMatches) {
+    for (const candidate of storedUsers) {
+      const passwordMatches = await bcrypt.compare(parsedPayload.password, candidate.passwordHash)
+      if (passwordMatches) {
+        storedUser = candidate
+        break
+      }
+    }
+
+    if (!storedUser) {
       throw new ApplicationError('Invalid credentials.', { email: parsedPayload.email }, 401)
     }
 
