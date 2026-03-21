@@ -1,100 +1,51 @@
-import {
-  deliveryChannels,
-  navigationSections,
-  productModules,
-  validateBalancedVoucher,
-} from '@shared/index'
-import { Panel, StatusBadge } from '@ui/index'
+import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { RequireAuth } from '@/components/auth/require-auth'
+import { AppLayout } from '@/layouts/app-layout'
+import { AuthLayout } from '@/layouts/auth-layout'
+import { WebLayout } from '@/layouts/web-layout'
+import { AboutPage } from '@/pages/about-page'
+import { ContactPage } from '@/pages/contact-page'
+import { DashboardPage } from '@/pages/dashboard-page'
+import { HomePage } from '@/pages/home-page'
+import { LoginPage } from '@/pages/login-page'
+import { NotFoundPage } from '@/pages/not-found-page'
+import { RegisterPage } from '@/pages/register-page'
 
-const accountingInvariant = validateBalancedVoucher({
-  voucherType: 'sales_invoice',
-  voucherNumber: 'SI-0001',
-  postingDate: '2026-03-21',
-  effectiveDate: '2026-03-21',
-  createdAt: '2026-03-21T09:00:00.000Z',
-  lines: [
-    { ledgerId: 'accounts_receivable', debit: 1000, credit: 0 },
-    { ledgerId: 'sales_revenue', debit: 0, credit: 1000 },
-  ],
-})
+const router = createBrowserRouter([
+  {
+    element: <WebLayout />,
+    children: [
+      { index: true, element: <HomePage /> },
+      { path: 'about', element: <AboutPage /> },
+      { path: 'contact', element: <ContactPage /> },
+    ],
+  },
+  {
+    element: <RequireAuth />,
+    children: [
+      {
+        path: 'dashboard',
+        element: <AppLayout />,
+        children: [
+          { index: true, element: <DashboardPage /> },
+          { path: '*', element: <DashboardPage /> },
+        ],
+      },
+    ],
+  },
+  {
+    element: <AuthLayout />,
+    children: [
+      { path: 'login', element: <LoginPage /> },
+      { path: 'register', element: <RegisterPage /> },
+    ],
+  },
+  {
+    path: '*',
+    element: <NotFoundPage />,
+  },
+])
 
 export function App() {
-  return (
-    <main className="app-shell">
-      <header className="hero">
-        <div className="hero__copy">
-          <p className="eyebrow">Shared Codebase ERP Platform</p>
-          <h1>CXNext</h1>
-          <p className="hero__summary">
-            ERP, CRM, online store, billing, and desktop operations software
-            built on one TypeScript platform with React, Electron, and Node.js.
-          </p>
-        </div>
-        <div className="hero__card">
-          <h2>Engineering baseline</h2>
-          <ul>
-            <li>TypeScript across web, API, desktop, and shared packages</li>
-            <li>Clean separation between domain, application, transport, and UI</li>
-            <li>Explicit accounting guardrails before feature expansion</li>
-          </ul>
-        </div>
-      </header>
-
-      <section className="grid grid--two">
-        <Panel eyebrow="Channels" title="Delivery surfaces">
-          <div className="stack">
-            {deliveryChannels.map((channel) => (
-              <article key={channel.id} className="list-card">
-                <h3>{channel.name}</h3>
-                <p>{channel.summary}</p>
-              </article>
-            ))}
-          </div>
-        </Panel>
-
-        <Panel eyebrow="Guardrails" title="Accounting invariant sample">
-          <div className="invariant">
-            <p>
-              Balanced voucher validation:
-              <strong>{accountingInvariant.ok ? ' pass' : ' fail'}</strong>
-            </p>
-            <p>
-              Every future posting workflow must preserve atomicity,
-              traceability, and balanced ledger lines.
-            </p>
-          </div>
-        </Panel>
-      </section>
-
-      <section className="grid">
-        <Panel eyebrow="Module map" title="Product modules">
-          <div className="module-grid">
-            {productModules.map((module) => (
-              <article key={module.id} className="module-card">
-                <div className="module-card__header">
-                  <h3>{module.name}</h3>
-                  <StatusBadge status={module.readiness} />
-                </div>
-                <p>{module.summary}</p>
-              </article>
-            ))}
-          </div>
-        </Panel>
-      </section>
-
-      <section className="grid grid--three">
-        {navigationSections.map((section) => (
-          <Panel key={section.title} eyebrow="Workstreams" title={section.title}>
-            <ul className="module-list">
-              {section.moduleIds.map((moduleId) => {
-                const module = productModules.find((entry) => entry.id === moduleId)
-
-                return module ? <li key={module.id}>{module.name}</li> : null
-              })}
-            </ul>
-          </Panel>
-        ))}
-      </section>
-    </main>
-  )
+  return <RouterProvider router={router} />
 }

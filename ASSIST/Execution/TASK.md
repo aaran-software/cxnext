@@ -50,7 +50,7 @@ Describe the concrete outcome to deliver in this task.
 
 ### Title
 
-Repository execution planning templates
+API runtime env loading and local login smoke fix
 
 ### Status
 
@@ -58,26 +58,27 @@ completed
 
 ### Objective
 
-Add a dedicated execution folder with task, planning, and walkthrough templates and wire them into the AI operating rules.
+Fix the local runtime issue causing `http://localhost:4000/auth/login` to refuse connections by ensuring the API loads `.env` automatically in development and by verifying that the API can start and answer health/auth requests with the configured local MariaDB setup.
 
 ### In Scope
 
-- Create `ASSIST/Execution`
-- Add `TASK.md`
-- Add `PLANNING.md`
-- Add `WALKTHROUGH.md`
-- Update `ASSIST/AI_RULES.md`
+- Load `.env` automatically for the API runtime
+- Verify the API starts successfully on port `4000`
+- Smoke-test health and login locally
+- Update execution docs and changelog for the runtime fix
 
 ### Out Of Scope
 
-- Feature implementation
-- Runtime architecture changes
+- Auth model redesign
+- Frontend UI changes unrelated to the runtime failure
+- Deployment or production process changes
 
 ### Dependencies
 
 - `ASSIST/AI_RULES.md`
-- Existing repository discipline files
+- Local `.env`
+- `apps/api`
 
 ### Risks
 
-- Future contributors may leave templates stale unless process discipline is followed
+- Fixing env loading must not break existing build or tsup behavior

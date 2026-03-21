@@ -17,6 +17,7 @@
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
+      "@/*": ["apps/web/src/*"],
       "@shared/*": ["packages/shared/src/*"],
       "@ui/*": ["packages/ui/src/*"]
     }

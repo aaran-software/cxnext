@@ -1,0 +1,85 @@
+import { z } from 'zod'
+
+export const actorTypeSchema = z.enum(['customer', 'staff', 'admin', 'vendor'])
+export const permissionKeySchema = z.enum([
+  'dashboard:view',
+  'users:manage',
+  'roles:manage',
+  'permissions:manage',
+  'vendors:view',
+  'customers:view',
+])
+
+export const roleKeySchema = z.enum([
+  'customer_portal',
+  'staff_operator',
+  'admin_owner',
+  'vendor_portal',
+])
+
+export const permissionSchema = z.object({
+  key: permissionKeySchema,
+  name: z.string().min(1),
+  summary: z.string().min(1),
+})
+
+export const roleSchema = z.object({
+  key: roleKeySchema,
+  name: z.string().min(1),
+  summary: z.string().min(1),
+  actorType: actorTypeSchema,
+  permissions: z.array(permissionSchema),
+})
+
+export const authUserSchema = z.object({
+  id: z.string().min(1),
+  email: z.email(),
+  displayName: z.string().min(1),
+  actorType: actorTypeSchema,
+  avatarUrl: z.url().nullable(),
+  isActive: z.boolean(),
+  organizationName: z.string().min(1).nullable(),
+  roles: z.array(roleSchema),
+  permissions: z.array(permissionSchema),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+})
+
+export const authRegisterPayloadSchema = z.object({
+  email: z.email(),
+  password: z.string().min(8),
+  displayName: z.string().min(2),
+  actorType: actorTypeSchema,
+  organizationName: z.string().trim().min(2).max(120).optional(),
+})
+
+export const authLoginPayloadSchema = z.object({
+  email: z.email(),
+  password: z.string().min(8),
+  actorType: actorTypeSchema,
+})
+
+export const authTokenResponseSchema = z.object({
+  accessToken: z.string().min(1),
+  tokenType: z.literal('Bearer'),
+  expiresInSeconds: z.number().int().positive(),
+  user: authUserSchema,
+})
+
+export const databaseHealthSchema = z.object({
+  status: z.enum(['ok', 'disabled', 'error']),
+  engine: z.literal('mariadb'),
+  checkedAt: z.string().min(1),
+  detail: z.string().min(1),
+})
+
+export type ActorType = z.infer<typeof actorTypeSchema>
+export type PermissionKey = z.infer<typeof permissionKeySchema>
+export type RoleKey = z.infer<typeof roleKeySchema>
+export type AuthPermission = z.infer<typeof permissionSchema>
+export type AuthRole = z.infer<typeof roleSchema>
+export type AuthUser = z.infer<typeof authUserSchema>
+export type AuthRegisterPayload = z.infer<typeof authRegisterPayloadSchema>
+export type AuthLoginPayload = z.infer<typeof authLoginPayloadSchema>
+export type AuthTokenResponse = z.infer<typeof authTokenResponseSchema>
+export type DatabaseHealth = z.infer<typeof databaseHealthSchema>

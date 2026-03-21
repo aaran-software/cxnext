@@ -53,33 +53,38 @@ State the intended result in one paragraph.
 
 ### Task
 
-Repository execution planning templates
+`API runtime env loading and local login smoke fix`
 
 ### Goal
 
-Introduce a durable execution workflow under `ASSIST/Execution` so active task scope, planning assumptions, and completed walkthrough details are stored in predictable files and referenced by AI rules.
+Make the local auth stack actually runnable without manual env injection. The API should read `.env` automatically when started through the normal dev workflow, then successfully respond on port `4000` so the frontend login fetch no longer fails with connection refusal.
 
 ### Assumptions
 
-- `ASSIST` is the source of truth for repository process
-- Templates are sufficient for now; no automation is required yet
+- The browser error is caused by the API not running or not booting cleanly with env values
+- A `dotenv`-based runtime load is acceptable in this repository
+- The current local MariaDB settings in `.env` are correct
 
 ### Constraints
 
-- Keep the structure simple and readable
-- Do not add conflicting process rules outside existing documentation
+- Preserve build and typecheck behavior
+- Keep the fix minimal and focused on the runtime failure
+- Re-verify with a live local API smoke test
 
 ### Plan
 
-1. Create a new execution subfolder under `ASSIST`
-2. Add `TASK.md`, `PLANNING.md`, and `WALKTHROUGH.md` with usable templates
-3. Update `ASSIST/AI_RULES.md` so agents must read and maintain them
+1. Add runtime `.env` loading for the API
+2. Start the API locally and verify `/health`
+3. Verify `/auth/login` works for the seeded Sundar account
+4. Update walkthrough and changelog with the runtime fix
 
 ### Validation
 
-- Review file presence and content consistency
-- Confirm AI rules mention the execution files explicitly
+- Local API smoke test
+- `npm run lint`
+- `npm run typecheck`
+- `npm run build`
 
 ### Open Questions
 
-- Whether future automation should prefill these files per task
+- Whether the team wants a dedicated smoke-test script committed after this fix

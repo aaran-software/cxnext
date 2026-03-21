@@ -27,7 +27,8 @@ Current delivery is foundation work:
 3. Initial Node API scaffold
 4. Initial React application shell
 5. Initial Electron shell
-6. Repository discipline and operating documentation
+6. MariaDB-backed authentication and RBAC foundation with frontend-connected login/register flows
+7. Repository discipline and operating documentation
 
 ## Product Principles
 

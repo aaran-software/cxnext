@@ -1,12 +1,12 @@
+import 'dotenv/config'
 import { createServer } from 'node:http'
+import { environment } from './config/environment'
 import { routeRequest } from './routes/router'
 
-const port = Number(process.env.PORT ?? 4000)
-
 const server = createServer((request, response) => {
-  routeRequest(request, response)
+  void routeRequest(request, response)
 })
 
-server.listen(port, () => {
-  console.log(`CXNext API listening on http://localhost:${port}`)
+server.listen(environment.port, () => {
+  console.log(`CXNext API listening on http://localhost:${environment.port}`)
 })

@@ -5,10 +5,13 @@
     "types": ["node"]
   },
   "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
     "apps/**/*.ts",
     "apps/**/*.tsx",
     "packages/**/*.ts",
     "packages/**/*.tsx",
+    "vite.config.ts",
     "eslint.config.js"
   ]
 }

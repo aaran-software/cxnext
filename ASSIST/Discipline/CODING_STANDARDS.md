@@ -15,6 +15,7 @@
 3. Financial writes must be atomic, balanced, traceable, and audit-safe.
 4. Never hard-delete financial transactions. Model reversals, cancellations, or correction entries.
 5. Store posting date, effective date, and created timestamp separately for accounting events.
+6. Database tables should default to lifecycle columns named `is_active`, `created_at`, and `updated_at` unless a documented exception exists.
 
 ## Frontend Rules
 

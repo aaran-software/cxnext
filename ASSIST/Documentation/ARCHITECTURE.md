@@ -50,10 +50,17 @@ ASSIST/
 ## Current Technical Foundation
 
 1. `apps/web` renders the operator-facing shell and roadmap summary.
-2. `apps/api` exposes a bootstrap API for system metadata and module readiness.
+2. `apps/api` exposes bootstrap, health, and auth endpoints with MariaDB-backed RBAC persistence.
 3. `apps/desktop` wraps the web client in Electron.
-4. `packages/shared` centralizes domain types, schemas, and accounting guardrails.
+4. `packages/shared` centralizes domain types, schemas, auth contracts, and accounting guardrails.
 5. `packages/ui` contains reusable React primitives.
+
+## Current Auth Foundation
+
+1. The API persists auth data in normalized `auth_users`, `auth_roles`, `auth_permissions`, `auth_user_roles`, and `auth_role_permissions` tables so it can coexist with pre-existing schemas in `cxnext_db`.
+2. The default table shape now expects `is_active`, `created_at`, and `updated_at` lifecycle columns unless an exception is documented.
+3. JWT auth responses expose avatar, roles, and permissions to the frontend through shared schemas.
+4. Development bootstrap can seed a default admin user and RBAC metadata from environment-driven configuration.
 
 ## Architecture Constraints
 
