@@ -50,7 +50,7 @@ Describe the concrete outcome to deliver in this task.
 
 ### Title
 
-`Application menu and common-module workspace`
+`Product master across backend and frontend`
 
 ### Status
 
@@ -58,31 +58,34 @@ completed
 
 ### Objective
 
-Implement the application menu described in `ASSIST/Execution/IDEAS.md` by replacing the placeholder dashboard navigation with a production-oriented common header and grouped common-module sidebar menu, then connect the existing common list UX to the new backend common-module APIs so the master screens are actually usable.
+Implement the product master described in `ASSIST/Execution/IDEAS.md` across backend and frontend, reusing existing common reference tables where they already exist and adding the remaining product-specific tables, contracts, CRUD endpoints, and full-page list plus upsert screens that return to the product list after save.
 
 ### In Scope
 
-- Prepare the application menu structure for the dashboard shell
-- Add a common header that works across the application workspace
-- Group common modules in the sidebar with chevron toggles and relevant icons
-- Connect the common-module list and upsert UX to the backend metadata and CRUD endpoints
+- Check the existing common reference modules and reuse product categories, brands, taxes, warehouses, and related masters instead of duplicating them
+- Add the remaining requested product-related tables through a separate migration and seed a default placeholder product
+- Introduce shared product schemas and backend CRUD routes for the product aggregate
+- Add a frontend product list page using the same list tone as the common modules
+- Add a full-page create/edit product form instead of a popup dialog
 - Update execution docs and changelog for this increment
 
 ### Out Of Scope
 
-- Reworking the public marketing/store shells
-- Full ERP transaction flows beyond common masters
-- Solving every unrelated pre-existing frontend typecheck issue outside the common-module workspace
+- Full inventory posting workflows, valuation logic, or accounting integration beyond storing the requested product aggregate data
+- Reworking unrelated legacy state/auth files that still fail global typecheck
+- Building every downstream commerce workflow that may later consume products
 
 ### Dependencies
 
 - `ASSIST/AI_RULES.md`
 - `ASSIST/Execution/IDEAS.md`
-- `apps/web`
 - `apps/api`
+- `apps/web`
 - `packages/shared`
+- Existing common-module reference tables and CRUD APIs
+- MariaDB environment configuration in `.env`
 
 ### Risks
 
-- The old generic form code still depends on missing primitives and stale data shapes, so the UI layer needs careful cleanup before it can compile cleanly
-- The app menu structure needs to stay scalable for future ERP modules instead of being hardcoded only for the current common-module set
+- The product aggregate spans many related tables, so transactional writes and fetch composition need to be kept consistent
+- Variant, stock, pricing, and tag child collections can become difficult to evolve if the initial persistence model is too rigid

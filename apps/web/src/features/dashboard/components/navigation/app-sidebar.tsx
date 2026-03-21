@@ -2,9 +2,12 @@
 
 import * as React from "react"
 import {
+  Building2,
   ChevronRight,
+  ContactRound,
   LayoutDashboard,
   LogOut,
+  Package,
 } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { NavLink, useLocation } from "react-router-dom"
@@ -79,6 +82,30 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <NavLink to="/dashboard">
                       <LayoutDashboard />
                       <span>Overview</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="Companies">
+                    <NavLink to="/dashboard/companies">
+                      <Building2 />
+                      <span>Companies</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="Contacts">
+                    <NavLink to="/dashboard/contacts">
+                      <ContactRound />
+                      <span>Contacts</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="Products">
+                    <NavLink to="/dashboard/products">
+                      <Package />
+                      <span>Products</span>
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

@@ -49,51 +49,50 @@ Short description of the delivered increment.
 
 ### Task
 
-`Application menu and common-module workspace`
+`Product master across backend and frontend`
 
 ### Summary
 
-Delivered the application-menu increment from `ASSIST/Execution/IDEAS.md`. The dashboard shell now uses a production-oriented common header and grouped sidebar menu for the shared masters, and the common-list UX is connected to the backend common-module APIs so the master workspace is functional instead of placeholder-only.
+Delivered the product aggregate requested in `ASSIST/Execution/IDEAS.md` across backend and frontend. The implementation first verified that product categories, brands, product groups, product types, units, HSN codes, taxes, styles, and warehouses already exist in the common-module foundation and reused them instead of creating duplicates. It then added the remaining product-specific tables and placeholder seed data, shared product schemas, transactional backend CRUD routes for products with variants, images, pricing, discounts, offers, stock, SEO, tags, and reviews, and frontend product list plus full-page create/edit screens that return to the product list after save.
 
 ### Files Changed
 
-- `ASSIST/Execution/TASK.md` to track and complete the application-menu task
-- `ASSIST/Execution/PLANNING.md` to record the menu/common-workspace plan
-- `ASSIST/Execution/WALKTHROUGH.md` to capture implementation details and residual gaps
-- `apps/web/src/app/router.tsx` to add common-module workspace routes under the app shell
-- `apps/web/src/app/layouts/app-layout.tsx` and `apps/web/src/features/dashboard/components/navigation/app-header.tsx` to introduce the common workspace header
-- `apps/web/src/features/dashboard/components/navigation/app-sidebar.tsx` to replace placeholder demo navigation with grouped chevron menus and relevant icons
-- `apps/web/src/features/common-modules/config/common-module-navigation.tsx` to define scalable menu groups and module icons
-- `apps/web/src/features/common-modules/lib/common-module-definitions.tsx` to bind backend metadata and CRUD endpoints into the existing common-list UX
-- `apps/web/src/features/common-modules/pages/common-modules-home-page.tsx` and `apps/web/src/features/common-modules/pages/common-module-page.tsx` to add the working common-module screens
-- `apps/web/src/shared/api/client.ts` to add common-module metadata and CRUD client helpers plus `HttpError`
-- `apps/web/src/components/forms/*` and `apps/web/src/types/common.ts` to align the common-master forms with the shared/backend data shape
-- `apps/web/src/components/ui/dialog.tsx`, `apps/web/src/components/ui/checkbox.tsx`, `apps/web/src/components/ui/field.tsx`, and `apps/web/src/components/lookups/AutocompleteLookup.tsx` to provide the missing frontend primitives required by the common-module dialogs
-- `ASSIST/Documentation/CHANGELOG.md` to document the new application-menu and common-workspace surface
+- `ASSIST/Execution/TASK.md` to track and complete the product master task
+- `ASSIST/Execution/PLANNING.md` to record the product scope and validation plan
+- `ASSIST/Execution/WALKTHROUGH.md` to record the delivered product slice and residual risks
+- `packages/shared/src/schemas/product.ts` and `packages/shared/src/index.ts` to centralize product contracts
+- `apps/api/src/shared/database/table-names.ts` and `apps/api/src/shared/database/migrations/005-product-foundation.ts` to add product-specific tables and bootstrap a placeholder product while reusing existing common masters
+- `apps/api/src/shared/database/migrations/index.ts` to register the new product migration
+- `apps/api/src/features/product/data/product-repository.ts` and `apps/api/src/features/product/application/product-service.ts` to implement transactional product CRUD logic
+- `apps/api/src/app/http/router.ts` to expose `/products` CRUD routes
+- `apps/web/src/shared/api/client.ts` to add product API helpers
+- `apps/web/src/features/product/pages/product-list-page.tsx` to add the product list with the same list tone as the common modules
+- `apps/web/src/features/product/pages/product-form-page.tsx` to add the full-page product create/edit flow
+- `apps/web/src/app/router.tsx`, `apps/web/src/features/dashboard/components/navigation/app-sidebar.tsx`, and `apps/web/src/features/dashboard/components/navigation/app-header.tsx` to wire the product flow into the app workspace
+- `ASSIST/Documentation/CHANGELOG.md` to document the product master increment
 
 ### Validation Performed
 
 - Reviewed `ASSIST/AI_RULES.md`
 - Reviewed `ASSIST/Execution/IDEAS.md`
-- Reviewed the current app shell, dashboard navigation, and common-master frontend hooks
-- `npm run build:web`
+- Reviewed the current common-module tables to avoid duplicating existing product-related reference masters
 - `npm run build:api`
-- `npm run typecheck` still fails because of pre-existing legacy files under `apps/web/src/state/*` and `apps/web/src/components/forms/ProtectedRoute.tsx`
+- `npm run build:web`
 
 ### Decisions
 
-- Keep the existing common-list and common-upsert UX instead of replacing it with a new screen pattern
-- Group common modules by functional area in the sidebar so the menu scales beyond the current set of master tables
-- Use backend metadata plus a thin local presentation registry for icons, descriptions, and grouping instead of duplicating full schema rules locally
-- Add a common app header with a module switcher so common-module navigation is available both in the sidebar and in the header
+- Implement the product aggregate as a dedicated feature instead of forcing it into the generic common-module registry
+- Reuse the existing common masters for categories, brands, product groups, product types, units, HSN, tax, styles, and warehouses instead of creating parallel copies
+- Use transactional aggregate writes that deactivate prior child rows and insert fresh active rows on edit
+- Keep the frontend list surface aligned with the common-list tone, but move product editing to a dedicated page instead of a popup dialog
 
 ### Remaining Work
 
-- Add authorization controls around the common-module backend endpoints before wider production exposure
-- Decide whether common-module screens should resolve and display reference names directly in tables instead of raw foreign-key ids
-- Remove or modernize the unrelated legacy `state/*` and old protected-route files so repository-wide typecheck can pass
+- Add authorization around product CRUD routes before broader production exposure
+- Improve the frontend product form with richer lookup behavior and validation for variant-linked child collections
+- Split operational inventory movement creation from product-master editing once the stock workflow is implemented
 
 ### Risks
 
-- Reference-backed masters currently display stored ids in table cells for related entities, which is functional but not yet ideal for operator readability
-- The common-module workspace is now operational, but broader ERP menu areas beyond common masters still need the same structured navigation treatment
+- Child collections are currently rewritten on edit by deactivating previous rows and inserting new ones, which is safe for history but not yet optimized for fine-grained edits
+- Stock movements are currently editable through the product aggregate because the operational inventory workflow does not exist yet, so this should be tightened once inventory transactions are introduced

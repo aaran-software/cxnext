@@ -3,6 +3,18 @@ import type {
   AuthRegisterPayload,
   AuthTokenResponse,
   AuthUser,
+  Company,
+  CompanyListResponse,
+  CompanyResponse,
+  CompanyUpsertPayload,
+  Contact,
+  ContactListResponse,
+  ContactResponse,
+  ContactUpsertPayload,
+  Product,
+  ProductListResponse,
+  ProductResponse,
+  ProductUpsertPayload,
   CommonModuleKey,
   CommonModuleListResponse,
   CommonModuleMetadata,
@@ -128,4 +140,110 @@ export async function restoreCommonModuleItem(moduleKey: CommonModuleKey, id: st
   await request<CommonModuleRecordResponse>(`/common/${moduleKey}/${id}/restore`, {
     method: 'POST',
   })
+}
+
+export async function listCompanies() {
+  const response = await request<CompanyListResponse>('/companies')
+  return response.items
+}
+
+export async function getCompany(id: string) {
+  const response = await request<CompanyResponse>(`/companies/${id}`)
+  return response.item
+}
+
+export async function createCompany(payload: CompanyUpsertPayload) {
+  const response = await request<CompanyResponse>('/companies', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  return response.item
+}
+
+export async function updateCompany(id: string, payload: CompanyUpsertPayload) {
+  const response = await request<CompanyResponse>(`/companies/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+  return response.item
+}
+
+export async function deactivateCompany(id: string) {
+  await request<CompanyResponse>(`/companies/${id}`, {
+    method: 'DELETE',
+  })
+}
+
+export async function restoreCompany(id: string) {
+  await request<CompanyResponse>(`/companies/${id}/restore`, {
+    method: 'POST',
+  })
+}
+
+export async function listContacts() {
+  const response = await request<ContactListResponse>('/contacts')
+  return response.items
+}
+
+export async function getContact(id: string) {
+  const response = await request<ContactResponse>(`/contacts/${id}`)
+  return response.item
+}
+
+export async function createContact(payload: ContactUpsertPayload) {
+  const response = await request<ContactResponse>('/contacts', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  return response.item
+}
+
+export async function updateContact(id: string, payload: ContactUpsertPayload) {
+  const response = await request<ContactResponse>(`/contacts/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+  return response.item
+}
+
+export async function deactivateContact(id: string) {
+  await request<ContactResponse>(`/contacts/${id}`, { method: 'DELETE' })
+}
+
+export async function restoreContact(id: string) {
+  await request<ContactResponse>(`/contacts/${id}/restore`, { method: 'POST' })
+}
+
+export async function listProducts() {
+  const response = await request<ProductListResponse>('/products')
+  return response.items
+}
+
+export async function getProduct(id: string) {
+  const response = await request<ProductResponse>(`/products/${id}`)
+  return response.item
+}
+
+export async function createProduct(payload: ProductUpsertPayload) {
+  const response = await request<ProductResponse>('/products', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  return response.item
+}
+
+export async function updateProduct(id: string, payload: ProductUpsertPayload) {
+  const response = await request<ProductResponse>(`/products/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+  return response.item
+}
+
+export async function deactivateProduct(id: string) {
+  await request<ProductResponse>(`/products/${id}`, { method: 'DELETE' })
+}
+
+export async function restoreProduct(id: string) {
+  await request<ProductResponse>(`/products/${id}/restore`, { method: 'POST' })
 }

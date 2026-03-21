@@ -33,3 +33,41 @@ export const commonTableNames = {
   destinations: 'common_destinations',
   paymentTerms: 'common_payment_terms',
 } as const
+
+export const companyTableNames = {
+  companies: 'companies',
+  logos: 'company_logos',
+  addresses: 'company_addresses',
+  emails: 'company_emails',
+  phones: 'company_phones',
+  bankAccounts: 'company_bank_accounts',
+} as const
+
+export const contactTableNames = {
+  contacts: 'contacts',
+  addresses: 'contact_addresses',
+  emails: 'contact_emails',
+  phones: 'contact_phones',
+  bankAccounts: 'contact_bank_accounts',
+  gstDetails: 'contact_gst_details',
+} as const
+
+export const productTableNames = {
+  products: 'products',
+  variants: 'product_variants',
+  variantAttributes: 'product_variant_attributes',
+  images: 'product_images',
+  variantImages: 'product_variant_images',
+  stockItems: 'stock_items',
+  stockMovements: 'stock_movements',
+  prices: 'product_prices',
+  discounts: 'product_discounts',
+  offers: 'product_offers',
+  attributes: 'product_attributes',
+  attributeValues: 'product_attribute_values',
+  variantMap: 'product_variant_map',
+  seo: 'product_seo',
+  reviews: 'product_reviews',
+  tags: 'product_tags',
+  tagMap: 'product_tag_map',
+} as const

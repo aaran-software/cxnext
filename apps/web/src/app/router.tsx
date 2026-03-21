@@ -10,6 +10,12 @@ import { ContactPage } from '@/features/marketing/pages/contact-page'
 import { DashboardPage } from '@/features/dashboard/pages/dashboard-page'
 import { CommonModulePage } from '@/features/common-modules/pages/common-module-page'
 import { CommonModulesHomePage } from '@/features/common-modules/pages/common-modules-home-page'
+import { CompanyFormPage } from '@/features/company/pages/company-form-page'
+import { CompanyListPage } from '@/features/company/pages/company-list-page'
+import { ContactFormPage } from '@/features/contact/pages/contact-form-page'
+import { ContactListPage } from '@/features/contact/pages/contact-list-page'
+import { ProductFormPage } from '@/features/product/pages/product-form-page'
+import { ProductListPage } from '@/features/product/pages/product-list-page'
 import { LoginPage } from '@/features/auth/pages/login-page'
 import { NotFoundPage } from '@/features/marketing/pages/not-found-page'
 import { PlaceholderPage } from '@/features/store/pages/placeholder-page'
@@ -26,6 +32,15 @@ const dashboardRoutes = {
       element: <AppLayout />,
       children: [
         { index: true, element: <DashboardPage /> },
+        { path: 'companies', element: <CompanyListPage /> },
+        { path: 'companies/new', element: <CompanyFormPage /> },
+        { path: 'companies/:companyId/edit', element: <CompanyFormPage /> },
+        { path: 'contacts', element: <ContactListPage /> },
+        { path: 'contacts/new', element: <ContactFormPage /> },
+        { path: 'contacts/:contactId/edit', element: <ContactFormPage /> },
+        { path: 'products', element: <ProductListPage /> },
+        { path: 'products/new', element: <ProductFormPage /> },
+        { path: 'products/:productId/edit', element: <ProductFormPage /> },
         { path: 'common', element: <CommonModulesHomePage /> },
         { path: 'common/:moduleKey', element: <CommonModulePage /> },
         { path: '*', element: <DashboardPage /> },

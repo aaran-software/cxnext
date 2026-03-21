@@ -1,6 +1,6 @@
 import type { CommonModuleKey } from '@shared/index'
 import { Link, useLocation } from 'react-router-dom'
-import { ChevronRight, Home, LayoutDashboard } from 'lucide-react'
+import { Building2, ChevronRight, ContactRound, Home, LayoutDashboard, Package } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
@@ -20,6 +20,69 @@ function resolveCurrentTitle(pathname: string) {
     return {
       section: 'Common Modules',
       title: 'Common workspace',
+    }
+  }
+
+  if (pathname === '/dashboard/companies' || pathname === '/dashboard/companies/') {
+    return {
+      section: 'Organization',
+      title: 'Companies',
+    }
+  }
+
+  if (pathname === '/dashboard/companies/new') {
+    return {
+      section: 'Organization',
+      title: 'New Company',
+    }
+  }
+
+  if (/^\/dashboard\/companies\/[^/]+\/edit$/.test(pathname)) {
+    return {
+      section: 'Organization',
+      title: 'Edit Company',
+    }
+  }
+
+  if (pathname === '/dashboard/contacts' || pathname === '/dashboard/contacts/') {
+    return {
+      section: 'CRM',
+      title: 'Contacts',
+    }
+  }
+
+  if (pathname === '/dashboard/contacts/new') {
+    return {
+      section: 'CRM',
+      title: 'New Contact',
+    }
+  }
+
+  if (/^\/dashboard\/contacts\/[^/]+\/edit$/.test(pathname)) {
+    return {
+      section: 'CRM',
+      title: 'Edit Contact',
+    }
+  }
+
+  if (pathname === '/dashboard/products' || pathname === '/dashboard/products/') {
+    return {
+      section: 'Catalog',
+      title: 'Products',
+    }
+  }
+
+  if (pathname === '/dashboard/products/new') {
+    return {
+      section: 'Catalog',
+      title: 'New Product',
+    }
+  }
+
+  if (/^\/dashboard\/products\/[^/]+\/edit$/.test(pathname)) {
+    return {
+      section: 'Catalog',
+      title: 'Edit Product',
     }
   }
 
@@ -64,6 +127,24 @@ export function AppHeader() {
       </div>
 
       <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" asChild>
+          <Link to="/dashboard/contacts">
+            <ContactRound className="size-4" />
+            Contacts
+          </Link>
+        </Button>
+        <Button variant="outline" size="sm" asChild>
+          <Link to="/dashboard/products">
+            <Package className="size-4" />
+            Products
+          </Link>
+        </Button>
+        <Button variant="outline" size="sm" asChild>
+          <Link to="/dashboard/companies">
+            <Building2 className="size-4" />
+            Companies
+          </Link>
+        </Button>
         <Button variant="outline" size="sm" asChild>
           <Link to="/dashboard">
             <LayoutDashboard className="size-4" />

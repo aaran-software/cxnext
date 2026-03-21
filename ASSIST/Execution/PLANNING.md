@@ -53,39 +53,42 @@ State the intended result in one paragraph.
 
 ### Task
 
-`Application menu and common-module workspace`
+`Product master across backend and frontend`
 
 ### Goal
 
-Replace the placeholder app navigation with a scalable application menu and common header, then connect the existing common-master list UX to the new backend APIs so the dashboard shell becomes a working common-module workspace. The increment should preserve the current UX direction, use grouped chevron menus with relevant icons, and avoid duplicating backend field rules where shared contracts already exist.
+Deliver the product aggregate requested in `ASSIST/Execution/IDEAS.md` as a production-oriented vertical slice. The increment should first verify which requested masters already exist in the common-module foundation, then add only the missing product-specific tables, expose transactional CRUD APIs for the product aggregate including variants, images, pricing, discounts, offers, stock, SEO, and tags, and add frontend list plus full-page create/edit flows that align with the existing dashboard workspace and return to the product list after save.
 
 ### Assumptions
 
-- The dashboard shell under `frontendTarget=app` is the primary surface for the requested application menu
-- The common-module backend metadata can drive most of the frontend module wiring
-- The existing `CommonList` and `CommonUpsertDialog` components are the intended base UX and should be retained where practical
-- A small set of missing UI primitives can be added locally without changing the overall design language
+- Product categories, brands, taxes, warehouses, styles, sizes, colours, units, product types, and HSN codes should be reused from the existing common masters instead of recreated
+- The product aggregate should be implemented as a dedicated backend feature rather than forced into the generic common-module registry
+- The first increment can support soft lifecycle management at the product root while replacing active child rows transactionally on edit
+- Stock movements can be stored as part of the aggregate record model in this increment without yet implementing operational inventory posting workflows
+- The frontend product form can use a dedicated page layout instead of the popup-based common-module dialog
 
 ### Constraints
 
-- Keep the existing route structure and auth shell intact
-- Preserve the common-list UX instead of inventing a new table/form experience
-- Keep module structure scalable for future ERP areas beyond common masters
-- Do not turn this increment into a full dashboard redesign or unrelated frontend cleanup effort
+- Keep shared request and response contracts in `packages/shared`
+- Preserve transactional integrity for multi-table product writes
+- Reuse the dashboard/application workspace rather than creating a separate shell
+- Reuse existing common-module records wherever the requested IDEA tables already exist
+- Keep the implementation focused on master data capture instead of full ecommerce or ERP execution workflows
 
 ### Plan
 
-1. Update execution docs to reflect the menu and common-module workspace task
-2. Add the missing UI primitives and API helpers required by the common-master screens
-3. Introduce scalable common-module frontend definitions and pages driven by shared/backend contracts
-4. Replace placeholder sidebar data with grouped chevron menu sections and a common app header
-5. Run `npm run build:web`, then record walkthrough details, validation, and remaining risks
+1. Update execution docs for the product master task and confirm which requested common tables already exist
+2. Add shared product schemas plus a dedicated backend migration and seed data for the missing product-specific tables
+3. Implement backend repository, service, and HTTP routes for product CRUD
+4. Add frontend product list and full-page upsert screens, and connect them into the dashboard navigation
+5. Run `npm run build:api` and `npm run build:web`, then record walkthrough details and residual risks
 
 ### Validation
 
+- `npm run build:api`
 - `npm run build:web`
 
 ### Open Questions
 
-- Whether non-common ERP modules should share the same sidebar grouping model or move to a higher-level module registry later
-- Whether the frontend should fully derive field layouts from backend metadata or keep a thin local presentation layer for labels and column rendering
+- Whether stock movements should later become append-only operational records created by transactions instead of editable aggregate children
+- Whether product attributes should later be normalized further into admin-managed masters instead of being maintained only through product forms
