@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   LogOut,
   Package,
+  Settings2,
 } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { NavLink, useLocation } from "react-router-dom"
@@ -129,6 +130,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                {session?.user.isSuperAdmin ? (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip="Settings">
+                      <NavLink to={buildAdminPortalPath('/settings')}>
+                        <Settings2 />
+                        <span>Settings</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ) : null}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

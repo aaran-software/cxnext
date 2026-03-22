@@ -1,6 +1,6 @@
 import type { PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise'
 import mysql from 'mysql2/promise'
-import { getConfiguredDatabaseSettings } from './database-config'
+import { environment } from '../config/environment'
 
 type SqlPrimitive = string | number | boolean | Date | null
 type SqlRecord = Record<string, SqlPrimitive>
@@ -8,18 +8,12 @@ type SqlRecord = Record<string, SqlPrimitive>
 let pool: mysql.Pool | null = null
 
 function createPool() {
-  const configuration = getConfiguredDatabaseSettings()
-
-  if (!configuration) {
-    throw new Error('MariaDB integration is not configured yet.')
-  }
-
   return mysql.createPool({
-    host: configuration.host,
-    port: configuration.port,
-    user: configuration.user,
-    password: configuration.password,
-    database: configuration.name,
+    host: environment.database.host,
+    port: environment.database.port,
+    user: environment.database.user,
+    password: environment.database.password,
+    database: environment.database.name,
     connectionLimit: 10,
     namedPlaceholders: true,
   })
@@ -50,7 +44,7 @@ function createTransactionClient(connection: PoolConnection) {
 
 export class DatabaseOrm {
   isEnabled() {
-    return Boolean(getConfiguredDatabaseSettings())
+    return environment.database.enabled
   }
 
   getPool() {

@@ -28,17 +28,10 @@ COPY tsconfig.node.json ./
 COPY vite.config.ts ./
 COPY .env.example ./
 
+RUN cp .env.example .env
 RUN rm -rf ./apps/web/public/storage && mkdir -p ./apps/web/public/storage
 RUN chmod +x ./.container/entrypoint.sh
 RUN npm run build:server
-
-ENV PORT=4000
-ENV CORS_ORIGIN=*
-ENV DB_ENABLED=false
-ENV RUNTIME_CONFIG_PATH=/opt/cxnext/runtime/config/runtime-config.json
-ENV MEDIA_STORAGE_ROOT=/opt/cxnext/runtime/storage
-ENV WEB_DIST_ROOT=apps/web/dist
-ENV VITE_API_BASE_URL=
 
 EXPOSE 4000
 

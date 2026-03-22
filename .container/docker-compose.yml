@@ -6,26 +6,8 @@ services:
       context: ..
       dockerfile: .container/Dockerfile
     container_name: cxnext-app
-    environment:
-      PORT: ${CXNEXT_PORT:-4000}
-      CORS_ORIGIN: ${CXNEXT_CORS_ORIGIN:-*}
-      DB_ENABLED: ${CXNEXT_DB_ENABLED:-true}
-      DB_HOST: ${CXNEXT_DB_HOST:-mariadb}
-      DB_PORT: ${CXNEXT_DB_PORT:-3306}
-      DB_USER: ${CXNEXT_DB_USER:-root}
-      DB_PASSWORD: ${CXNEXT_DB_PASSWORD:-DbPass1@@}
-      DB_NAME: ${CXNEXT_DB_NAME:-cxnext_db}
-      RUNTIME_CONFIG_PATH: /opt/cxnext/runtime/config/runtime-config.json
-      MEDIA_STORAGE_ROOT: /opt/cxnext/runtime/storage
-      MEDIA_PUBLIC_BASE_URL: ${CXNEXT_MEDIA_PUBLIC_BASE_URL:-http://localhost:4000/media/public}
-      WEB_DIST_ROOT: apps/web/dist
-      GIT_SYNC_ENABLED: ${CXNEXT_GIT_SYNC_ENABLED:-false}
-      GIT_REPOSITORY_URL: ${CXNEXT_GIT_REPOSITORY_URL:-https://github.com/aaran-software/cxnext.git}
-      GIT_BRANCH: ${CXNEXT_GIT_BRANCH:-main}
-      INSTALL_DEPS_ON_START: ${CXNEXT_INSTALL_DEPS_ON_START:-false}
-      BUILD_ON_START: ${CXNEXT_BUILD_ON_START:-false}
     ports:
-      - "${CXNEXT_APP_PORT:-4000}:4000"
+      - "4000:4000"
     restart: unless-stopped
     volumes:
       - cxnext_runtime:/opt/cxnext/runtime

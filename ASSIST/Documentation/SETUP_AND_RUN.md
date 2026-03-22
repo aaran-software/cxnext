@@ -13,7 +13,9 @@ npm install
 
 ## Environment
 
-API auth and database bootstrap can be configured through environment variables:
+CXNext now reads runtime configuration from `.env` only.
+
+Key entries:
 
 - `DB_ENABLED=true`
 - `DB_HOST=localhost`
@@ -21,9 +23,9 @@ API auth and database bootstrap can be configured through environment variables:
 - `DB_USER=root`
 - `DB_PASSWORD=...`
 - `DB_NAME=cxnext_db`
-- `RUNTIME_CONFIG_PATH=storage/config/runtime-config.json`
 - `WEB_DIST_ROOT=apps/web/dist`
 - `JWT_SECRET=change-this-for-real-use`
+- `SUPER_ADMIN_EMAILS=sundar@sundar.com`
 - `SEED_DEFAULT_USER=true`
 - `SEED_DEFAULT_USER_NAME=Sundar`
 - `SEED_DEFAULT_USER_EMAIL=sundar@sundar.com`
@@ -48,11 +50,11 @@ If `cxnext_db` already contains unrelated tables named `users`, `roles`, or `per
 If `DB_ENABLED` is `false` or the configured database cannot be reached, the API now starts in setup mode instead of exiting. In that state:
 
 - `GET /setup/status` reports whether setup is `ready`, `required`, or `error`
-- `POST /setup/database` saves MariaDB settings into `RUNTIME_CONFIG_PATH`
+- `POST /setup/database` writes MariaDB settings into `.env`
 - The React app shows an initial setup screen until database bootstrap succeeds
 - If the named database does not exist but the credentials can create it, CXNext creates it automatically before running migrations
 
-The runtime JSON config overrides `.env` database values when present. This is intended for volume-backed container deployments.
+`.env` is the single runtime config file. If it is invalid, startup fails with an explicit error instead of falling back to other config sources.
 
 ## Development
 
@@ -83,7 +85,7 @@ Desktop:
 npm run start:desktop
 ```
 
-Set `CXNEXT_WEB_URL` if the desktop shell should target a non-default web URL.
+Set `CXNEXT_WEB_URL` in `.env` before starting the desktop shell.
 
 ## Validation
 
@@ -99,7 +101,7 @@ Build and run the bundled stack:
 
 ```bash
 docker network create codexion-network
-docker compose -f .container/docker-compose.yml --env-file .container/compose.env up -d --build
+docker compose -f .container/docker-compose.yml up -d --build
 ```
 
 The default container stack includes:
@@ -114,7 +116,7 @@ If you want to run the uploaded local MariaDB stack from this repository:
 docker compose -f .container/mariadb.yml up -d
 ```
 
-Default database values in `.container/compose.env`:
+Default database values in `.env.example`:
 
 - Host: `mariadb`
 - Port: `3306`
@@ -124,20 +126,21 @@ Default database values in `.container/compose.env`:
 
 Persistent runtime data is stored in the `cxnext_runtime` Docker volume, including:
 
-- Runtime DB config JSON
+- Runtime `.env`
 - Uploaded media storage
 
 ### Optional Git Sync On Start
 
-The container entrypoint under `.container/entrypoint.sh` supports pulling from Git and rebuilding inside the container. Enable it with environment variables such as:
+The container entrypoint under `.container/entrypoint.sh` supports pulling from Git and rebuilding inside the container. Enable it in `.env` with values such as:
 
-- `CXNEXT_GIT_SYNC_ENABLED=true`
-- `CXNEXT_GIT_REPOSITORY_URL=https://github.com/aaran-software/cxnext.git`
-- `CXNEXT_GIT_BRANCH=main`
+- `GIT_SYNC_ENABLED=true`
+- `GIT_AUTO_UPDATE_ON_START=true`
+- `GIT_REPOSITORY_URL=https://github.com/aaran-software/cxnext.git`
+- `GIT_BRANCH=main`
 
 Optional related flags:
 
-- `CXNEXT_BUILD_ON_START=true`
-- `CXNEXT_INSTALL_DEPS_ON_START=true`
+- `BUILD_ON_START=true`
+- `INSTALL_DEPS_ON_START=true`
 
 Detailed app-only deployment instructions for an existing MariaDB data server are in `.container/USAGE.md`.

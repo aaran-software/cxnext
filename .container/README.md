@@ -4,8 +4,6 @@ Container deployment assets now live entirely in this folder:
 
 - `Dockerfile`
 - `docker-compose.yml`
-- `compose.env`
-- `compose.env.example`
 - `entrypoint.sh`
 - `mariadb.yml`
 - `50-server.cnf`

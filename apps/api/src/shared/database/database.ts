@@ -1,8 +1,7 @@
 import type { DatabaseHealth, SetupStatus } from '@shared/index'
 import { databaseSetupPayloadSchema, setupStatusSchema } from '@shared/index'
 import mysql from 'mysql2/promise'
-import { getConfiguredDatabaseSettings } from './database-config'
-import { saveRuntimeDatabaseSettings } from '../config/runtime-settings'
+import { environment, reloadEnvironment, updateEnvironmentFile } from '../config/environment'
 import { db } from './orm'
 import { runMigrations } from './migrator'
 import { ApplicationError } from '../errors/application-error'
@@ -14,7 +13,7 @@ let setupStatus = createSetupStatus(
 let setupPromise: Promise<SetupStatus> | null = null
 
 function createSetupStatus(status: SetupStatus['status'], detail: string): SetupStatus {
-  const configuration = getConfiguredDatabaseSettings()
+  const configuration = environment.database.enabled ? environment.database : null
 
   return setupStatusSchema.parse({
     status,
@@ -22,7 +21,7 @@ function createSetupStatus(status: SetupStatus['status'], detail: string): Setup
     detail,
     database: {
       configured: Boolean(configuration),
-      source: configuration?.source ?? 'none',
+      source: configuration ? 'env_file' : 'none',
       host: configuration?.host ?? null,
       port: configuration?.port ?? null,
       user: configuration?.user ?? null,
@@ -46,7 +45,7 @@ function quoteIdentifier(value: string) {
 }
 
 async function createDatabaseIfMissing() {
-  const configuration = getConfiguredDatabaseSettings()
+  const configuration = environment.database.enabled ? environment.database : null
 
   if (!configuration) {
     return
@@ -131,7 +130,7 @@ export async function initializeApplicationSetup(force = false) {
   }
 
   const nextSetupPromise = (async () => {
-    const configuration = getConfiguredDatabaseSettings()
+    const configuration = environment.database.enabled ? environment.database : null
 
     if (!configuration) {
       setupStatus = createSetupStatus(
@@ -172,10 +171,19 @@ export async function initializeApplicationSetup(force = false) {
   }
 }
 
-export async function applyDatabaseSetup(payload: unknown) {
+export async function applyDatabaseSetup(payload: unknown, options?: { mediaPublicBaseUrl?: string }) {
   const parsedPayload = databaseSetupPayloadSchema.parse(payload)
-
-  await saveRuntimeDatabaseSettings(parsedPayload)
+  const mediaPublicBaseUrl = options?.mediaPublicBaseUrl?.replace(/\/$/, '') ?? environment.media.publicBaseUrl
+  updateEnvironmentFile({
+    DB_ENABLED: 'true',
+    DB_HOST: parsedPayload.host,
+    DB_PORT: String(parsedPayload.port),
+    DB_USER: parsedPayload.user,
+    DB_PASSWORD: parsedPayload.password,
+    DB_NAME: parsedPayload.name,
+    MEDIA_PUBLIC_BASE_URL: mediaPublicBaseUrl,
+  })
+  reloadEnvironment()
   await db.close()
 
   return {
@@ -184,7 +192,7 @@ export async function applyDatabaseSetup(payload: unknown) {
 }
 
 export function getDatabaseHealth(): DatabaseHealth {
-  const configuration = getConfiguredDatabaseSettings()
+  const configuration = environment.database.enabled ? environment.database : null
 
   if (!configuration) {
     return {

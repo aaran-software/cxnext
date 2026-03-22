@@ -41,6 +41,7 @@
 - Expanded the storefront `shop` target into a full static frontend shopping flow with garment-focused home, catalog filters, product detail, wishlist, cart, and checkout pages while preserving the existing menu and footer shell
 - Added a first-run setup mode that keeps the API online when MariaDB is missing or misconfigured, exposes setup status/configuration endpoints, persists runtime DB settings outside `.env`, and gates the React app with a WordPress-style database setup screen
 - Added production static serving from `apps/api` so the built `apps/web` bundle can be deployed as part of the same Node process
-- Moved the production Docker assets into `.container/`, switched the default Compose stack to app-only deployment against an existing MariaDB server, and added `.container/USAGE.md` plus `compose.env.example` for VPS setup guidance
+- Moved the production Docker assets into `.container/`, switched the default Compose stack to app-only deployment against an existing MariaDB server, and added `.container/USAGE.md` for VPS setup guidance
 - Configured the app container to join external Docker network `codexion-network`, default to the `mariadb` host with `root` / `DbPass1@@` / `cxnext_db`, and prefill the Git sync source as `https://github.com/aaran-software/cxnext.git` on `main`
 - Aligned `.container/docker-compose.yml` with the uploaded `.container/mariadb.yml` stack by using the shared `codexion-network` and the `mariadb` service hostname
+- Removed the runtime JSON config path and Compose-based app env injection so container startup now seeds a single `.env` file from `.env.example`, uses that file as the only runtime config source, and fails fast if `.env` is invalid

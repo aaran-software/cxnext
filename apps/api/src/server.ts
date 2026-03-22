@@ -1,4 +1,3 @@
-import 'dotenv/config'
 import { createServer } from 'node:http'
 import { routeRequest } from './app/http/router'
 import { closeDatabasePool, initializeApplicationSetup } from './shared/database/database'

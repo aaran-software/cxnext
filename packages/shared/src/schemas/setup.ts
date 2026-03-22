@@ -10,7 +10,7 @@ export const databaseSetupPayloadSchema = z.object({
 
 export const setupDatabaseSummarySchema = z.object({
   configured: z.boolean(),
-  source: z.enum(['environment', 'runtime_file', 'none']),
+  source: z.enum(['env_file', 'none']),
   host: z.string().min(1).nullable(),
   port: z.number().int().positive().nullable(),
   user: z.string().min(1).nullable(),

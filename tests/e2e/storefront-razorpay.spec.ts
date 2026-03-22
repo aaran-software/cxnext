@@ -1,8 +1,13 @@
-import 'dotenv/config'
 import { createHmac } from 'node:crypto'
+import { existsSync, readFileSync } from 'node:fs'
+import path from 'node:path'
 import { expect, test } from '@playwright/test'
+import dotenv from 'dotenv'
 
-const razorpaySecret = process.env.RAZORPAY_KEY_SECRET
+const envFilePath = path.resolve(process.cwd(), '.env')
+const razorpaySecret = existsSync(envFilePath)
+  ? dotenv.parse(readFileSync(envFilePath, 'utf8')).RAZORPAY_KEY_SECRET
+  : undefined
 
 test.skip(!razorpaySecret, 'RAZORPAY_KEY_SECRET is required for the Razorpay checkout test.')
 

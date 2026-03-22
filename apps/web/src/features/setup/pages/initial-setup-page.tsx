@@ -10,11 +10,11 @@ import { HttpError } from '@/shared/api/client'
 import { useSetup } from '../components/setup-provider'
 
 const initialFormState: DatabaseSetupPayload = {
-  host: 'db',
+  host: 'mariadb',
   port: 3306,
-  user: 'cxnext',
-  password: '',
-  name: 'cxnext',
+  user: 'root',
+  password: 'DbPass1@@',
+  name: 'cxnext_db',
 }
 
 function formatSetupMode(status: ReturnType<typeof useSetup>['status']) {
@@ -43,7 +43,7 @@ export function InitialSetupPage() {
       return 'Enter the MariaDB host, database name, and login that should hold the CXNext schema.'
     }
 
-    return `Current source: ${status.database.source === 'runtime_file' ? 'saved runtime config' : 'environment variables'}.`
+    return `Current source: ${status.database.source === 'env_file' ? '.env file' : 'not configured yet'}.`
   }, [status])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -101,7 +101,7 @@ export function InitialSetupPage() {
             </div>
             <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
               <p className="text-sm uppercase tracking-[0.2em] text-slate-400">Step 2</p>
-              <p className="mt-3 text-lg font-medium">Save runtime config</p>
+              <p className="mt-3 text-lg font-medium">Save .env file</p>
             </div>
             <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
               <p className="text-sm uppercase tracking-[0.2em] text-slate-400">Step 3</p>
@@ -204,7 +204,7 @@ export function InitialSetupPage() {
                 <p className="font-medium text-slate-900">Status</p>
                 <p>{status?.detail ?? 'Checking the API setup state.'}</p>
                 <p className="mt-2">
-                  Suggested Docker Compose host: <span className="font-medium text-slate-900">db</span>
+                  Suggested Docker Compose host: <span className="font-medium text-slate-900">mariadb</span>
                 </p>
               </div>
 

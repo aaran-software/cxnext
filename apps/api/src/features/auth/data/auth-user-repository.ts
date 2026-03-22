@@ -9,6 +9,7 @@ import type {
 } from '@shared/index'
 import type { RowDataPacket } from 'mysql2'
 import { randomUUID } from 'node:crypto'
+import { isSuperAdminEmail } from '../../../shared/config/environment'
 import { ensureDatabaseSchema } from '../../../shared/database/database'
 import { db } from '../../../shared/database/orm'
 import { authTableNames } from '../../../shared/database/table-names'
@@ -108,6 +109,7 @@ export class AuthUserRepository {
             email: userRow.email,
             phoneNumber: userRow.phone_number,
             displayName: userRow.display_name,
+            isSuperAdmin: isSuperAdminEmail(userRow.email, userRow.actor_type),
             avatarUrl: userRow.avatar_url,
             actorType: userRow.actor_type,
             isActive: Boolean(userRow.is_active),
@@ -189,6 +191,7 @@ export class AuthUserRepository {
             email: userRow.email,
             phoneNumber: userRow.phone_number,
             displayName: userRow.display_name,
+            isSuperAdmin: isSuperAdminEmail(userRow.email, userRow.actor_type),
             avatarUrl: userRow.avatar_url,
             actorType: userRow.actor_type,
             isActive: Boolean(userRow.is_active),

@@ -4,11 +4,12 @@ import type { AuthLoginPayload, AuthRegisterPayload, AuthUser } from '@shared/in
 import {
   createContext,
   type PropsWithChildren,
+  useEffect,
   useContext,
   useMemo,
   useState,
 } from 'react'
-import { login, register } from '@/shared/api/client'
+import { getCurrentUser, login, register } from '@/shared/api/client'
 
 const STORAGE_KEY = 'cxnext-auth-session-v2'
 
@@ -48,6 +49,34 @@ function getStoredSession(): AuthSession | null {
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<AuthSession | null>(() => getStoredSession())
+
+  useEffect(() => {
+    if (!session?.accessToken || typeof session.user.isSuperAdmin === 'boolean') {
+      return
+    }
+
+    let cancelled = false
+
+    void getCurrentUser(session.accessToken)
+      .then((user) => {
+        if (cancelled) {
+          return
+        }
+
+        const nextSession = {
+          ...session,
+          user,
+        } satisfies AuthSession
+
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession))
+        setSession(nextSession)
+      })
+      .catch(() => {})
+
+    return () => {
+      cancelled = true
+    }
+  }, [session])
 
   async function handleLogin(payload: AuthLoginPayload) {
     const response = await login(payload)
