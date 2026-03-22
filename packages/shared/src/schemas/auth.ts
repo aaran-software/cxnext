@@ -37,6 +37,7 @@ export const authUserSchema = z.object({
   phoneNumber: z.string().min(10).nullable(),
   displayName: z.string().min(1),
   actorType: actorTypeSchema,
+  isSuperAdmin: z.boolean(),
   avatarUrl: z.url().nullable(),
   isActive: z.boolean(),
   organizationName: z.string().min(1).nullable(),

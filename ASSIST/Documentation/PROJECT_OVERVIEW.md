@@ -17,6 +17,7 @@ The platform is intended to cover:
 7. Ledger, trial balance, P&L, and balance sheet reports
 8. Audit trail and role-based access control
 9. CRM and commerce workflows built on the same shared platform
+10. VPS-friendly single-container deployment with runtime-first database setup
 
 ## Current State
 
@@ -43,6 +44,8 @@ Current delivery is foundation work:
 19. The top header login/account trigger now shares the same hover surface behavior as the adjacent `More` trigger for consistent sticky-nav affordance
 20. The catalog toolbar now presents the shared search bar without extra helper copy for a cleaner browsing surface
 21. Repository discipline and operating documentation
+22. Runtime configuration-backed setup mode that keeps the API online when MariaDB is not configured yet
+23. Single-process production serving where `apps/api` can serve the built `apps/web` bundle for VPS deployment
 
 ## Product Principles
 

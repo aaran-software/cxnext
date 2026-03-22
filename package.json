@@ -10,12 +10,14 @@
     "dev:stack": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
     "build:web": "vite build --config apps/web/vite.config.ts",
     "build:api": "tsup apps/api/src/server.ts --format esm --platform node --out-dir apps/api/dist",
+    "build:server": "npm run build:api && npm run build:web",
     "build:desktop": "tsup apps/desktop/src/main.ts apps/desktop/src/preload.ts --format esm --platform node --out-dir apps/desktop/dist --external electron",
     "build": "npm run build:api && npm run build:web && npm run build:desktop",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint .",
     "test:e2e": "playwright test",
     "preview:web": "vite preview --config apps/web/vite.config.ts",
+    "start:server": "node apps/api/dist/server.js",
     "start:desktop": "npm run build:desktop && electron apps/desktop/dist/main.js"
   },
   "dependencies": {

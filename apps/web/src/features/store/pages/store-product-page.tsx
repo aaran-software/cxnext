@@ -172,7 +172,7 @@ export function StoreProductPage() {
               className="rounded-full px-6"
               disabled={isOutOfStock}
               onClick={() => {
-                addToCart(product.id, quantity, selectedSize, selectedColor)
+                addToCart(product.id, quantity, selectedSize, selectedColor, { toast: false })
                 void navigate('/checkout')
               }}
             >

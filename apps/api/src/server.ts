@@ -1,7 +1,6 @@
-import 'dotenv/config'
 import { createServer } from 'node:http'
 import { routeRequest } from './app/http/router'
-import { closeDatabasePool, ensureDatabaseSchema } from './shared/database/database'
+import { closeDatabasePool, initializeApplicationSetup } from './shared/database/database'
 import { environment } from './shared/config/environment'
 import { ensureMediaStorage } from './shared/media/storage'
 
@@ -92,7 +91,7 @@ process.once('unhandledRejection', (reason) => {
 
 async function startServer() {
   await ensureMediaStorage()
-  await ensureDatabaseSchema()
+  await initializeApplicationSetup()
 
   await new Promise<void>((resolve) => {
     server.listen(environment.port, () => {

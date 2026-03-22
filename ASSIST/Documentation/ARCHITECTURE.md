@@ -50,8 +50,8 @@ ASSIST/
 ## Current Technical Foundation
 
 1. `apps/web` renders the operator-facing shell plus the storefront-facing `shop` target, now including a full static frontend shopping flow for home, catalog, product detail, wishlist, cart, and checkout.
-2. `apps/api` exposes bootstrap, health, and auth endpoints with MariaDB-backed RBAC persistence.
-3. API database bootstrap now separates schema migrations from optional tracked seeders for development/demo aggregate data.
+2. `apps/api` exposes bootstrap, health, auth, and setup endpoints with MariaDB-backed RBAC persistence.
+3. API database bootstrap now separates schema migrations from optional tracked seeders for development/demo aggregate data and can enter a runtime setup mode instead of crashing when DB settings are missing or invalid.
 4. `apps/desktop` wraps the web client in Electron.
 5. `packages/shared` centralizes domain types, schemas, auth contracts, and accounting guardrails.
 6. `packages/ui` contains reusable React primitives.
@@ -68,6 +68,7 @@ ASSIST/
 17. Header utility icons should follow the same icon-led interaction rule when acting as lightweight status shortcuts, so sticky navigation does not visually overpower core storefront actions.
 18. Adjacent sticky-header utility triggers should reuse the same hover surface language where appropriate to avoid visual drift within the top navigation cluster.
 19. Catalog toolbar helper copy can be removed when the shared search control alone communicates the surface purpose clearly enough.
+20. Production VPS deployment can run as a single Node container that serves the built React app from `apps/web/dist` and stores runtime config/media data in an external volume.
 
 ## Current Auth Foundation
 
@@ -76,6 +77,7 @@ ASSIST/
 3. JWT auth responses expose avatar, roles, and permissions to the frontend through shared schemas.
 4. Development bootstrap can seed a default admin user and RBAC metadata from environment-driven configuration.
 5. Optional aggregate/demo data should flow through tracked seeders under `apps/api/src/shared/database/seeders` instead of being embedded in schema-only migrations.
+6. Runtime database settings may come from a volume-backed JSON config file that overrides `.env`, allowing first-run setup without image rebuilds.
 
 ## Architecture Constraints
 

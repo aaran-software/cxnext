@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate, RouterProvider, useLocation } from 'react-router-dom'
 import { RequireAuth } from '@/features/auth/components/require-auth'
+import { RequireSuperAdmin } from '@/features/auth/components/require-super-admin'
 import { frontendTarget } from '@/config/frontend'
 import { AppLayout } from '@/app/layouts/app-layout'
 import { AuthLayout } from '@/app/layouts/auth-layout'
@@ -46,6 +47,7 @@ import { StoreCheckoutPage } from '@/features/store/pages/store-checkout-page'
 import { StoreHomePage } from '@/features/store/pages/store-home-page'
 import { StoreProductPage } from '@/features/store/pages/store-product-page'
 import { StoreWishlistPage } from '@/features/store/pages/store-wishlist-page'
+import { SystemSettingsPage } from '@/features/settings/pages/system-settings-page'
 
 function LegacyAdminDashboardRedirect() {
   const location = useLocation()
@@ -96,6 +98,12 @@ const adminRoutes = {
         { path: 'storefront-designer/new', element: <StorefrontTemplateFormPage /> },
         { path: 'storefront-designer/:templateId', element: <StorefrontTemplateShowPage /> },
         { path: 'storefront-designer/:templateId/edit', element: <StorefrontTemplateFormPage /> },
+        {
+          element: <RequireSuperAdmin />,
+          children: [
+            { path: 'settings', element: <SystemSettingsPage /> },
+          ],
+        },
         { path: 'common', element: <CommonModulesHomePage /> },
         { path: 'common/:moduleKey', element: <CommonModulePage /> },
         { path: '*', element: <DashboardPage /> },

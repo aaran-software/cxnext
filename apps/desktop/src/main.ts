@@ -1,19 +1,28 @@
 import { BrowserWindow, app } from 'electron'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import dotenv from 'dotenv'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-function resolveRendererTarget() {
-  const configuredUrl = process.env.CXNEXT_WEB_URL
-
-  if (configuredUrl) {
-    return configuredUrl
+function readDesktopEnvironment() {
+  const envFilePath = path.resolve(__dirname, '../../../.env')
+  if (!existsSync(envFilePath)) {
+    throw new Error(`Missing .env file at ${envFilePath}. Copy .env.example to .env before starting CXNext.`)
   }
 
-  return 'http://localhost:5173'
+  return dotenv.parse(readFileSync(envFilePath, 'utf8'))
+}
+
+function resolveRendererTarget() {
+  const configuredUrl = readDesktopEnvironment().CXNEXT_WEB_URL?.trim()
+  if (!configuredUrl) {
+    throw new Error('CXNEXT_WEB_URL is required in .env before starting the desktop app.')
+  }
+
+  return configuredUrl
 }
 
 async function createMainWindow() {
@@ -28,13 +37,7 @@ async function createMainWindow() {
     },
   })
 
-  const webDist = path.resolve(__dirname, '../../web/dist/index.html')
   const rendererTarget = resolveRendererTarget()
-
-  if (!process.env.CXNEXT_WEB_URL && existsSync(webDist)) {
-    await mainWindow.loadFile(webDist)
-    return
-  }
 
   await mainWindow.loadURL(rendererTarget)
 }

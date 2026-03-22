@@ -17,13 +17,23 @@ import { AuthService } from '../../features/auth/application/auth-service'
 import { AuthUserRepository } from '../../features/auth/data/auth-user-repository'
 import { MailboxService } from '../../features/mailbox/application/mailbox-service'
 import { MailboxRepository } from '../../features/mailbox/data/mailbox-repository'
+import {
+  readSystemSettings,
+  runManualUpdate,
+  saveSystemSettings,
+} from '../../features/settings/application/system-settings-service'
 import { GetBootstrapSnapshot } from '../../features/bootstrap/application/get-bootstrap-snapshot'
 import { SystemOverviewRepository } from '../../features/bootstrap/data/system-overview-repository'
 import { ApplicationError } from '../../shared/errors/application-error'
-import { getDatabaseHealth } from '../../shared/database/database'
+import {
+  applyDatabaseSetup,
+  getDatabaseHealth,
+  getSetupStatus,
+} from '../../shared/database/database'
 import { servePublicMediaAsset } from '../../shared/media/storage'
 import { getBearerToken, readJsonBody } from '../../shared/http/request'
 import { writeEmpty, writeJson } from '../../shared/http/response'
+import { serveBuiltWebApp } from '../../shared/http/static-web'
 
 const bootstrapUseCase = new GetBootstrapSnapshot(new SystemOverviewRepository())
 const mailboxService = new MailboxService(new MailboxRepository())
@@ -43,6 +53,24 @@ function parseBooleanFlag(value: string | null) {
   return ['1', 'true', 'yes', 'on'].includes(value.toLowerCase())
 }
 
+function resolveMediaPublicBaseUrl(request: IncomingMessage) {
+  const forwardedProto = request.headers['x-forwarded-proto']
+  const protocol = Array.isArray(forwardedProto)
+    ? forwardedProto[0]
+    : forwardedProto ?? 'http'
+  const host = request.headers.host ?? `localhost:4000`
+  return `${protocol}://${host}/media/public`
+}
+
+async function requireAuthenticatedUser(request: IncomingMessage) {
+  const token = getBearerToken(request)
+  if (!token) {
+    throw new ApplicationError('Authorization token is required.', {}, 401)
+  }
+
+  return authService.getAuthenticatedUser(token)
+}
+
 export async function routeRequest(
   request: IncomingMessage,
   response: ServerResponse,
@@ -57,19 +85,61 @@ export async function routeRequest(
     }
 
     if (method === 'GET' && url.pathname === '/health') {
-      const database = await getDatabaseHealth()
+      const database = getDatabaseHealth()
 
       writeJson(response, 200, {
         status: 'ok',
         service: 'cxnext-api',
         timestamp: new Date().toISOString(),
         database,
+        setup: getSetupStatus(),
       })
       return
     }
 
     if (method === 'GET' && url.pathname === '/health/db') {
-      writeJson(response, 200, await getDatabaseHealth())
+      writeJson(response, 200, getDatabaseHealth())
+      return
+    }
+
+    if (method === 'GET' && url.pathname === '/setup/status') {
+      writeJson(response, 200, {
+        status: getSetupStatus(),
+      })
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/setup/database') {
+      writeJson(
+        response,
+        200,
+        await applyDatabaseSetup(await readJsonBody(request), {
+          mediaPublicBaseUrl: resolveMediaPublicBaseUrl(request),
+        }),
+      )
+      return
+    }
+
+    if (method === 'GET' && url.pathname === '/admin/settings/system') {
+      writeJson(response, 200, readSystemSettings(await requireAuthenticatedUser(request)))
+      return
+    }
+
+    if (method === 'PATCH' && url.pathname === '/admin/settings/system') {
+      writeJson(
+        response,
+        200,
+        saveSystemSettings(await requireAuthenticatedUser(request), await readJsonBody(request)),
+      )
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/admin/settings/system/update') {
+      writeJson(
+        response,
+        202,
+        runManualUpdate(await requireAuthenticatedUser(request), await readJsonBody(request)),
+      )
       return
     }
 
@@ -437,12 +507,11 @@ export async function routeRequest(
     }
 
     if (method === 'GET' && url.pathname === '/auth/me') {
-      const token = getBearerToken(request)
-      if (!token) {
-        throw new ApplicationError('Authorization token is required.', {}, 401)
-      }
+      writeJson(response, 200, await requireAuthenticatedUser(request))
+      return
+    }
 
-      writeJson(response, 200, await authService.getAuthenticatedUser(token))
+    if ((method === 'GET' || method === 'HEAD') && (await serveBuiltWebApp(response, url.pathname))) {
       return
     }
 

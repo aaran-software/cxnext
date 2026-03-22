@@ -53,8 +53,6 @@ State the intended result in one paragraph.
 
 ### Task
 
-`Storefront catalog toolbar copy removal`
-
 ### Goal
 
 Simplify the catalog toolbar by removing the helper copy and leaving the search bar as the sole control in that surface. The result should feel cleaner without affecting the existing search/filter behavior.
@@ -85,3 +83,42 @@ Simplify the catalog toolbar by removing the helper copy and leaving the search 
 ### Open Questions
 
 - Whether the toolbar needs a tighter vertical padding pass after browser QA
+=======
+`Single-container VPS deploy plus first-run database setup mode`
+
+### Goal
+
+Enable CXNext to run as a single container on a VPS by serving the built React app from the Node API, persisting runtime database settings in a volume-backed config file, and exposing a first-run setup screen that can recover from missing or invalid MariaDB configuration without crashing the server process.
+
+### Assumptions
+
+- The current Node API remains the single runtime process in production, with the built React app served as static files by that process
+- Runtime database settings should override `.env` when present so container deployments can be configured through the UI after first boot
+- A Git-sync-and-build-on-start option is required for this task even though immutable image deployment is usually the cleaner production pattern
+
+### Constraints
+
+- Keep shared contracts in `packages/shared` for the new setup API
+- Fail explicitly when DB-backed routes are used before setup completes
+- Persist runtime configuration outside the source tree so updates do not erase it
+- Update the required execution/docs/changelog files in the same change set
+
+### Plan
+
+1. Add shared setup schemas and API runtime settings persistence
+2. Rework database bootstrap so startup enters setup mode instead of crashing on missing/invalid DB configuration
+3. Add setup endpoints and production static-web serving in the API
+4. Gate the React app with a first-run database setup screen wired to the new API
+5. Add `.container` runtime scripts, a single production `Dockerfile`, Docker Compose, and environment/documentation updates
+6. Validate with lint, typecheck, and build
+
+### Validation
+
+- `npm run lint`
+- `npm run typecheck`
+- `npm run build:server`
+
+### Open Questions
+
+- Whether a future follow-up should add an authenticated admin UI for editing runtime DB settings after setup is complete
+- Whether Git-sync behavior should later be moved to a separate maintenance container or CI/CD path

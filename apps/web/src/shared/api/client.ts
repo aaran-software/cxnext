@@ -7,16 +7,12 @@ import type {
   AuthRegisterOtpVerifyResponse,
   AuthTokenResponse,
   AuthUser,
-  Company,
   CompanyListResponse,
   CompanyResponse,
   CompanyUpsertPayload,
-  Contact,
   ContactListResponse,
   ContactResponse,
   ContactUpsertPayload,
-  Media,
-  MediaFolder,
   MediaFolderListResponse,
   MediaFolderResponse,
   MediaFolderUpsertPayload,
@@ -24,15 +20,12 @@ import type {
   MediaListResponse,
   MediaResponse,
   MediaUpsertPayload,
-  Product,
   ProductListResponse,
   ProductResponse,
   ProductUpsertPayload,
-  MailboxMessage,
   MailboxMessageListResponse,
   MailboxMessageResponse,
   MailboxSendPayload,
-  MailboxTemplate,
   MailboxTemplateListResponse,
   MailboxTemplateResponse,
   MailboxTemplateUpsertPayload,
@@ -47,9 +40,26 @@ import type {
   CommonModuleMetadataListResponse,
   CommonModuleRecordResponse,
   CommonModuleUpsertPayload,
+  DatabaseSetupPayload,
+  SetupStatusResponse,
+  SystemSettingsResponse,
+  SystemSettingsUpdatePayload,
+  SystemUpdateRunResponse,
 } from '@shared/index'
 
-const apiBaseUrl = String(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000')
+const configuredApiBaseUrl = String(import.meta.env.VITE_API_BASE_URL ?? '').trim()
+
+function resolveApiBaseUrl() {
+  if (configuredApiBaseUrl) {
+    return configuredApiBaseUrl.replace(/\/$/, '')
+  }
+
+  if (typeof window !== 'undefined') {
+    return window.location.origin
+  }
+
+  return 'http://localhost:4000'
+}
 
 export class HttpError extends Error {
   constructor(
@@ -63,7 +73,7 @@ export class HttpError extends Error {
 }
 
 export async function request<T>(path: string, init?: RequestInit) {
-  const response = await fetch(`${apiBaseUrl}${path}`, {
+  const response = await fetch(`${resolveApiBaseUrl()}${path}`, {
     ...init,
     headers: {
       ...(init?.body ? { 'content-type': 'application/json' } : {}),
@@ -87,6 +97,25 @@ export async function request<T>(path: string, init?: RequestInit) {
   }
 
   return payload as T
+}
+
+function createAuthorizationHeaders(token: string) {
+  return {
+    authorization: `Bearer ${token}`,
+  }
+}
+
+export async function fetchSetupStatus() {
+  const response = await request<SetupStatusResponse>('/setup/status')
+  return response.status
+}
+
+export async function saveDatabaseSetup(payload: DatabaseSetupPayload) {
+  const response = await request<SetupStatusResponse>('/setup/database', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  return response.status
 }
 
 export function login(payload: AuthLoginPayload) {
@@ -119,9 +148,31 @@ export function verifyRegisterOtp(payload: AuthRegisterOtpVerifyPayload) {
 
 export function getCurrentUser(token: string) {
   return request<AuthUser>('/auth/me', {
-    headers: {
-      authorization: `Bearer ${token}`,
-    },
+    headers: createAuthorizationHeaders(token),
+  })
+}
+
+export async function getSystemSettings(token: string) {
+  const response = await request<SystemSettingsResponse>('/admin/settings/system', {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.settings
+}
+
+export async function updateSystemSettings(token: string, payload: SystemSettingsUpdatePayload) {
+  const response = await request<SystemSettingsResponse>('/admin/settings/system', {
+    method: 'PATCH',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
+  })
+  return response.settings
+}
+
+export async function runSystemUpdate(token: string, payload: SystemSettingsUpdatePayload) {
+  return request<SystemUpdateRunResponse>('/admin/settings/system/update', {
+    method: 'POST',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
   })
 }
 
