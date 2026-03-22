@@ -21,7 +21,9 @@ export function Navbar({ items }: { items: NavItem[] }) {
             to={item.url}
             className={cn(
               "min-w-28 rounded-full px-4 py-2 text-center text-sm font-medium transition",
-              isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent hover:text-foreground",
+              isActive
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
             )}
           >
             {item.title}

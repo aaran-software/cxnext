@@ -11,6 +11,7 @@ import {
   useState,
 } from 'react'
 import { fetchSetupStatus, saveDatabaseSetup } from '@/shared/api/client'
+import { appSkipSetupCheck } from '@/config/frontend'
 
 interface SetupContextValue {
   isLoading: boolean
@@ -23,8 +24,24 @@ interface SetupContextValue {
 const SetupContext = createContext<SetupContextValue | null>(null)
 
 export function SetupProvider({ children }: PropsWithChildren) {
-  const [status, setStatus] = useState<SetupStatus | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [status, setStatus] = useState<SetupStatus | null>(() =>
+    appSkipSetupCheck
+      ? {
+          status: 'ready',
+          checkedAt: new Date().toISOString(),
+          detail: 'Application setup checks are bypassed by APP_SKIP_SETUP_CHECK.',
+          database: {
+            configured: false,
+            source: 'none',
+            host: null,
+            port: null,
+            user: null,
+            name: null,
+          },
+        }
+      : null,
+  )
+  const [isLoading, setIsLoading] = useState(!appSkipSetupCheck)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   function createUnreachableStatus(detail: string): SetupStatus {
@@ -80,6 +97,10 @@ export function SetupProvider({ children }: PropsWithChildren) {
   }, [])
 
   useEffect(() => {
+    if (appSkipSetupCheck) {
+      return
+    }
+
     void (async () => {
       await refresh()
     })()

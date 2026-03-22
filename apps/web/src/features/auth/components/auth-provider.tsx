@@ -40,7 +40,20 @@ function getStoredSession(): AuthSession | null {
   }
 
   try {
-    return JSON.parse(rawValue) as AuthSession
+    const parsedValue = JSON.parse(rawValue) as Partial<AuthSession> | null
+
+    if (
+      !parsedValue ||
+      typeof parsedValue.accessToken !== 'string' ||
+      typeof parsedValue.expiresInSeconds !== 'number' ||
+      !parsedValue.user ||
+      typeof parsedValue.user !== 'object'
+    ) {
+      window.localStorage.removeItem(STORAGE_KEY)
+      return null
+    }
+
+    return parsedValue as AuthSession
   } catch {
     window.localStorage.removeItem(STORAGE_KEY)
     return null
@@ -51,7 +64,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<AuthSession | null>(() => getStoredSession())
 
   useEffect(() => {
-    if (!session?.accessToken || typeof session.user.isSuperAdmin === 'boolean') {
+    if (!session?.accessToken || !session.user || typeof session.user !== 'object') {
+      return
+    }
+
+    if (typeof session.user.isSuperAdmin === 'boolean') {
       return
     }
 

@@ -17,7 +17,6 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuGroup,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -132,7 +131,9 @@ type SortState = {
 const DEFAULT_PAGE_SIZE_OPTIONS = [10, 20, 50]
 
 function getStickyClass(sticky?: "left" | "right", surface: "header" | "body" = "body") {
-  const backgroundClass = surface === "header" ? "bg-muted" : "bg-card group-hover/table-row:bg-muted/50"
+  const backgroundClass = surface === "header"
+    ? "bg-muted"
+    : "bg-card group-hover/table-row:bg-muted/50 group-data-[state=selected]/table-row:bg-muted"
 
   if (sticky === "left") {
     return `sticky left-0 z-20 ${backgroundClass}`

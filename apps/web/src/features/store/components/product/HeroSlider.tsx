@@ -1,3 +1,4 @@
+import { AnimatePresence, motion } from "motion/react"
 import { useEffect, useState } from "react"
 import { ChevronLeftIcon, ChevronRightIcon, ShoppingBagIcon, StarIcon } from "lucide-react"
 import { Link } from "react-router-dom"
@@ -8,9 +9,9 @@ import { formatCurrency, getPrimaryProductImage } from "@/features/store/lib/sto
 import { cn } from "@/lib/utils"
 
 const gradients = [
-  "bg-[linear-gradient(135deg,#21140f_0%,#5e241b_48%,#c5873a_100%)]",
-  "bg-[linear-gradient(135deg,#282235_0%,#5f4ca7_52%,#d1b7ea_100%)]",
-  "bg-[linear-gradient(135deg,#18352c_0%,#1d6a5b_50%,#a7d9cb_100%)]",
+  "bg-[linear-gradient(135deg,#21140f_20%,#5e241b_48%,#c5873a_90%)]",
+  "bg-[linear-gradient(135deg,#282235_20%,#5f4ca7_52%,#d1b7ea_90%)]",
+  "bg-[linear-gradient(135deg,#18352c_20%,#1d6a5b_50%,#a7d9cb_90%)]",
 ]
 
 export function HeroSlider() {
@@ -20,10 +21,12 @@ export function HeroSlider() {
     .sort((left, right) => left.homeSliderOrder - right.homeSliderOrder || right.rating - left.rating)
     .slice(0, 3)
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const [direction, setDirection] = useState(1)
 
   useEffect(() => {
     if (featuredProducts.length <= 1) return
     const timer = window.setInterval(() => {
+      setDirection(1)
       setSelectedIndex((current) => (current + 1) % featuredProducts.length)
     }, 5000)
     return () => window.clearInterval(timer)
@@ -37,75 +40,123 @@ export function HeroSlider() {
   return (
     <section
       className={cn(
-        "relative overflow-hidden rounded-[2.5rem] border border-border/60 text-white shadow-[0_35px_90px_-42px_rgba(49,20,9,0.72)] transition-colors duration-700 ease-in-out",
+        "relative overflow-hidden rounded-[2.5rem] border border-[#e3d5c7] text-foreground shadow-[0_35px_90px_-52px_rgba(49,20,9,0.32)] transition-colors duration-700 ease-in-out",
         activeGradient,
       )}
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.15),transparent_60%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.42),transparent_60%)]" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-[linear-gradient(270deg,rgba(255,255,255,0.2),transparent)]" />
 
       <div className="relative z-10 mx-auto w-full max-w-7xl">
         <div className="flex flex-col-reverse items-center justify-between gap-6 px-6 py-6 sm:px-10 sm:py-8 md:flex-row md:gap-10">
-          <div className="flex w-full flex-1 flex-col justify-center space-y-5 md:w-1/2">
-            <div className="inline-flex w-fit rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/90 backdrop-blur-sm">
-              {activeProduct.catalogBadge ?? activeProduct.categoryName}
-            </div>
-
-            <h1 className="text-3xl font-bold leading-tight tracking-tight sm:text-4xl lg:text-5xl lg:leading-[1.05]">
-              {activeProduct.name}
-            </h1>
-
-            <p className="max-w-xl text-sm leading-relaxed text-white/80 sm:text-base">
-              {activeProduct.description ?? activeProduct.shortDescription ?? 'Featured storefront highlight.'}
-            </p>
-
-            <div className="flex flex-wrap items-center gap-5 pt-1">
-              <div className="flex flex-col">
-                <span className="text-xs font-medium text-white/60">Special Price</span>
-                <span className="text-2xl font-bold text-white sm:text-3xl">
-                  {formatCurrency(activeProduct.price)}
-                </span>
-              </div>
-              <div className="h-8 w-px bg-white/20" />
-              <div className="flex flex-col">
-                <span className="text-xs font-medium text-white/60">Rating & Reviews</span>
-                <div className="flex items-center gap-1.5 text-yellow-400">
-                  <StarIcon className="size-4 fill-current sm:size-5" />
-                  <span className="text-base font-bold text-white sm:text-lg">
-                    {activeProduct.rating.toFixed(1)}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3 pt-2">
-              <Button
-                className="h-10 rounded-full bg-white px-6 text-sm font-semibold text-black hover:bg-white/90 sm:h-11 sm:px-8 sm:text-base"
-                onClick={() => addToCart(activeProduct.id, 1)}
+          <div className="flex w-full flex-1 md:w-1/2">
+            <AnimatePresence mode="wait" custom={direction}>
+              <motion.div
+                key={`${activeProduct.id}-content`}
+                custom={direction}
+                initial={{ opacity: 0, x: direction > 0 ? 40 : -40 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: direction > 0 ? -28 : 28 }}
+                transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+                className="flex w-full flex-col justify-center space-y-5"
               >
-                <ShoppingBagIcon className="mr-2 size-4 sm:size-5" />
-                Add to cart
-              </Button>
-              <Link
-                to={`/product/${activeProduct.slug}`}
-                className={buttonVariants({
-                  variant: "outline",
-                  className:
-                    "h-10 rounded-full border-white/20 bg-transparent px-6 text-sm font-medium text-white hover:bg-white/10 sm:h-11 sm:px-8 sm:text-base",
-                })}
-              >
-                View details
-              </Link>
-            </div>
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.34, delay: 0.06 }}
+                  className="inline-flex w-fit rounded-full border border-black/10 bg-white/55 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground/80 backdrop-blur-sm"
+                >
+                  {activeProduct.catalogBadge ?? activeProduct.categoryName}
+                </motion.div>
+
+                <motion.h1
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.1 }}
+                  className="text-3xl font-bold leading-tight tracking-tight sm:text-4xl lg:text-5xl lg:leading-[1.05]"
+                >
+                  {activeProduct.name}
+                </motion.h1>
+
+                <motion.p
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.14 }}
+                  className="max-w-xl text-sm leading-relaxed text-foreground/70 sm:text-base"
+                >
+                  {activeProduct.description ?? activeProduct.shortDescription ?? "Featured storefront highlight."}
+                </motion.p>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.18 }}
+                  className="flex flex-wrap items-center gap-5 pt-1"
+                >
+                  <div className="flex flex-col">
+                    <span className="text-xs font-medium text-foreground/55">Special Price</span>
+                    <span className="text-2xl font-bold text-foreground sm:text-3xl">
+                      {formatCurrency(activeProduct.price)}
+                    </span>
+                  </div>
+                  <div className="h-8 w-px bg-black/10" />
+                  <div className="flex flex-col">
+                    <span className="text-xs font-medium text-foreground/55">Rating & Reviews</span>
+                    <div className="flex items-center gap-1.5 text-amber-500">
+                      <StarIcon className="size-4 fill-current sm:size-5" />
+                      <span className="text-base font-bold text-foreground sm:text-lg">
+                        {activeProduct.rating.toFixed(1)}
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.22 }}
+                  className="flex flex-wrap items-center gap-3 pt-2"
+                >
+                  <Button
+                    className="h-10 rounded-full bg-black px-6 text-sm font-semibold text-white hover:bg-black/90 sm:h-11 sm:px-8 sm:text-base"
+                    onClick={() => addToCart(activeProduct.id, 1)}
+                  >
+                    <ShoppingBagIcon className="mr-2 size-4 sm:size-5" />
+                    Add to cart
+                  </Button>
+                  <Link
+                    to={`/product/${activeProduct.slug}`}
+                    className={buttonVariants({
+                      variant: "outline",
+                      className:
+                        "h-10 rounded-full border-black/12 bg-white/50 px-6 text-sm font-medium text-foreground hover:bg-white/80 sm:h-11 sm:px-8 sm:text-base",
+                    })}
+                  >
+                    View details
+                  </Link>
+                </motion.div>
+              </motion.div>
+            </AnimatePresence>
           </div>
 
           <div className="relative flex w-full flex-1 items-center justify-center md:w-1/2">
-            <div className="relative aspect-[4/3] w-full max-w-[320px] overflow-hidden rounded-[1.5rem] border border-white/10 bg-white/5 shadow-2xl backdrop-blur-md lg:aspect-square lg:max-w-[420px]">
-              <img
-                src={getPrimaryProductImage(activeProduct)}
-                alt={activeProduct.name}
-                className="h-full w-full object-cover transition-transform duration-700 hover:scale-105"
-              />
-            </div>
+            <AnimatePresence mode="wait" custom={direction}>
+              <motion.div
+                key={`${activeProduct.id}-image`}
+                custom={direction}
+                initial={{ opacity: 0, x: direction > 0 ? 56 : -56, scale: 0.98 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: direction > 0 ? -40 : 40, scale: 0.985 }}
+                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                className="relative aspect-[4/3] w-full max-w-[320px] overflow-hidden rounded-[1.7rem] border border-white/60 bg-white/35 shadow-[0_24px_60px_-34px_rgba(38,27,19,0.28)] backdrop-blur-md lg:aspect-square lg:max-w-[420px]"
+              >
+                <img
+                  src={getPrimaryProductImage(activeProduct)}
+                  alt={activeProduct.name}
+                  className="h-full w-full object-cover"
+                />
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
 
@@ -113,12 +164,13 @@ export function HeroSlider() {
           <Button
             variant="outline"
             size="icon"
-            onClick={() =>
+            onClick={() => {
+              setDirection(-1)
               setSelectedIndex(
                 (current) => (current - 1 + featuredProducts.length) % featuredProducts.length,
               )
-            }
-            className="size-10 rounded-full border-white/20 bg-black/20 text-white backdrop-blur-md hover:bg-black/40 hover:text-white"
+            }}
+            className="size-10 rounded-full border-black/10 bg-white/45 text-foreground backdrop-blur-md hover:bg-white/65 hover:text-foreground"
           >
             <ChevronLeftIcon className="size-5" />
           </Button>
@@ -128,7 +180,7 @@ export function HeroSlider() {
                 key={product.id}
                 className={cn(
                   "h-1.5 rounded-full transition-all duration-300",
-                  index === selectedIndex ? "w-6 bg-white" : "w-1.5 bg-white/30",
+                  index === selectedIndex ? "w-6 bg-foreground" : "w-1.5 bg-foreground/25",
                 )}
               />
             ))}
@@ -136,8 +188,11 @@ export function HeroSlider() {
           <Button
             variant="outline"
             size="icon"
-            onClick={() => setSelectedIndex((current) => (current + 1) % featuredProducts.length)}
-            className="size-10 rounded-full border-white/20 bg-black/20 text-white backdrop-blur-md hover:bg-black/40 hover:text-white"
+            onClick={() => {
+              setDirection(1)
+              setSelectedIndex((current) => (current + 1) % featuredProducts.length)
+            }}
+            className="size-10 rounded-full border-black/10 bg-white/45 text-foreground backdrop-blur-md hover:bg-white/65 hover:text-foreground"
           >
             <ChevronRightIcon className="size-5" />
           </Button>

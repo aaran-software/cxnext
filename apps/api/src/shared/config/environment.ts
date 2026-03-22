@@ -4,6 +4,7 @@ import dotenv from 'dotenv'
 import { z } from 'zod'
 
 const frontendTargetSchema = z.enum(['app', 'web', 'shop'])
+const appModeSchema = frontendTargetSchema
 const optionalNonEmptyString = z
   .string()
   .optional()
@@ -21,6 +22,9 @@ const optionalBooleanFlag = z
 const requiredBooleanFlag = z.string().transform((value) => ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase()))
 
 const environmentSchema = z.object({
+  APP_MODE: appModeSchema.optional(),
+  APP_DEBUG: requiredBooleanFlag,
+  APP_SKIP_SETUP_CHECK: requiredBooleanFlag,
   PORT: z.coerce.number().int().positive(),
   CORS_ORIGIN: z.string().min(1),
   JWT_SECRET: z.string().min(16),
@@ -120,12 +124,17 @@ function resolveEnvironment() {
 
   return {
     envFilePath,
+    app: {
+      mode: parsedEnvironment.APP_MODE ?? parsedEnvironment.VITE_FRONTEND_TARGET,
+      debug: parsedEnvironment.APP_DEBUG,
+      skipSetupCheck: parsedEnvironment.APP_SKIP_SETUP_CHECK,
+    },
     port: parsedEnvironment.PORT,
     corsOrigin: parsedEnvironment.CORS_ORIGIN,
     jwtSecret: parsedEnvironment.JWT_SECRET,
     jwtExpiresInSeconds: parsedEnvironment.JWT_EXPIRES_IN_SECONDS,
     frontend: {
-      target: parsedEnvironment.VITE_FRONTEND_TARGET,
+      target: parsedEnvironment.APP_MODE ?? parsedEnvironment.VITE_FRONTEND_TARGET,
     },
     database: {
       enabled: parsedEnvironment.DB_ENABLED,

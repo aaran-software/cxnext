@@ -3,8 +3,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { EditIcon, MoreHorizontalIcon, PowerIcon } from 'lucide-react'
 import { CommonList } from '@/components/forms/CommonList'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { ActiveStatusBadge } from '@/components/ui/status-badge'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -205,11 +205,7 @@ export function CompanyListPage() {
               id: 'status',
               header: 'Status',
               accessor: (item) => item.isActive,
-              cell: (item) => (
-                <Badge variant={item.isActive ? 'default' : 'secondary'}>
-                  {item.isActive ? 'Active' : 'Inactive'}
-                </Badge>
-              ),
+              cell: (item) => <ActiveStatusBadge isActive={item.isActive} />,
             },
             {
               id: 'actions',

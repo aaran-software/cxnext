@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { EditIcon, Trash2 } from 'lucide-react'
 import { AnimatedTabs, type AnimatedContentTab } from '@/components/ui/animated-tabs'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { ActiveStatusBadge } from '@/components/ui/status-badge'
 import { EntityDetailHeader, formatDetailValue } from '@/components/entity/entity-detail'
 import {
   deactivateCommonModuleItem,
@@ -184,7 +184,7 @@ export function StorefrontTemplateShowPage() {
           <StorefrontTemplateDisplayRow label="Section" value={slotMeta.label} />
           <StorefrontTemplateDisplayRow label="Section Type" value={slotMeta.kind} />
           <StorefrontTemplateDisplayRow label="Sort Order" value={String(item.sort_order)} />
-          <StorefrontTemplateDisplayRow label="Status" value={<Badge variant={item.isActive ? 'default' : 'secondary'}>{item.isActive ? 'Active' : 'Inactive'}</Badge>} />
+          <StorefrontTemplateDisplayRow label="Status" value={<ActiveStatusBadge isActive={item.isActive} />} />
           <StorefrontTemplateDisplayRow label="Created" value={new Date(item.createdAt).toLocaleString()} />
           <StorefrontTemplateDisplayRow label="Updated" value={new Date(item.updatedAt).toLocaleString()} />
         </StorefrontTemplateTableCard>

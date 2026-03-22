@@ -1,9 +1,9 @@
 import type { PropsWithChildren, ReactNode } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { ActiveStatusBadge } from '@/components/ui/status-badge'
 
 export function formatDetailValue(value: unknown) {
   if (value == null) return '-'
@@ -38,9 +38,7 @@ export function EntityDetailHeader({
           </Button>
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-3xl font-semibold text-foreground">{title}</h1>
-            <Badge variant={isActive ? 'default' : 'secondary'}>
-              {isActive ? 'Active' : 'Inactive'}
-            </Badge>
+            <ActiveStatusBadge isActive={isActive} />
           </div>
           <p className="mt-2 text-sm text-muted-foreground">{description}</p>
         </div>

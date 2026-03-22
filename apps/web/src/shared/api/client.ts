@@ -45,9 +45,24 @@ import type {
   SystemSettingsResponse,
   SystemSettingsUpdatePayload,
   SystemUpdateRunResponse,
+  SystemVersionResponse,
+  SystemUpdateCheckResponse,
 } from '@shared/index'
 
 const configuredApiBaseUrl = String(import.meta.env.VITE_API_BASE_URL ?? '').trim()
+const defaultLocalApiBaseUrl = 'http://localhost:4000'
+
+function isViteLocalDevOrigin(origin: string) {
+  try {
+    const url = new URL(origin)
+    return (
+      (url.hostname === 'localhost' || url.hostname === '127.0.0.1') &&
+      url.port === '5173'
+    )
+  } catch {
+    return false
+  }
+}
 
 function resolveApiBaseUrl() {
   if (configuredApiBaseUrl) {
@@ -55,10 +70,14 @@ function resolveApiBaseUrl() {
   }
 
   if (typeof window !== 'undefined') {
+    if (isViteLocalDevOrigin(window.location.origin)) {
+      return defaultLocalApiBaseUrl
+    }
+
     return window.location.origin
   }
 
-  return 'http://localhost:4000'
+  return defaultLocalApiBaseUrl
 }
 
 export class HttpError extends Error {
@@ -174,6 +193,18 @@ export async function runSystemUpdate(token: string, payload: SystemSettingsUpda
     headers: createAuthorizationHeaders(token),
     body: JSON.stringify(payload),
   })
+}
+
+export async function getSystemVersion() {
+  const response = await request<SystemVersionResponse>('/system/version')
+  return response.version
+}
+
+export async function getSystemUpdateCheck(token: string) {
+  const response = await request<SystemUpdateCheckResponse>('/admin/system/update-check', {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.update
 }
 
 export async function listCommonModuleMetadata() {

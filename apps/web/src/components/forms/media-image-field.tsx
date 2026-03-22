@@ -59,7 +59,7 @@ export function MediaImageField({
 
         {value ? (
           <div className="overflow-hidden rounded-[1.25rem] border border-border/70 bg-muted">
-            <img src={value} alt={label} className="h-48 w-full object-cover" />
+            <img src={value} alt={label} className="h-48 w-full object-cover" loading="lazy" decoding="async" />
           </div>
         ) : null}
       </div>

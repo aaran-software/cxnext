@@ -20,6 +20,25 @@ type ToggleOption = {
   label: string
 }
 
+type MultiValueFilterKey =
+  | "categories"
+  | "sizes"
+  | "colors"
+  | "fabrics"
+  | "fits"
+  | "sleeves"
+  | "occasions"
+
+const departmentOptions: { value: CatalogFilters["department"]; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "women", label: "Women" },
+  { value: "men", label: "Men" },
+  { value: "kids", label: "Kids" },
+  { value: "accessories", label: "Accessories" },
+]
+
+const ratingOptions = [0, 3, 4, 5] as const
+
 function FilterSection({
   title,
   subtitle,
@@ -32,7 +51,7 @@ function FilterSection({
   children: ReactNode
 }) {
   return (
-    <section className="rounded-[1.35rem] border border-border/70 bg-white/84 p-4 shadow-[0_18px_40px_-34px_rgba(45,29,19,0.24)]">
+    <section className="rounded-[1.35rem] border border-[#e7dbcb] bg-white/88 p-4 shadow-[0_18px_40px_-34px_rgba(45,29,19,0.2)]">
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="space-y-1">
           <h3 className="text-[0.8rem] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
@@ -124,9 +143,8 @@ export function FilterSidebar({
   onChange: (next: CatalogFilters) => void
   onReset: () => void
 }) {
-  const toggleValue = (key: keyof CatalogFilters, value: string) => {
+  const toggleValue = (key: MultiValueFilterKey, value: string) => {
     const current = filters[key]
-    if (!Array.isArray(current)) return
 
     onChange({
       ...filters,
@@ -135,17 +153,10 @@ export function FilterSidebar({
   }
 
   const activeCount = countActiveFilters(filters)
-  const departmentOptions: ToggleOption[] = [
-    { value: "all", label: "All" },
-    { value: "women", label: "Women" },
-    { value: "men", label: "Men" },
-    { value: "kids", label: "Kids" },
-    { value: "accessories", label: "Accessories" },
-  ]
 
   return (
     <aside className="space-y-4 self-start xl:sticky xl:top-24">
-      <section className="rounded-[1.8rem] border border-border/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(249,246,241,0.94)_100%)] p-5 shadow-[0_24px_50px_-38px_rgba(45,29,19,0.22)]">
+      <section className="rounded-[1.8rem] border border-[#e7dbcb] bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(249,246,241,0.95)_100%)] p-5 shadow-[0_24px_50px_-38px_rgba(45,29,19,0.2)]">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
@@ -155,7 +166,7 @@ export function FilterSidebar({
             <div className="space-y-1">
               <h2 className="text-xl font-semibold tracking-tight">Refine the catalog</h2>
               <p className="text-sm leading-6 text-muted-foreground">
-                Clean garment filters with grouped sections, better hierarchy, and controlled scrolling.
+                Narrow the collection with clean grouped filters.
               </p>
             </div>
           </div>
@@ -165,7 +176,7 @@ export function FilterSidebar({
           </Button>
         </div>
 
-        <div className="mt-4 rounded-[1.25rem] border border-border/70 bg-white/78 px-4 py-3">
+        <div className="mt-4 rounded-[1.25rem] border border-[#eadfce] bg-white/82 px-4 py-3">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-sm font-medium">
               <SparklesIcon className="size-4 text-muted-foreground" />
@@ -177,8 +188,8 @@ export function FilterSidebar({
           </div>
           <p className="mt-2 text-xs leading-5 text-muted-foreground">
             {activeCount > 0
-              ? "The product grid updates instantly as you adjust sections below."
-              : "Start with department or category, then narrow with garment-specific attributes."}
+              ? "Results update instantly as you refine."
+              : "Start with department, then narrow further."}
           </p>
         </div>
       </section>
@@ -186,7 +197,7 @@ export function FilterSidebar({
       <div className="space-y-3">
         <FilterSection
           title="Department"
-          subtitle="Use one master segment before narrowing into specific product attributes."
+          subtitle="Choose the main segment first."
           count={filters.department === "all" ? 0 : 1}
         >
           <div className="flex flex-wrap gap-2">
@@ -197,7 +208,7 @@ export function FilterSidebar({
                 <button
                   key={department.value}
                   type="button"
-                  onClick={() => onChange({ ...filters, department: department.value as CatalogFilters["department"] })}
+                  onClick={() => onChange({ ...filters, department: department.value })}
                   className={active
                     ? "rounded-full border border-foreground bg-foreground px-3 py-1.5 text-sm text-white shadow-sm"
                     : "rounded-full border border-border bg-white px-3 py-1.5 text-sm text-foreground transition hover:border-foreground/30 hover:bg-accent/50"}
@@ -211,7 +222,7 @@ export function FilterSidebar({
 
         <ToggleGroup
           title="Categories"
-          subtitle="Catalog groupings from backend category records."
+          subtitle="Browse by catalog group."
           options={categories.map((category) => ({ value: category.slug, label: category.name }))}
           selected={filters.categories}
           onToggle={(value) => toggleValue("categories", value)}
@@ -219,7 +230,7 @@ export function FilterSidebar({
 
         <ToggleGroup
           title="Sizes"
-          subtitle="Variant sizes resolved from live product attribute rows."
+          subtitle="Available size values."
           options={options.sizes.map((value) => ({ value, label: value }))}
           selected={filters.sizes}
           onToggle={(value) => toggleValue("sizes", value)}
@@ -227,7 +238,7 @@ export function FilterSidebar({
 
         <ToggleGroup
           title="Colors"
-          subtitle="Color values available in the current catalog view."
+          subtitle="Filter by visible color options."
           options={options.colors.map((value) => ({ value, label: value }))}
           selected={filters.colors}
           onToggle={(value) => toggleValue("colors", value)}
@@ -235,7 +246,7 @@ export function FilterSidebar({
 
         <ToggleGroup
           title="Fabrics"
-          subtitle="Material-level filtering for quicker browsing."
+          subtitle="Material-based filtering."
           options={options.fabrics.map((value) => ({ value, label: value }))}
           selected={filters.fabrics}
           onToggle={(value) => toggleValue("fabrics", value)}
@@ -243,7 +254,7 @@ export function FilterSidebar({
 
         <ToggleGroup
           title="Fits"
-          subtitle="Silhouette and fit labels managed from product publishing."
+          subtitle="Silhouette and fit labels."
           options={options.fits.map((value) => ({ value, label: value }))}
           selected={filters.fits}
           onToggle={(value) => toggleValue("fits", value)}
@@ -251,7 +262,7 @@ export function FilterSidebar({
 
         <ToggleGroup
           title="Sleeves"
-          subtitle="Sleeve styling options from storefront attributes."
+          subtitle="Sleeve styling options."
           options={options.sleeves.map((value) => ({ value, label: value }))}
           selected={filters.sleeves}
           onToggle={(value) => toggleValue("sleeves", value)}
@@ -259,7 +270,7 @@ export function FilterSidebar({
 
         <ToggleGroup
           title="Occasions"
-          subtitle="Use-case tags for festive, workwear, travel, and more."
+          subtitle="Shop by occasion."
           options={options.occasions.map((value) => ({ value, label: value }))}
           selected={filters.occasions}
           onToggle={(value) => toggleValue("occasions", value)}
@@ -290,7 +301,7 @@ export function FilterSidebar({
 
         <FilterSection title="Rating" subtitle="Prefer products with stronger review scores.">
           <div className="flex flex-wrap gap-2">
-            {[0, 3, 4, 5].map((rating) => (
+            {ratingOptions.map((rating) => (
               <button
                 key={rating}
                 type="button"

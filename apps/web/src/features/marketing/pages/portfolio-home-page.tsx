@@ -41,13 +41,17 @@ export function PortfolioHomePage() {
             </div>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-3 border-t border-border/60 bg-background/30 p-8">
-            <Button asChild>
+            <Button asChild className="bg-accent text-accent-foreground hover:bg-accent-light">
               <Link to="/services">
                 Explore services
                 <ArrowRight className="size-4" />
               </Link>
             </Button>
-            <Button asChild variant="outline">
+            <Button
+              asChild
+              variant="outline"
+              className="border-accent/20 hover:bg-accent hover:text-accent-foreground"
+            >
               <Link to="/login">Open login</Link>
             </Button>
           </CardContent>

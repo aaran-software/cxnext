@@ -304,7 +304,7 @@ export function MediaAssetManagerDialog({
                   >
                     <div className="aspect-[4/3] bg-muted">
                       {item.storageScope === 'public' ? (
-                        <img src={item.fileUrl} alt={item.altText ?? item.fileName} className="h-full w-full object-cover" />
+                        <img src={item.fileUrl} alt={item.altText ?? item.fileName} className="h-full w-full object-cover" loading="lazy" decoding="async" />
                       ) : (
                         <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Private asset</div>
                       )}
@@ -371,7 +371,7 @@ export function MediaAssetManagerDialog({
                 <div className="h-[15rem] overflow-hidden rounded-[1.9rem] border border-border/70 bg-card/40 lg:h-[18rem]">
                   {draft ? (
                     <div className="flex h-full items-center justify-center bg-muted/30 p-4">
-                      <img src={draft.dataUrl} alt={draft.altText || draft.fileName} className="h-full w-full object-contain" />
+                      <img src={draft.dataUrl} alt={draft.altText || draft.fileName} className="h-full w-full object-contain" loading="lazy" decoding="async" />
                     </div>
                   ) : (
                     <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">

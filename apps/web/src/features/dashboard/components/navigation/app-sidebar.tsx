@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import type { SystemVersion } from "@shared/index"
 import {
   Building2,
   ChevronRight,
@@ -8,7 +9,6 @@ import {
   Image,
   Mail,
   LayoutDashboard,
-  LogOut,
   Package,
   Settings2,
 } from "lucide-react"
@@ -29,12 +29,15 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
+  useSidebar,
 } from "@/components/ui/sidebar"
-import { Button } from "@/components/ui/button"
 import { useAuth } from "@/features/auth/components/auth-provider"
 import { buildAdminPortalPath } from "@/features/auth/lib/portal-routing"
 import { commonModuleMenuGroups, getCommonModuleHref } from "@/features/common-modules/config/common-module-navigation"
-import { BrandMark } from "@/shared/branding/brand-mark"
+import { NavUser } from "@/features/dashboard/components/navigation/nav-user"
+import { getSystemVersion } from "@/shared/api/client"
+import { BrandGlyph } from "@/shared/branding/brand-mark"
+import { useBranding } from "@/shared/branding/branding-provider"
 
 function getActiveGroupKey(pathname: string) {
   const moduleKey = pathname.startsWith(buildAdminPortalPath('/storefront-designer'))
@@ -52,7 +55,10 @@ function getActiveGroupKey(pathname: string) {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { session, logout } = useAuth()
+  const branding = useBranding()
+  const { state: sidebarState } = useSidebar()
   const location = useLocation()
+  const [systemVersion, setSystemVersion] = React.useState<SystemVersion | null>(null)
   const [openGroupKey, setOpenGroupKey] = React.useState<string | null>(() =>
     getActiveGroupKey(location.pathname),
   )
@@ -62,15 +68,48 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     setOpenGroupKey(activeGroupKey)
   }, [location.pathname])
 
+  React.useEffect(() => {
+    let cancelled = false
+
+    void getSystemVersion()
+      .then((version) => {
+        if (!cancelled) {
+          setSystemVersion(version)
+        }
+      })
+      .catch(() => {})
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   return (
       <Sidebar variant="inset" collapsible="icon" {...props}>
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton size="lg" asChild>
+              <SidebarMenuButton
+                asChild
+                className="h-auto min-h-0 overflow-visible px-2 py-2 group-data-[collapsible=icon]:-ml-1 group-data-[collapsible=icon]:size-10 group-data-[collapsible=icon]:p-0"
+              >
                 <NavLink to={buildAdminPortalPath()}>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <BrandMark compact className="items-start" />
+                  <div className="flex min-w-0 items-center gap-3">
+                    <BrandGlyph
+                      shadowless
+                      className="size-10 shrink-0 rounded-xl"
+                      iconClassName="size-5"
+                    />
+                    {sidebarState === "expanded" ? (
+                      <div className="min-w-0 flex-1 text-left leading-tight">
+                        <p className="truncate text-base font-semibold uppercase tracking-[0.2em] text-foreground">
+                          {branding.brandName}
+                        </p>
+                        <p className="truncate text-xs font-medium text-muted-foreground">
+                          {branding.tagline}
+                        </p>
+                      </div>
+                    ) : null}
                   </div>
                 </NavLink>
               </SidebarMenuButton>
@@ -202,21 +241,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter>
-          <div className="rounded-xl border border-sidebar-border/70 p-3">
-            <p className="truncate text-sm font-medium text-sidebar-foreground">
-              {session?.user.displayName ?? 'Workspace user'}
-            </p>
-            <p className="truncate text-xs text-sidebar-foreground/70">
-              {session?.user.email ?? 'No email'}
-            </p>
-            <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-sidebar-foreground/60">
-              {session?.user.actorType ?? 'operator'}
-            </p>
-            <Button variant="outline" size="sm" className="mt-3 w-full" onClick={logout}>
-              <LogOut className="size-4" />
-              Logout
-            </Button>
-          </div>
+          <NavUser
+            user={{
+              name: session?.user.displayName ?? 'Workspace user',
+              email: session?.user.email ?? 'No email',
+              avatar: session?.user.avatarUrl ?? null,
+              actorType: session?.user.actorType ?? 'operator',
+            }}
+            onLogout={logout}
+            systemVersion={systemVersion}
+            showAdminLinks={Boolean(session?.user.isSuperAdmin)}
+          />
         </SidebarFooter>
       </Sidebar>
   )

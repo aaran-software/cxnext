@@ -152,8 +152,8 @@ export function StorefrontHeader({ categories }: { categories: HeaderCategory[] 
                   className={cn(
                     "size-5 transition-all duration-300 ease-out md:mr-2",
                     accountActive
-                      ? "fill-current stroke-current text-accent group-hover:text-current group-data-[state=open]:text-current"
-                      : "fill-transparent stroke-current text-current group-hover:scale-110 group-hover:fill-current group-hover:text-current group-data-[state=open]:fill-current group-data-[state=open]:text-current",
+                      ? "fill-transparent stroke-current text-accent group-hover:text-current group-data-[state=open]:text-current"
+                      : "fill-transparent stroke-current text-current group-hover:scale-110 group-hover:text-current group-data-[state=open]:text-current",
                   )}
                   strokeWidth={1.9}
                 />

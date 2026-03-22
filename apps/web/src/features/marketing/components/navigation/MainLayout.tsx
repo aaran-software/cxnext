@@ -1,5 +1,6 @@
 import { Outlet } from "react-router-dom"
 
+import { FloatingContactButton } from "@/components/shared/floating-contact-button"
 import { PortfolioFooter } from "./portfolio-footer"
 import { PortfolioHeader } from "./portfolio-header"
 
@@ -11,6 +12,7 @@ export default function MainLayout() {
         <Outlet />
       </main>
       <PortfolioFooter />
+      <FloatingContactButton />
     </div>
   )
 }

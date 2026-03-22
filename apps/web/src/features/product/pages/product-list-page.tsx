@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { EditIcon, MoreHorizontalIcon, PowerIcon } from 'lucide-react'
 import { CommonList } from '@/components/forms/CommonList'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -12,6 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { ActiveStatusBadge, StatusBadge } from '@/components/ui/status-badge'
 import { deactivateProduct, HttpError, listProducts, restoreProduct } from '@/shared/api/client'
 import { showFailedActionToast, showStatusChangeToast } from '@/shared/notifications/toast'
 
@@ -311,8 +311,8 @@ export function ProductListPage() {
               accessor: (item) => item.isActive,
               cell: (item) => (
                 <div className="flex items-center gap-2">
-                  <Badge variant={item.isActive ? 'default' : 'secondary'}>{item.isActive ? 'Active' : 'Inactive'}</Badge>
-                  {item.isFeatured ? <Badge variant="outline">Featured</Badge> : null}
+                  <ActiveStatusBadge isActive={item.isActive} />
+                  {item.isFeatured ? <StatusBadge tone="featured">Featured</StatusBadge> : null}
                 </div>
               ),
             },
@@ -321,12 +321,12 @@ export function ProductListPage() {
               header: 'Publishing',
               cell: (item) => (
                 <div className="flex flex-wrap gap-1.5">
-                  {item.homeSliderEnabled ? <Badge variant="outline">Home</Badge> : null}
-                  {item.promoSliderEnabled ? <Badge variant="outline">Promo</Badge> : null}
-                  {item.featureSectionEnabled ? <Badge variant="outline">Feature</Badge> : null}
-                  {item.isNewArrival ? <Badge variant="outline">New</Badge> : null}
-                  {item.isBestSeller ? <Badge variant="outline">Best</Badge> : null}
-                  {item.isFeaturedLabel ? <Badge variant="outline">Label</Badge> : null}
+                  {item.homeSliderEnabled ? <StatusBadge tone="home">Home</StatusBadge> : null}
+                  {item.promoSliderEnabled ? <StatusBadge tone="promo">Promo</StatusBadge> : null}
+                  {item.featureSectionEnabled ? <StatusBadge tone="publishing">Feature</StatusBadge> : null}
+                  {item.isNewArrival ? <StatusBadge tone="new">New</StatusBadge> : null}
+                  {item.isBestSeller ? <StatusBadge tone="best">Best</StatusBadge> : null}
+                  {item.isFeaturedLabel ? <StatusBadge tone="label">Label</StatusBadge> : null}
                   {!item.homeSliderEnabled && !item.promoSliderEnabled && !item.featureSectionEnabled && !item.isNewArrival && !item.isBestSeller && !item.isFeaturedLabel ? (
                     <span className="text-sm text-muted-foreground">Standard</span>
                   ) : null}

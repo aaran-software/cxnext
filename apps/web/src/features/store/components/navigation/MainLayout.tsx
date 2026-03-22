@@ -1,5 +1,6 @@
 import { Outlet } from "react-router-dom"
 
+import { FloatingContactButton } from "@/components/shared/floating-contact-button"
 import { StorefrontBottomNav } from "./storefront-bottom-nav"
 import { StorefrontCategories } from "./storefront-categories"
 import { StorefrontFooter } from "./storefront-footer"
@@ -24,6 +25,7 @@ export default function MainLayout() {
         <Outlet />
       </main>
       <StorefrontFooter />
+      <FloatingContactButton className="bottom-24 md:bottom-6" />
       <StorefrontBottomNav />
     </div>
   )

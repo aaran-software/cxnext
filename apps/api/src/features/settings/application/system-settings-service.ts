@@ -68,6 +68,7 @@ export function saveSystemSettings(user: AuthUser, payload: unknown) {
 
   const parsedPayload = systemSettingsUpdatePayloadSchema.parse(payload)
   updateEnvironmentFile({
+    APP_MODE: parsedPayload.frontendTarget,
     VITE_FRONTEND_TARGET: parsedPayload.frontendTarget,
     GIT_SYNC_ENABLED: String(parsedPayload.update.gitSyncEnabled),
     GIT_AUTO_UPDATE_ON_START: String(parsedPayload.update.autoUpdateOnStart),
@@ -86,6 +87,7 @@ export function runManualUpdate(user: AuthUser, payload: unknown) {
 
   const parsedPayload = systemUpdateRunPayloadSchema.parse(payload)
   updateEnvironmentFile({
+    APP_MODE: parsedPayload.frontendTarget,
     VITE_FRONTEND_TARGET: parsedPayload.frontendTarget,
     GIT_SYNC_ENABLED: 'true',
     GIT_AUTO_UPDATE_ON_START: String(parsedPayload.update.autoUpdateOnStart),

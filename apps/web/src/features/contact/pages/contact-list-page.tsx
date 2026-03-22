@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { EditIcon, MoreHorizontalIcon, PowerIcon } from 'lucide-react'
 import { CommonList } from '@/components/forms/CommonList'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -12,6 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { ActiveStatusBadge } from '@/components/ui/status-badge'
 import { deactivateContact, HttpError, listContacts, restoreContact } from '@/shared/api/client'
 import { showFailedActionToast, showStatusChangeToast } from '@/shared/notifications/toast'
 
@@ -117,7 +117,7 @@ export function ContactListPage() {
             { id: 'tax', header: 'Tax', accessor: (item) => item.gstin ?? item.pan, cell: (item) => <div><p>{item.gstin ?? 'No GSTIN'}</p><p className="text-sm text-muted-foreground">{item.pan ?? 'No PAN'}</p></div> },
             { id: 'financial', header: 'Balance', accessor: (item) => item.openingBalance, cell: (item) => <div><p>{item.openingBalance.toFixed(2)}</p><p className="text-sm text-muted-foreground">{item.balanceType ?? 'Not set'}</p></div> },
             { id: 'contact', header: 'Primary Contact', accessor: (item) => item.primaryEmail ?? item.primaryPhone, cell: (item) => <div><p>{item.primaryEmail ?? 'No email'}</p><p className="text-sm text-muted-foreground">{item.primaryPhone ?? 'No phone'}</p></div> },
-            { id: 'status', header: 'Status', accessor: (item) => item.isActive, cell: (item) => <Badge variant={item.isActive ? 'default' : 'secondary'}>{item.isActive ? 'Active' : 'Inactive'}</Badge> },
+            { id: 'status', header: 'Status', accessor: (item) => item.isActive, cell: (item) => <ActiveStatusBadge isActive={item.isActive} /> },
             {
               id: 'actions', header: 'Actions', className: 'w-12 min-w-12 px-2 text-center', headerClassName: 'w-12 min-w-12 px-2 text-center', sticky: 'right',
               cell: (item) => (

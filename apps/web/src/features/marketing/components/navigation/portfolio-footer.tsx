@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom"
 
 import { BrandMark } from "@/shared/branding/brand-mark"
+import { useBranding } from "@/shared/branding/branding-provider"
 
 const quickLinks = [
   { label: "Home", href: "/" },
@@ -10,13 +11,15 @@ const quickLinks = [
 ]
 
 export function PortfolioFooter() {
+  const branding = useBranding()
+
   return (
     <footer className="border-t border-border/70 bg-card/60">
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-5">
           <BrandMark />
           <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
-            CXNext ships product surfaces across ERP billing, portfolio websites, and online storefronts from a shared frontend foundation.
+            {branding.summary}
           </p>
         </div>
         <div className="grid gap-8 sm:grid-cols-2">
@@ -33,9 +36,9 @@ export function PortfolioFooter() {
           <div className="space-y-4">
             <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">Contact</h3>
             <div className="grid gap-3 text-sm text-muted-foreground">
-              <p>ops@cxnext.local</p>
-              <p>Chennai, India</p>
-              <p>Design systems, frontend architecture, and rollout support.</p>
+              <p>{branding.email}</p>
+              <p>{branding.location}</p>
+              <p>{branding.tagline}</p>
             </div>
           </div>
         </div>

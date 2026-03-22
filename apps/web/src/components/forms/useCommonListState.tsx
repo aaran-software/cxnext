@@ -6,8 +6,8 @@ import type {
   CommonUpsertFieldDefinition,
   CommonUpsertFormValues,
 } from "@/components/forms/CommonUpsertDialog"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { ActiveStatusBadge } from "@/components/ui/status-badge"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -131,12 +131,7 @@ export function useCommonListState<TItem extends CommonListRecord>({
       sortable: true,
       accessor: (item) => item.isActive,
       cell: (item) => (
-        <Badge
-          variant={item.isActive ? "default" : "secondary"}
-          className={item.isActive ? "bg-emerald-500 text-white hover:bg-emerald-500/90" : "bg-slate-100 text-slate-700 hover:bg-slate-100 dark:bg-slate-700 dark:text-slate-100"}
-        >
-          {item.isActive ? "Active" : "Inactive"}
-        </Badge>
+        <ActiveStatusBadge isActive={item.isActive} />
       ),
     },
     {

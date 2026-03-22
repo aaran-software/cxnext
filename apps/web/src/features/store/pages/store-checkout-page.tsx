@@ -614,7 +614,7 @@ export function StoreCheckoutPage() {
               {orderItems.map(({ item, product }) => (
                 <div key={`${item.productId}-${item.size}-${item.color}`} className="flex gap-3 rounded-[1.4rem] border border-border/70 bg-background/70 p-3">
                   {getPrimaryProductImage(product) ? (
-                    <img src={getPrimaryProductImage(product)} alt={product.name} className="size-20 rounded-2xl object-cover" />
+                    <img src={getPrimaryProductImage(product)} alt={product.name} className="size-20 rounded-2xl object-cover" loading="lazy" decoding="async" />
                   ) : (
                     <div className="flex size-20 items-center justify-center rounded-2xl bg-muted text-xs text-muted-foreground">No image</div>
                   )}

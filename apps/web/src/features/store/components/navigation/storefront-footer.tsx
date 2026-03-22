@@ -1,32 +1,51 @@
-import { FacebookIcon, InstagramIcon, MailIcon, MapPinIcon, PhoneIcon, TwitterIcon, YoutubeIcon } from "lucide-react"
+import {
+  FacebookIcon,
+  InstagramIcon,
+  MailIcon,
+  MapPinIcon,
+  PhoneIcon,
+  TwitterIcon,
+  YoutubeIcon,
+} from "lucide-react"
 import { Link } from "react-router-dom"
 
 import { BrandMark } from "@/shared/branding/brand-mark"
+import { useBranding } from "@/shared/branding/branding-provider"
 
 export function StorefrontFooter() {
+  const branding = useBranding()
+
   return (
-    <footer className="w-full border-t border-border/70 bg-card/60 pt-16 pb-8">
+    <footer className="w-full border-t border-border/70 bg-card/60 pb-8 pt-16">
       <div className="mx-auto w-full px-6 md:px-12 lg:px-16">
         <div className="grid grid-cols-1 gap-12 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 lg:gap-8">
           <div className="space-y-6 lg:col-span-2 lg:pr-8">
             <Link to="/" className="inline-block">
               <BrandMark />
             </Link>
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              Your premier destination for multi-vendor commerce. Discover curated products from trusted sellers around the world, all in one unified shopping experience with faster checkout flows.
-            </p>
+            <p className="text-sm leading-relaxed text-muted-foreground">{branding.summary}</p>
             <div className="space-y-3 pt-2 text-sm text-muted-foreground">
               <div className="flex items-start gap-3">
                 <MapPinIcon className="mt-0.5 size-4 shrink-0" />
-                <span>Bengaluru, Karnataka, India</span>
+                <span>{branding.location}</span>
               </div>
               <div className="flex items-center gap-3">
                 <PhoneIcon className="size-4 shrink-0" />
-                <a href="tel:+918000000000" className="transition-colors hover:text-foreground">+91 80000 00000</a>
+                <a
+                  href={`tel:${branding.phone.replace(/\D/g, "")}`}
+                  className="transition-colors hover:text-foreground"
+                >
+                  {branding.phone}
+                </a>
               </div>
               <div className="flex items-center gap-3">
                 <MailIcon className="size-4 shrink-0" />
-                <a href="mailto:support@cxnext.app" className="transition-colors hover:text-foreground">support@cxnext.app</a>
+                <a
+                  href={`mailto:${branding.email}`}
+                  className="transition-colors hover:text-foreground"
+                >
+                  {branding.email}
+                </a>
               </div>
             </div>
           </div>
@@ -100,11 +119,10 @@ export function StorefrontFooter() {
           </div>
 
           <div className="text-center text-sm text-muted-foreground md:text-right">
-            {"©"} {new Date().getFullYear()} CODEXSUN. All rights reserved.
+            {"©"} {new Date().getFullYear()} {branding.brandName}. All rights reserved.
           </div>
         </div>
       </div>
     </footer>
   )
 }
-

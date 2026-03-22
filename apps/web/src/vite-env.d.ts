@@ -5,3 +5,6 @@ interface ImportMetaEnv {
 }
 
 declare const __FRONTEND_TARGET__: string
+declare const __APP_MODE__: string
+declare const __APP_DEBUG__: boolean
+declare const __APP_SKIP_SETUP_CHECK__: boolean

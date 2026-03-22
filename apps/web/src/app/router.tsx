@@ -1,53 +1,107 @@
+import { lazy, Suspense, type ComponentType } from 'react'
 import { createBrowserRouter, Navigate, RouterProvider, useLocation } from 'react-router-dom'
+import { GlobalLoader } from '@/components/ui/global-loader'
 import { RequireAuth } from '@/features/auth/components/require-auth'
 import { RequireSuperAdmin } from '@/features/auth/components/require-super-admin'
 import { frontendTarget } from '@/config/frontend'
-import { AppLayout } from '@/app/layouts/app-layout'
-import { AuthLayout } from '@/app/layouts/auth-layout'
-import { CustomerPortalLayout } from '@/app/layouts/customer-portal-layout'
-import { ShopLayout } from '@/app/layouts/shop-layout'
-import { WebLayout } from '@/app/layouts/web-layout'
-import { AboutPage } from '@/features/marketing/pages/about-page'
-import { ContactPage } from '@/features/marketing/pages/contact-page'
 import { buildAdminPortalPath, buildCustomerPortalPath, customerPortalRoot } from '@/features/auth/lib/portal-routing'
 import { useAuth } from '@/features/auth/components/auth-provider'
-import { CustomerDashboardPage } from '@/features/customer-portal/pages/customer-dashboard-page'
 import { CustomerSectionPage } from '@/features/customer-portal/pages/customer-section-page'
-import { DashboardPage } from '@/features/dashboard/pages/dashboard-page'
-import { CommonModulePage } from '@/features/common-modules/pages/common-module-page'
-import { CommonModulesHomePage } from '@/features/common-modules/pages/common-modules-home-page'
-import { CompanyFormPage } from '@/features/company/pages/company-form-page'
-import { CompanyListPage } from '@/features/company/pages/company-list-page'
-import { CompanyShowPage } from '@/features/company/pages/company-show-page'
-import { ContactFormPage } from '@/features/contact/pages/contact-form-page'
-import { ContactListPage } from '@/features/contact/pages/contact-list-page'
-import { ContactShowPage } from '@/features/contact/pages/contact-show-page'
-import { MediaFormPage } from '@/features/media/pages/media-form-page'
-import { MediaListPage } from '@/features/media/pages/media-list-page'
-import { ProductFormPage } from '@/features/product/pages/product-form-page'
-import { ProductListPage } from '@/features/product/pages/product-list-page'
-import { ProductShowPage } from '@/features/product/pages/product-show-page'
-import { MailboxComposePage } from '@/features/mailbox/pages/mailbox-compose-page'
-import { MailboxMessageListPage } from '@/features/mailbox/pages/mailbox-message-list-page'
-import { MailboxMessageShowPage } from '@/features/mailbox/pages/mailbox-message-show-page'
-import { MailboxTemplateFormPage } from '@/features/mailbox/pages/mailbox-template-form-page'
-import { MailboxTemplateListPage } from '@/features/mailbox/pages/mailbox-template-list-page'
-import { StorefrontTemplateFormPage } from '@/features/storefront-designer/pages/storefront-template-form-page'
-import { StorefrontTemplateListPage } from '@/features/storefront-designer/pages/storefront-template-list-page'
-import { StorefrontTemplateShowPage } from '@/features/storefront-designer/pages/storefront-template-show-page'
-import { LoginPage } from '@/features/auth/pages/login-page'
 import { NotFoundPage } from '@/features/marketing/pages/not-found-page'
 import { PlaceholderPage } from '@/features/store/pages/placeholder-page'
-import { PortfolioHomePage } from '@/features/marketing/pages/portfolio-home-page'
-import { RegisterPage } from '@/features/auth/pages/register-page'
-import { ServicesPage } from '@/features/marketing/pages/services-page'
-import { StoreCartPage } from '@/features/store/pages/store-cart-page'
-import { StoreCatalogPage } from '@/features/store/pages/store-catalog-page'
-import { StoreCheckoutPage } from '@/features/store/pages/store-checkout-page'
-import { StoreHomePage } from '@/features/store/pages/store-home-page'
-import { StoreProductPage } from '@/features/store/pages/store-product-page'
-import { StoreWishlistPage } from '@/features/store/pages/store-wishlist-page'
-import { SystemSettingsPage } from '@/features/settings/pages/system-settings-page'
+
+function lazyPage<T extends Record<string, unknown>>(loader: () => Promise<T>, key: keyof T) {
+  return lazy(async () => ({ default: (await loader())[key] as never }))
+}
+
+function renderLazy(Component: ComponentType) {
+  return (
+    <Suspense
+      fallback={<GlobalLoader fullScreen={false} size="sm" />}
+    >
+      <Component />
+    </Suspense>
+  )
+}
+
+const AppLayout = lazyPage(() => import('@/app/layouts/app-layout'), 'AppLayout')
+const AuthLayout = lazyPage(() => import('@/app/layouts/auth-layout'), 'AuthLayout')
+const CustomerPortalLayout = lazyPage(
+  () => import('@/app/layouts/customer-portal-layout'),
+  'CustomerPortalLayout',
+)
+const ShopLayout = lazyPage(() => import('@/app/layouts/shop-layout'), 'ShopLayout')
+const WebLayout = lazyPage(() => import('@/app/layouts/web-layout'), 'WebLayout')
+const AboutPage = lazyPage(() => import('@/features/marketing/pages/about-page'), 'AboutPage')
+const ContactPage = lazyPage(() => import('@/features/marketing/pages/contact-page'), 'ContactPage')
+const CustomerDashboardPage = lazyPage(
+  () => import('@/features/customer-portal/pages/customer-dashboard-page'),
+  'CustomerDashboardPage',
+)
+const DashboardPage = lazyPage(() => import('@/features/dashboard/pages/dashboard-page'), 'DashboardPage')
+const CommonModulePage = lazyPage(
+  () => import('@/features/common-modules/pages/common-module-page'),
+  'CommonModulePage',
+)
+const CommonModulesHomePage = lazyPage(
+  () => import('@/features/common-modules/pages/common-modules-home-page'),
+  'CommonModulesHomePage',
+)
+const CompanyFormPage = lazyPage(() => import('@/features/company/pages/company-form-page'), 'CompanyFormPage')
+const CompanyListPage = lazyPage(() => import('@/features/company/pages/company-list-page'), 'CompanyListPage')
+const CompanyShowPage = lazyPage(() => import('@/features/company/pages/company-show-page'), 'CompanyShowPage')
+const ContactFormPage = lazyPage(() => import('@/features/contact/pages/contact-form-page'), 'ContactFormPage')
+const ContactListPage = lazyPage(() => import('@/features/contact/pages/contact-list-page'), 'ContactListPage')
+const ContactShowPage = lazyPage(() => import('@/features/contact/pages/contact-show-page'), 'ContactShowPage')
+const MediaFormPage = lazyPage(() => import('@/features/media/pages/media-form-page'), 'MediaFormPage')
+const MediaListPage = lazyPage(() => import('@/features/media/pages/media-list-page'), 'MediaListPage')
+const ProductFormPage = lazyPage(() => import('@/features/product/pages/product-form-page'), 'ProductFormPage')
+const ProductListPage = lazyPage(() => import('@/features/product/pages/product-list-page'), 'ProductListPage')
+const ProductShowPage = lazyPage(() => import('@/features/product/pages/product-show-page'), 'ProductShowPage')
+const MailboxComposePage = lazyPage(() => import('@/features/mailbox/pages/mailbox-compose-page'), 'MailboxComposePage')
+const MailboxMessageListPage = lazyPage(
+  () => import('@/features/mailbox/pages/mailbox-message-list-page'),
+  'MailboxMessageListPage',
+)
+const MailboxMessageShowPage = lazyPage(
+  () => import('@/features/mailbox/pages/mailbox-message-show-page'),
+  'MailboxMessageShowPage',
+)
+const MailboxTemplateFormPage = lazyPage(
+  () => import('@/features/mailbox/pages/mailbox-template-form-page'),
+  'MailboxTemplateFormPage',
+)
+const MailboxTemplateListPage = lazyPage(
+  () => import('@/features/mailbox/pages/mailbox-template-list-page'),
+  'MailboxTemplateListPage',
+)
+const StorefrontTemplateFormPage = lazyPage(
+  () => import('@/features/storefront-designer/pages/storefront-template-form-page'),
+  'StorefrontTemplateFormPage',
+)
+const StorefrontTemplateListPage = lazyPage(
+  () => import('@/features/storefront-designer/pages/storefront-template-list-page'),
+  'StorefrontTemplateListPage',
+)
+const StorefrontTemplateShowPage = lazyPage(
+  () => import('@/features/storefront-designer/pages/storefront-template-show-page'),
+  'StorefrontTemplateShowPage',
+)
+const LoginPage = lazyPage(() => import('@/features/auth/pages/login-page'), 'LoginPage')
+const PortfolioHomePage = lazyPage(
+  () => import('@/features/marketing/pages/portfolio-home-page'),
+  'PortfolioHomePage',
+)
+const RegisterPage = lazyPage(() => import('@/features/auth/pages/register-page'), 'RegisterPage')
+const ServicesPage = lazyPage(() => import('@/features/marketing/pages/services-page'), 'ServicesPage')
+const StoreCartPage = lazyPage(() => import('@/features/store/pages/store-cart-page'), 'StoreCartPage')
+const StoreCatalogPage = lazyPage(() => import('@/features/store/pages/store-catalog-page'), 'StoreCatalogPage')
+const StoreCheckoutPage = lazyPage(() => import('@/features/store/pages/store-checkout-page'), 'StoreCheckoutPage')
+const StoreHomePage = lazyPage(() => import('@/features/store/pages/store-home-page'), 'StoreHomePage')
+const StoreProductPage = lazyPage(() => import('@/features/store/pages/store-product-page'), 'StoreProductPage')
+const StoreWishlistPage = lazyPage(() => import('@/features/store/pages/store-wishlist-page'), 'StoreWishlistPage')
+const SystemSettingsPage = lazyPage(() => import('@/features/settings/pages/system-settings-page'), 'SystemSettingsPage')
+const SystemVersionPage = lazyPage(() => import('@/features/settings/pages/system-version-page'), 'SystemVersionPage')
 
 function LegacyAdminDashboardRedirect() {
   const location = useLocation()
@@ -70,43 +124,44 @@ const adminRoutes = {
   children: [
     {
       path: 'admin/dashboard',
-      element: <AppLayout />,
+      element: renderLazy(AppLayout),
       children: [
-        { index: true, element: <DashboardPage /> },
-        { path: 'companies', element: <CompanyListPage /> },
-        { path: 'companies/new', element: <CompanyFormPage /> },
-        { path: 'companies/:companyId', element: <CompanyShowPage /> },
-        { path: 'companies/:companyId/edit', element: <CompanyFormPage /> },
-        { path: 'contacts', element: <ContactListPage /> },
-        { path: 'contacts/new', element: <ContactFormPage /> },
-        { path: 'contacts/:contactId', element: <ContactShowPage /> },
-        { path: 'contacts/:contactId/edit', element: <ContactFormPage /> },
-        { path: 'media', element: <MediaListPage /> },
-        { path: 'media/new', element: <MediaFormPage /> },
-        { path: 'media/:mediaId/edit', element: <MediaFormPage /> },
-        { path: 'products', element: <ProductListPage /> },
-        { path: 'products/new', element: <ProductFormPage /> },
-        { path: 'products/:productId', element: <ProductShowPage /> },
-        { path: 'products/:productId/edit', element: <ProductFormPage /> },
-        { path: 'mailbox/messages', element: <MailboxMessageListPage /> },
-        { path: 'mailbox/messages/:messageId', element: <MailboxMessageShowPage /> },
-        { path: 'mailbox/compose', element: <MailboxComposePage /> },
-        { path: 'mailbox/templates', element: <MailboxTemplateListPage /> },
-        { path: 'mailbox/templates/new', element: <MailboxTemplateFormPage /> },
-        { path: 'mailbox/templates/:templateId/edit', element: <MailboxTemplateFormPage /> },
-        { path: 'storefront-designer', element: <StorefrontTemplateListPage /> },
-        { path: 'storefront-designer/new', element: <StorefrontTemplateFormPage /> },
-        { path: 'storefront-designer/:templateId', element: <StorefrontTemplateShowPage /> },
-        { path: 'storefront-designer/:templateId/edit', element: <StorefrontTemplateFormPage /> },
+        { index: true, element: renderLazy(DashboardPage) },
+        { path: 'companies', element: renderLazy(CompanyListPage) },
+        { path: 'companies/new', element: renderLazy(CompanyFormPage) },
+        { path: 'companies/:companyId', element: renderLazy(CompanyShowPage) },
+        { path: 'companies/:companyId/edit', element: renderLazy(CompanyFormPage) },
+        { path: 'contacts', element: renderLazy(ContactListPage) },
+        { path: 'contacts/new', element: renderLazy(ContactFormPage) },
+        { path: 'contacts/:contactId', element: renderLazy(ContactShowPage) },
+        { path: 'contacts/:contactId/edit', element: renderLazy(ContactFormPage) },
+        { path: 'media', element: renderLazy(MediaListPage) },
+        { path: 'media/new', element: renderLazy(MediaFormPage) },
+        { path: 'media/:mediaId/edit', element: renderLazy(MediaFormPage) },
+        { path: 'products', element: renderLazy(ProductListPage) },
+        { path: 'products/new', element: renderLazy(ProductFormPage) },
+        { path: 'products/:productId', element: renderLazy(ProductShowPage) },
+        { path: 'products/:productId/edit', element: renderLazy(ProductFormPage) },
+        { path: 'mailbox/messages', element: renderLazy(MailboxMessageListPage) },
+        { path: 'mailbox/messages/:messageId', element: renderLazy(MailboxMessageShowPage) },
+        { path: 'mailbox/compose', element: renderLazy(MailboxComposePage) },
+        { path: 'mailbox/templates', element: renderLazy(MailboxTemplateListPage) },
+        { path: 'mailbox/templates/new', element: renderLazy(MailboxTemplateFormPage) },
+        { path: 'mailbox/templates/:templateId/edit', element: renderLazy(MailboxTemplateFormPage) },
+        { path: 'storefront-designer', element: renderLazy(StorefrontTemplateListPage) },
+        { path: 'storefront-designer/new', element: renderLazy(StorefrontTemplateFormPage) },
+        { path: 'storefront-designer/:templateId', element: renderLazy(StorefrontTemplateShowPage) },
+        { path: 'storefront-designer/:templateId/edit', element: renderLazy(StorefrontTemplateFormPage) },
         {
           element: <RequireSuperAdmin />,
           children: [
-            { path: 'settings', element: <SystemSettingsPage /> },
+            { path: 'settings', element: renderLazy(SystemSettingsPage) },
+            { path: 'version', element: renderLazy(SystemVersionPage) },
           ],
         },
-        { path: 'common', element: <CommonModulesHomePage /> },
-        { path: 'common/:moduleKey', element: <CommonModulePage /> },
-        { path: '*', element: <DashboardPage /> },
+        { path: 'common', element: renderLazy(CommonModulesHomePage) },
+        { path: 'common/:moduleKey', element: renderLazy(CommonModulePage) },
+        { path: '*', element: renderLazy(DashboardPage) },
       ],
     },
   ],
@@ -117,9 +172,9 @@ const customerPortalRoutes = {
   children: [
     {
       path: 'dashboard',
-      element: <CustomerPortalLayout />,
+      element: renderLazy(CustomerPortalLayout),
       children: [
-        { index: true, element: <CustomerDashboardPage /> },
+        { index: true, element: renderLazy(CustomerDashboardPage) },
         {
           path: 'orders',
           element: <CustomerSectionPage title="Orders" description="Review order progress, payment confirmations, and delivery history in one place." />,
@@ -162,19 +217,19 @@ const legacyAdminRoutes = {
 const authRoutes = {
   element: <AuthLayout />,
   children: [
-    { path: 'login', element: <LoginPage /> },
-    { path: 'register', element: <RegisterPage /> },
+    { path: 'login', element: renderLazy(LoginPage) },
+    { path: 'register', element: renderLazy(RegisterPage) },
   ],
 }
 
 const webRoutes = [
   {
-    element: <WebLayout />,
+    element: renderLazy(WebLayout),
     children: [
-      { index: true, element: <PortfolioHomePage /> },
-      { path: 'about', element: <AboutPage /> },
-      { path: 'services', element: <ServicesPage /> },
-      { path: 'contact', element: <ContactPage /> },
+      { index: true, element: renderLazy(PortfolioHomePage) },
+      { path: 'about', element: renderLazy(AboutPage) },
+      { path: 'services', element: renderLazy(ServicesPage) },
+      { path: 'contact', element: renderLazy(ContactPage) },
     ],
   },
   customerPortalRoutes,
@@ -189,25 +244,25 @@ const webRoutes = [
 
 const shopRoutes = [
   {
-    element: <ShopLayout />,
+    element: renderLazy(ShopLayout),
     children: [
-      { index: true, element: <StoreHomePage /> },
-      { path: 'about', element: <AboutPage /> },
-      { path: 'contact', element: <ContactPage /> },
-      { path: 'search', element: <StoreCatalogPage /> },
-      { path: 'wishlist', element: <StoreWishlistPage /> },
-      { path: 'cart', element: <StoreCartPage /> },
+      { index: true, element: renderLazy(StoreHomePage) },
+      { path: 'about', element: renderLazy(AboutPage) },
+      { path: 'contact', element: renderLazy(ContactPage) },
+      { path: 'search', element: renderLazy(StoreCatalogPage) },
+      { path: 'wishlist', element: renderLazy(StoreWishlistPage) },
+      { path: 'cart', element: renderLazy(StoreCartPage) },
       {
         element: <RequireAuth allow={['customer']} />,
         children: [
-          { path: 'checkout', element: <StoreCheckoutPage /> },
+          { path: 'checkout', element: renderLazy(StoreCheckoutPage) },
           { path: 'account', element: <Navigate to={buildCustomerPortalPath()} replace /> },
           { path: 'account/profile', element: <Navigate to={buildCustomerPortalPath('/profile')} replace /> },
           { path: 'account/orders', element: <Navigate to={buildCustomerPortalPath('/orders')} replace /> },
           { path: 'account/notifications', element: <Navigate to={buildCustomerPortalPath('/notifications')} replace /> },
         ],
       },
-      { path: 'product/:slug', element: <StoreProductPage /> },
+      { path: 'product/:slug', element: renderLazy(StoreProductPage) },
       { path: 'support', element: <PlaceholderPage /> },
       { path: 'vendor', element: <PlaceholderPage /> },
       { path: 'advertise', element: <PlaceholderPage /> },

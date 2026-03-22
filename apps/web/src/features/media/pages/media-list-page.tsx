@@ -6,7 +6,6 @@ import {
   FolderOpen,
   ImageIcon,
   MoreHorizontalIcon,
-  Plus,
   PowerIcon,
 } from 'lucide-react'
 import { CommonList } from '@/components/forms/CommonList'
@@ -19,6 +18,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { ActiveStatusBadge, StatusBadge } from '@/components/ui/status-badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -274,7 +274,7 @@ export function MediaListPage() {
                   <div className="flex items-center gap-2">
                     <FolderOpen className="size-4 text-muted-foreground" />
                     <p className="font-medium text-foreground">{folder.name}</p>
-                    <Badge variant={folder.isActive ? 'default' : 'secondary'}>{folder.isActive ? 'Active' : 'Inactive'}</Badge>
+                    <ActiveStatusBadge isActive={folder.isActive} />
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Parent: {folder.parentId ? folderNameById.get(folder.parentId) ?? 'Unknown folder' : 'Root'}
@@ -393,8 +393,8 @@ export function MediaListPage() {
               accessor: (item) => item.isActive,
               cell: (item) => (
                 <div className="flex items-center gap-2">
-                  <Badge variant={item.isActive ? 'default' : 'secondary'}>{item.isActive ? 'Active' : 'Inactive'}</Badge>
-                  {item.isOptimized ? <Badge variant="outline">Optimized</Badge> : null}
+                  <ActiveStatusBadge isActive={item.isActive} />
+                  {item.isOptimized ? <StatusBadge tone="optimized">Optimized</StatusBadge> : null}
                 </div>
               ),
             },

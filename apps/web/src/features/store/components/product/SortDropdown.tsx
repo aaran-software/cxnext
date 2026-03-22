@@ -19,12 +19,12 @@ export function SortDropdown({
 }) {
   return (
     <Select value={value} onValueChange={(next) => onChange(next as StorefrontSortOption)}>
-      <SelectTrigger className="w-full rounded-full bg-card md:w-64">
+      <SelectTrigger className="h-12 w-full rounded-2xl border-[#e2d5c6] bg-white px-4 text-left shadow-none md:w-full">
         <SelectValue />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className="rounded-2xl border-[#e2d5c6] bg-white">
         {options.map((option) => (
-          <SelectItem key={option.value} value={option.value}>
+          <SelectItem key={option.value} value={option.value} className="rounded-xl">
             {option.label}
           </SelectItem>
         ))}

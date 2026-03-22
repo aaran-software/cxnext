@@ -8,7 +8,7 @@ export function ProductGallery({ images, fallbackUrl }: { images: string[]; fall
     <div className="grid gap-4">
       <div className="overflow-hidden rounded-[2rem] border border-border/60 bg-card">
         {hasImage ? (
-          <img src={activeUrl} alt="Product" className="aspect-square w-full object-cover" />
+          <img src={activeUrl} alt="Product" className="aspect-square w-full object-cover" decoding="async" fetchPriority="high" />
         ) : (
           <div className="flex aspect-square items-center justify-center text-sm text-muted-foreground">
             Product image unavailable
@@ -24,7 +24,7 @@ export function ProductGallery({ images, fallbackUrl }: { images: string[]; fall
               className="overflow-hidden rounded-2xl border border-border/60"
               onClick={() => setActiveUrl(image)}
             >
-              <img src={image} alt="Product preview" className="aspect-square w-full object-cover" />
+              <img src={image} alt="Product preview" className="aspect-square w-full object-cover" loading="lazy" decoding="async" />
             </button>
           ))}
         </div>

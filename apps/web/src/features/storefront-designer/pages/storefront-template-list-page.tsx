@@ -11,6 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { ActiveStatusBadge } from '@/components/ui/status-badge'
 import {
   deactivateCommonModuleItem,
   HttpError,
@@ -319,9 +320,7 @@ export function StorefrontTemplateListPage() {
               defaultVisible: false,
               cell: (item) => (
                 <div className="flex items-center gap-2">
-                  <Badge variant={item.isActive ? 'default' : 'secondary'}>
-                    {item.isActive ? 'Active' : 'Inactive'}
-                  </Badge>
+                  <ActiveStatusBadge isActive={item.isActive} />
                   <span className="text-xs text-muted-foreground">Order {item.sort_order}</span>
                 </div>
               ),

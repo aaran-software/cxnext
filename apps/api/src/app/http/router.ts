@@ -34,6 +34,8 @@ import { servePublicMediaAsset } from '../../shared/media/storage'
 import { getBearerToken, readJsonBody } from '../../shared/http/request'
 import { writeEmpty, writeJson } from '../../shared/http/response'
 import { serveBuiltWebApp } from '../../shared/http/static-web'
+import { getSystemUpdateCheck, getSystemVersion } from '../../shared/version/system-version'
+import { environment } from '../../shared/config/environment'
 
 const bootstrapUseCase = new GetBootstrapSnapshot(new SystemOverviewRepository())
 const mailboxService = new MailboxService(new MailboxRepository())
@@ -99,6 +101,17 @@ export async function routeRequest(
 
     if (method === 'GET' && url.pathname === '/health/db') {
       writeJson(response, 200, getDatabaseHealth())
+      return
+    }
+
+    if (method === 'GET' && url.pathname === '/system/version') {
+      writeJson(response, 200, await getSystemVersion())
+      return
+    }
+
+    if (method === 'GET' && url.pathname === '/admin/system/update-check') {
+      await requireAuthenticatedUser(request)
+      writeJson(response, 200, await getSystemUpdateCheck())
       return
     }
 
@@ -536,7 +549,7 @@ export async function routeRequest(
     const unknownError = error instanceof Error ? error.message : 'Unknown error'
     writeJson(response, 500, {
       error: 'Unhandled server error.',
-      context: { detail: unknownError },
+      context: environment.app.debug ? { detail: unknownError } : undefined,
     })
   }
 }

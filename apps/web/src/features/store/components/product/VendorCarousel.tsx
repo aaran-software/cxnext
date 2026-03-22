@@ -13,7 +13,7 @@ export function VendorCarousel({ vendors }: { vendors: StorefrontBrand[] }) {
         >
           <div className="mb-4 flex size-14 items-center justify-center overflow-hidden rounded-2xl bg-primary/10 text-lg font-semibold text-primary">
             {vendor.image ? (
-              <img src={vendor.image} alt={vendor.name} className="h-full w-full object-cover" loading="lazy" />
+              <img src={vendor.image} alt={vendor.name} className="h-full w-full object-cover" loading="lazy" decoding="async" />
             ) : (
               <span>{vendor.name.slice(0, 2).toUpperCase()}</span>
             )}

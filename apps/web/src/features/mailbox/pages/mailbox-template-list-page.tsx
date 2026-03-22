@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { EditIcon, MoreHorizontalIcon, PowerIcon } from 'lucide-react'
 import { CommonList } from '@/components/forms/CommonList'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -12,6 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { ActiveStatusBadge, StatusBadge } from '@/components/ui/status-badge'
 import {
   deactivateMailboxTemplate,
   HttpError,
@@ -199,8 +199,8 @@ export function MailboxTemplateListPage() {
               accessor: (item) => item.isActive,
               cell: (item) => (
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant={item.isActive ? 'default' : 'secondary'}>{item.isActive ? 'Active' : 'Inactive'}</Badge>
-                  {item.isSystem ? <Badge variant="outline">System</Badge> : <Badge variant="outline">Manual</Badge>}
+                  <ActiveStatusBadge isActive={item.isActive} />
+                  {item.isSystem ? <StatusBadge tone="system">System</StatusBadge> : <StatusBadge tone="manual">Manual</StatusBadge>}
                 </div>
               ),
             },

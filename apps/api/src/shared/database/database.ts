@@ -130,6 +130,15 @@ export async function initializeApplicationSetup(force = false) {
   }
 
   const nextSetupPromise = (async () => {
+    if (environment.app.skipSetupCheck) {
+      setupStatus = createSetupStatus(
+        'ready',
+        'Application setup checks are bypassed by APP_SKIP_SETUP_CHECK.',
+      )
+      await db.close()
+      return setupStatus
+    }
+
     const configuration = environment.database.enabled ? environment.database : null
 
     if (!configuration) {
