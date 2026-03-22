@@ -14,6 +14,10 @@ interface WarehouseRow extends RowDataPacket {
   id: string
 }
 
+interface CompanyRow extends RowDataPacket {
+  id: string
+}
+
 type ProductSeed = {
   key: string
   name: string
@@ -151,6 +155,25 @@ async function resolveWarehouseId(
   )
 
   return warehouse?.id ?? 'warehouse:main'
+}
+
+async function resolveCompanyId(
+  first: <T extends RowDataPacket = RowDataPacket>(sql: string, params?: SqlValue[]) => Promise<T | null>,
+  requestedId: string,
+  requestedName: string,
+) {
+  const company = await first<CompanyRow>(
+    `
+      SELECT id
+      FROM ${companyTableNames.companies}
+      WHERE id = ? OR name = ?
+      ORDER BY CASE WHEN id = ? THEN 0 ELSE 1 END, created_at ASC
+      LIMIT 1
+    `,
+    [requestedId, requestedName, requestedId],
+  )
+
+  return company?.id ?? requestedId
 }
 
 function buildStorefrontTemplates(): UpsertRow[] {
@@ -349,17 +372,18 @@ export const tirupurDirectCatalogSeeder: Seeder = {
       await upsertRows(execute, companyTableNames.companies, [
         { id: 'company:tirupur-direct', name: 'TIRUPUR DIRECT', legal_name: 'TIRUPUR TEXTILES', registration_number: 'TD-TEAMA-2026', pan: 'AAJCT4001L', financial_year_start: '2025-04-01', books_start: '2025-04-01', website: 'https://tirupurdirect.com', description: 'Garment online shopping delivered direct from Tiruppur export factories. Tirupur Direct works in association with TEAMA, the Tiruppur Exporter and Manufacturer Association, to present knitwear-focused factory collections.', is_active: 1 },
       ])
+      const companyId = await resolveCompanyId(transaction.first.bind(transaction), 'company:tirupur-direct', 'TIRUPUR DIRECT')
       await upsertRows(execute, companyTableNames.logos, [
-        { id: 'company-logo:tirupur-direct-primary', company_id: 'company:tirupur-direct', logo_url: imageUrl('TIRUPUR DIRECT Logo'), logo_type: 'primary', is_active: 1 },
+        { id: 'company-logo:tirupur-direct-primary', company_id: companyId, logo_url: imageUrl('TIRUPUR DIRECT Logo'), logo_type: 'primary', is_active: 1 },
       ])
       await upsertRows(execute, companyTableNames.addresses, [
-        { id: 'company-address:tirupur-direct-head-office', company_id: 'company:tirupur-direct', address_type: 'head_office', address_line1: 'No. 12, Export Knit Cluster', address_line2: 'Avinashi Road', city_id: 'city:IN-TN-TIRUPPUR', state_id: 'state:IN-TN', country_id: 'country:IN', pincode_id: 'pincode:641601', latitude: 11.1085, longitude: 77.3411, is_default: 1, is_active: 1 },
+        { id: 'company-address:tirupur-direct-head-office', company_id: companyId, address_type: 'head_office', address_line1: 'No. 12, Export Knit Cluster', address_line2: 'Avinashi Road', city_id: 'city:IN-TN-TIRUPPUR', state_id: 'state:IN-TN', country_id: 'country:IN', pincode_id: 'pincode:641601', latitude: 11.1085, longitude: 77.3411, is_default: 1, is_active: 1 },
       ])
       await upsertRows(execute, companyTableNames.emails, [
-        { id: 'company-email:tirupur-direct-primary', company_id: 'company:tirupur-direct', email: 'sales@tirupurdirect.com', email_type: 'sales', is_active: 1 },
+        { id: 'company-email:tirupur-direct-primary', company_id: companyId, email: 'sales@tirupurdirect.com', email_type: 'sales', is_active: 1 },
       ])
       await upsertRows(execute, companyTableNames.phones, [
-        { id: 'company-phone:tirupur-direct-primary', company_id: 'company:tirupur-direct', phone_number: '+91 90039 64160', phone_type: 'phone', is_primary: 1, is_active: 1 },
+        { id: 'company-phone:tirupur-direct-primary', company_id: companyId, phone_number: '+91 90039 64160', phone_type: 'phone', is_primary: 1, is_active: 1 },
       ])
 
       await upsertRows(execute, commonTableNames.storefrontTemplates, buildStorefrontTemplates())
