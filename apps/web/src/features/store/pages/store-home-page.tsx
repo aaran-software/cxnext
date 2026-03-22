@@ -13,6 +13,7 @@ import type { StorefrontProduct } from "@/features/store/types/storefront"
 import { VendorCarousel } from "@/features/store/components/product/VendorCarousel"
 import { useStorefront } from "@/features/store/context/storefront-context"
 import { HttpError, listCommonModuleItems } from "@/shared/api/client"
+import { showInfoToast } from "@/shared/notifications/toast"
 
 type HomeTemplateCode =
   | "home-category"
@@ -316,6 +317,13 @@ export function StoreHomePage() {
   const bestsellingProducts = products.filter((product) => product.bestseller).slice(0, 2)
   const featuredBrands = brands.filter((brand) => brand.featuredLabel)
 
+  function handleFeatureNoteClick(title: string) {
+    showInfoToast({
+      title: "Feature details coming soon",
+      description: `${title} will get a dedicated storefront walkthrough in a follow-up.`,
+    })
+  }
+
   if (isLoading) {
     return <div className="mx-auto max-w-7xl px-4 py-10 text-sm text-muted-foreground sm:px-6">Loading storefront...</div>
   }
@@ -429,16 +437,26 @@ export function StoreHomePage() {
 
       <section className="grid gap-4 lg:grid-cols-3">
         {trustNotes.map((note) => (
-          <div
+          <button
             key={note.title}
-            className="rounded-[1.8rem] border border-white/70 bg-white/78 p-5 shadow-[0_20px_50px_-40px_rgba(40,28,18,0.25)]"
+            type="button"
+            onClick={() => handleFeatureNoteClick(note.title)}
+            className="group cursor-pointer rounded-[1.8rem] border border-white/70 bg-white/78 p-5 text-left shadow-[0_20px_50px_-40px_rgba(40,28,18,0.25)] transition-all duration-300 ease-out hover:-translate-y-1 hover:border-accent/28 hover:shadow-[0_26px_60px_-36px_rgba(40,28,18,0.34)] focus-visible:-translate-y-1 focus-visible:border-accent/28 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20"
           >
-            <div className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-accent/15">
-              <note.icon className="size-5 text-foreground" />
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div className="flex size-12 items-center justify-center rounded-2xl bg-background/88 transition-all duration-300 ease-out group-hover:bg-[var(--accent-bg)] group-hover:shadow-[0_12px_24px_-16px_color-mix(in_srgb,var(--color-accent)_55%,transparent)]">
+                <note.icon className="size-5 text-foreground transition-all duration-300 ease-out group-hover:scale-110 group-hover:text-accent" />
+              </div>
+              <span className="pointer-events-none inline-flex items-center gap-1 text-xs font-medium tracking-[0.08em] text-accent opacity-0 transition-all duration-300 ease-out group-hover:translate-x-0.5 group-hover:opacity-100">
+                Learn more
+                <ArrowRightIcon className="size-3.5" />
+              </span>
             </div>
-            <h2 className="text-xl font-semibold tracking-tight">{note.title}</h2>
+            <h2 className="text-xl font-semibold tracking-tight transition-all duration-300 ease-out group-hover:-translate-y-0.5 group-hover:text-accent">
+              {note.title}
+            </h2>
             {note.description ? <p className="mt-2 text-sm leading-6 text-muted-foreground">{note.description}</p> : null}
-          </div>
+          </button>
         ))}
       </section>
     </div>

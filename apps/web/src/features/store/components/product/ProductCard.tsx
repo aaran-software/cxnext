@@ -1,4 +1,4 @@
-import { HeartIcon, ShoppingCartIcon } from "lucide-react"
+import { ShoppingCartIcon } from "lucide-react"
 import { Link } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
@@ -7,11 +7,12 @@ import { useStorefront } from "@/features/store/context/storefront-context"
 import { formatCurrency, getPrimaryProductImage } from "@/features/store/lib/storefront-utils"
 import type { StorefrontProduct } from "@/features/store/types/storefront"
 import { RatingStars } from "./RatingStars"
+import { ShareButton } from "./ShareButton"
+import { WishlistButton } from "./WishlistButton"
 
 export function ProductCard({ product }: { product: StorefrontProduct }) {
-  const { addToCart, toggleWishlist, isInWishlist } = useStorefront()
+  const { addToCart } = useStorefront()
   const imageUrl = getPrimaryProductImage(product)
-  const wished = isInWishlist(product.id)
   const isOutOfStock = product.inventory <= 0
 
   return (
@@ -53,14 +54,15 @@ export function ProductCard({ product }: { product: StorefrontProduct }) {
           </div>
         </div>
       </CardContent>
-      <div className="grid grid-cols-[1fr_auto] gap-3 p-5 pt-0">
+      <div className="grid grid-cols-[1fr_auto] items-center gap-3 p-5 pt-0">
         <Button className="rounded-full" disabled={isOutOfStock} onClick={() => addToCart(product.id, 1)}>
           <ShoppingCartIcon className="size-4" />
           {isOutOfStock ? "Out of stock" : "Add to Cart"}
         </Button>
-        <Button variant="outline" size="icon" className="rounded-full" onClick={() => toggleWishlist(product.id)}>
-          <HeartIcon className={wished ? "size-4 fill-current" : "size-4"} />
-        </Button>
+        <div className="flex items-center gap-2">
+          <WishlistButton productId={product.id} />
+          <ShareButton productName={product.name} />
+        </div>
       </div>
     </Card>
   )

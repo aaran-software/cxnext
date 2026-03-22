@@ -25,18 +25,48 @@ export function StorefrontBottomNav() {
         {items.map((item) => {
           const Icon = item.icon
           const isActive = location.pathname === item.url || location.pathname.startsWith(`${item.url}/`)
+          const isWishlistItem = item.label === "Wishlist"
+          const isCartItem = item.label === "Cart"
+          const isAccountItem = item.label === "Account"
+          const wishlistActive = isWishlistItem && wishlistProductIds.length > 0
+          const cartActive = isCartItem && cartCount > 0
+          const accountActive =
+            isAccountItem &&
+            (auth.isAuthenticated ||
+              location.pathname === "/login" ||
+              location.pathname === "/register" ||
+              location.pathname.startsWith("/dashboard/") ||
+              location.pathname === "/dashboard" ||
+              location.pathname.startsWith("/admin/dashboard/") ||
+              location.pathname === "/admin/dashboard" ||
+              location.pathname.startsWith("/account/") ||
+              location.pathname === "/account")
 
           return (
             <Link
               key={item.url}
               to={item.url}
               className={cn(
-                "relative flex flex-col items-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-medium transition",
-                isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground",
+                "relative flex flex-col items-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-medium transition-all duration-300 ease-out",
+                isActive
+                  ? "bg-primary text-primary-foreground"
+                  : wishlistActive
+                    ? "bg-primary/[0.08] text-primary"
+                    : cartActive
+                      ? "bg-primary/[0.08] text-primary"
+                    : accountActive
+                      ? "bg-primary/[0.08] text-primary"
+                    : "text-muted-foreground",
               )}
             >
-              <Icon className="size-4" />
-              {item.label === "Wishlist" && wishlistProductIds.length > 0 ? (
+              <Icon
+                className={cn(
+                  "size-4 transition-all duration-300 ease-out",
+                  wishlistActive || cartActive || accountActive ? "fill-current text-current" : "",
+                )}
+                strokeWidth={isWishlistItem || isCartItem || isAccountItem ? 1.9 : undefined}
+              />
+              {isWishlistItem && wishlistProductIds.length > 0 ? (
                 <Badge className="absolute top-1 right-3 min-w-5 justify-center rounded-full px-1 text-[10px]">
                   {wishlistProductIds.length}
                 </Badge>

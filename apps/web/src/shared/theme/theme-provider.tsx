@@ -87,6 +87,7 @@ export function ThemeProvider({ children }: PropsWithChildren) {
     const root = document.documentElement
     root.dataset.mode = resolvedMode
     root.dataset.theme = accent
+    root.dataset.accent = accent
     root.style.colorScheme = resolvedMode
   }, [accent, mode, resolvedMode])
 

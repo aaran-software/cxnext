@@ -16,8 +16,10 @@
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --accent: #000000;
+  --accent-light: #404040;
+  --accent-bg: rgba(0, 0, 0, 0.08);
+  --accent-foreground: #ffffff;
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
@@ -54,6 +56,8 @@
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
   --accent: oklch(0.269 0 0);
+  --accent-light: oklch(0.38 0 0);
+  --accent-bg: color-mix(in srgb, var(--accent) 18%, transparent);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
@@ -74,20 +78,38 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
-:root[data-theme='orange'] {
+:root[data-theme='neutral'],
+:root[data-accent='neutral'] {
+  --accent: #000000;
+  --accent-light: #404040;
+  --accent-bg: rgba(0, 0, 0, 0.08);
+  --accent-foreground: #ffffff;
+  --ring: oklch(0.708 0 0);
+}
+
+:root[data-theme='orange'],
+:root[data-accent='orange'] {
   --accent: oklch(0.72 0.16 55);
+  --accent-light: oklch(0.8 0.12 55);
+  --accent-bg: color-mix(in srgb, var(--accent) 14%, transparent);
   --accent-foreground: oklch(0.2 0.03 55);
   --ring: oklch(0.72 0.16 55);
 }
 
-:root[data-theme='blue'] {
+:root[data-theme='blue'],
+:root[data-accent='blue'] {
   --accent: oklch(0.68 0.15 245);
+  --accent-light: oklch(0.78 0.11 245);
+  --accent-bg: color-mix(in srgb, var(--accent) 14%, transparent);
   --accent-foreground: oklch(0.98 0.01 245);
   --ring: oklch(0.68 0.15 245);
 }
 
-:root[data-theme='purple'] {
+:root[data-theme='purple'],
+:root[data-accent='purple'] {
   --accent: oklch(0.63 0.18 310);
+  --accent-light: oklch(0.74 0.13 310);
+  --accent-bg: color-mix(in srgb, var(--accent) 14%, transparent);
   --accent-foreground: oklch(0.98 0.01 310);
   --ring: oklch(0.63 0.18 310);
 }
@@ -106,6 +128,8 @@
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
+  --color-accent-light: var(--accent-light);
+  --color-accent-bg: var(--accent-bg);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-chart-1: var(--chart-1);

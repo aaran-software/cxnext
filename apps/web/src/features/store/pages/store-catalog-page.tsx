@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from "react"
-import { Grid2X2Icon, SlidersHorizontalIcon } from "lucide-react"
 import { useParams, useSearchParams } from "react-router-dom"
 
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { StorefrontSearchBar } from "@/features/store/components/navigation/storefront-search-bar"
 import { FilterSidebar } from "@/features/store/components/product/FilterSidebar"
 import { ProductGrid } from "@/features/store/components/product/ProductGrid"
 import { SortDropdown } from "@/features/store/components/product/SortDropdown"
@@ -15,7 +14,7 @@ import {
   getFilterOptions,
   sortProducts,
 } from "@/features/store/lib/storefront-utils"
-import type { StorefrontDepartment, StorefrontSortOption } from "@/features/store/types/storefront"
+import type { StorefrontSortOption } from "@/features/store/types/storefront"
 
 export function StoreCatalogPage() {
   const { slug } = useParams()
@@ -24,6 +23,7 @@ export function StoreCatalogPage() {
   const [sort, setSort] = useState<StorefrontSortOption>("featured")
   const [filters, setFilters] = useState(() => buildDefaultFilters(slug))
   const query = searchParams.get("q") ?? ""
+  const selectedDepartment = searchParams.get("department") ?? "all"
   const routeCategory = getCategoryBySlug(categories, slug)
 
   useEffect(() => {
@@ -37,7 +37,7 @@ export function StoreCatalogPage() {
       department === "kids" ||
       department === "accessories"
     ) {
-      nextFilters.department = department as StorefrontDepartment
+      nextFilters.department = department
     }
 
     if (occasion) {
@@ -96,15 +96,12 @@ export function StoreCatalogPage() {
         />
 
         <section className="space-y-5">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.8rem] border border-white/70 bg-white/76 px-5 py-4 shadow-sm">
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <Grid2X2Icon className="size-4" />
-              <span>Live catalog view with backend-driven browsing controls</span>
-            </div>
-            <Button variant="ghost" size="sm" className="rounded-full">
-              <SlidersHorizontalIcon className="size-4" />
-              Filtered catalog view
-            </Button>
+          <div className="rounded-[1.8rem] border border-white/70 bg-white/76 px-5 py-4 shadow-sm">
+            <StorefrontSearchBar
+              initialValue={query}
+              initialDepartment={selectedDepartment}
+              className="w-full"
+            />
           </div>
           <ProductGrid
             products={filteredProducts}

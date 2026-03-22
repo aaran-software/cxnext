@@ -53,39 +53,35 @@ State the intended result in one paragraph.
 
 ### Task
 
-`Global media asset manager redesign for form integration`
+`Storefront catalog toolbar copy removal`
 
 ### Goal
 
-Turn the existing popup media picker into a shared form component with a more deliberate upload experience: left-side upload controls, right-side image preview, and a bottom metadata area organized into tabs. The redesign must preserve current library selection and API persistence, while making the component reusable anywhere the dashboard needs image picking.
+Simplify the catalog toolbar by removing the helper copy and leaving the search bar as the sole control in that surface. The result should feel cleaner without affecting the existing search/filter behavior.
 
 ### Assumptions
 
-- The existing upload API contract is sufficient for this redesign, so the UI should organize current fields better rather than inventing new persisted schema
-- The current admin image-entry surfaces are company logos, product images, variant images, and the media asset quick-upload flow
-- Keeping compatibility re-exports in the old feature paths is useful while shifting the canonical implementation into shared form components
+- The requested text is the helper copy in the catalog toolbar, not the main catalog page description above it
+- The search bar should remain full-width once the helper copy is removed
+- No replacement label or icon is needed in this toolbar surface
 
 ### Constraints
 
-- Keep persistence behavior unchanged: uploads remain temporary in the client until confirmation triggers the API write
-- Stay within the current shared media schema and backend route capabilities
-- Make the upload workspace responsive so it still works on narrower form-page widths
-- Update execution tracking and documentation in the same change set
+- Keep the work inside the storefront UI layer only
+- Limit the scope to the catalog toolbar surface
+- Update execution tracking and user-visible documentation in the same change set
 
 ### Plan
 
-1. Replace the active execution notes with the media manager redesign scope
-2. Build shared `MediaAssetManagerDialog` and `MediaImageField` components under `apps/web/src/components/forms`
-3. Redesign the upload tab into the requested two-column layout plus bottom metadata tabs while keeping the library tab intact
-4. Rewire the current company, product, and media form consumers to the shared components and keep compatibility re-exports in the previous feature-local paths
-5. Update overview/architecture/changelog docs and validate with focused ESLint plus `npm run build:web`
+1. Remove the helper text block from the catalog toolbar
+2. Let the shared search bar occupy the toolbar cleanly on its own
+3. Update execution notes plus overview, architecture, and changelog entries
+4. Validate with focused ESLint
 
 ### Validation
 
-- Focused ESLint on the shared media form components and current consuming pages
-- `npm run build:web`
+- Focused ESLint on the touched catalog-page file
 
 ### Open Questions
 
-- Whether future media work should support true multipart uploads for large assets instead of the current data-URL JSON flow
-- Whether a follow-up increment should auto-create `media_usage` rows when specific forms pick an asset
+- Whether the toolbar needs a tighter vertical padding pass after browser QA

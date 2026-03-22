@@ -50,7 +50,7 @@ Describe the concrete outcome to deliver in this task.
 
 ### Title
 
-`Media manager viewport fit and fixed preview sizing`
+`Storefront catalog toolbar copy removal`
 
 ### Status
 
@@ -58,29 +58,29 @@ validated
 
 ### Objective
 
-Keep the shared media upload dialog within the viewport by fixing preview/upload panel heights, enabling internal vertical scrolling, and making the "new media" upload surface fit cleanly on page.
+Remove the catalog-toolbar helper text so the toolbar only presents the search control without the extra “Live catalog view...” copy.
 
 ### In Scope
 
-- Constrain the shared media asset manager dialog to viewport height
-- Set fixed upload and preview panel sizes for the upload tab
-- Add y-axis scrolling to the dialog body so long content stays usable
-- Update execution notes and changelog for the layout adjustment
+- Remove the visible helper text from the catalog toolbar
+- Keep the shared search bar intact and tighten the toolbar layout around it
+- Update execution plus documentation notes for the storefront catalog-toolbar cleanup
 
 ### Out Of Scope
 
-- Changing the backend media upload contract or stored metadata
-- Redesigning unrelated storefront or dashboard surfaces
-- Adding new media schema fields beyond the current form
+- Reworking catalog search behavior, filtering, or sort behavior
+- Changing the catalog hero/heading copy above the toolbar
+- Revisiting other storefront helper copy outside this toolbar
 
 ### Dependencies
 
 - `ASSIST/AI_RULES.md`
+- `ASSIST/Documentation/PROJECT_OVERVIEW.md`
+- `ASSIST/Documentation/ARCHITECTURE.md`
 - `ASSIST/Documentation/CHANGELOG.md`
-- `apps/web/src/components/forms/media-asset-manager-dialog.tsx`
-- Existing shared media form components and upload API flow
+- `apps/web/src/features/store/pages/store-catalog-page.tsx`
 
 ### Risks
 
-- Responsive behavior still benefits from live browser QA at very small viewport heights
-- The media dialog remains image-focused and does not solve large-file handling constraints in the current JSON upload flow
+- Removing the helper copy may make the toolbar feel sparse if the search bar alone does not anchor the section well
+- Browser QA is still needed to confirm the simplified toolbar spacing feels intentional

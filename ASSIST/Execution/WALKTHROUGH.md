@@ -49,35 +49,32 @@ Short description of the delivered increment.
 
 ### Task
 
-`Media manager viewport fit and fixed preview sizing`
+`Storefront catalog toolbar copy removal`
 
 ### Summary
 
-Adjusted the shared media upload dialog so the "new media" surface fits within the viewport. The dialog now uses a capped height with an internal y-axis scroll region, while the upload drop zone and preview panel use fixed heights so large images no longer stretch the modal off-page.
+Removed the helper copy from the catalog toolbar and left the shared search bar as the only control in that surface. The toolbar is now cleaner and more direct, without changing the underlying catalog search behavior.
 
 ### Files Changed
 
-- `ASSIST/Execution/TASK.md` and `ASSIST/Execution/WALKTHROUGH.md` to record the focused media manager sizing follow-up
-- `apps/web/src/components/forms/media-asset-manager-dialog.tsx` to cap the dialog height, add internal vertical scrolling, and lock the upload/preview panels to fixed heights
-- `ASSIST/Documentation/CHANGELOG.md` to note the viewport-fit adjustment
+- `apps/web/src/features/store/pages/store-catalog-page.tsx` to remove the toolbar helper copy and tighten the toolbar layout around the shared search bar
+- `ASSIST/Execution/TASK.md`, `ASSIST/Execution/PLANNING.md`, and `ASSIST/Execution/WALKTHROUGH.md` to record the current storefront UX task
 
 ### Validation Performed
 
-- Reviewed the active media manager component before editing
-- `npx eslint apps/web/src/components/forms/media-asset-manager-dialog.tsx` succeeded
-- `npm run build:web` succeeded
+- Reviewed the catalog toolbar to confirm the helper copy and icon were defined locally in the page
+- `npx eslint apps/web/src/features/store/pages/store-catalog-page.tsx` succeeded
 
 ### Decisions
 
-- Keep the header and footer fixed while allowing the dialog body to scroll vertically
-- Use fixed upload/preview panel heights and `object-contain` in the preview so image dimensions do not dictate dialog height
+- Remove the helper copy entirely instead of replacing it with shorter text
+- Let the shared search bar span the toolbar width after the text block is removed
 
 ### Remaining Work
 
-- Run browser QA on very short viewport heights to confirm the modal remains comfortable in real use
-- Clean the remaining text-encoding artifact in the persistence helper copy if it appears in the runtime UI
+- Run browser QA to confirm the simplified toolbar still feels balanced
 
 ### Risks
 
-- The larger dialog still contributes to the general dashboard bundle size, though the build remains successful
-- Extremely tall metadata content may still need more polish if additional tabs/fields are introduced later
+- The toolbar may feel visually sparse after removing the text, depending on viewport width
+- Further spacing tweaks may still be needed after browser QA

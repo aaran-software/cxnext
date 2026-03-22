@@ -15,7 +15,7 @@ import {
   TrendingUpIcon,
   UserCircle2Icon,
 } from "lucide-react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 
 import { useAuth } from "@/features/auth/components/auth-provider"
 import { buildCustomerPortalPath, getPortalHomeHref } from "@/features/auth/lib/portal-routing"
@@ -26,6 +26,7 @@ import { ThemeSwitcher } from "@/shared/theme/theme-switcher"
 import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { useStorefront } from "@/features/store/context/storefront-context"
+import { cn } from "@/lib/utils"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,10 +42,26 @@ type HeaderCategory = {
 
 export function StorefrontHeader({ categories }: { categories: HeaderCategory[] }) {
   const auth = useAuth()
+  const location = useLocation()
   const navigate = useNavigate()
   const { wishlistProductIds, cartCount } = useStorefront()
   const wishlistCount = wishlistProductIds.length
   const cartItemsCount = cartCount
+  const wishlistHasItems = wishlistCount > 0
+  const wishlistRouteActive = location.pathname === "/wishlist" || location.pathname.startsWith("/wishlist/")
+  const wishlistActive = wishlistHasItems || wishlistRouteActive
+  const cartHasItems = cartItemsCount > 0
+  const cartRouteActive = location.pathname === "/cart" || location.pathname.startsWith("/cart/")
+  const cartActive = cartHasItems || cartRouteActive
+  const authRouteActive = location.pathname === "/login" || location.pathname === "/register"
+  const accountRouteActive =
+    location.pathname === "/account" ||
+    location.pathname.startsWith("/account/") ||
+    location.pathname === "/dashboard" ||
+    location.pathname.startsWith("/dashboard/") ||
+    location.pathname === "/admin/dashboard" ||
+    location.pathname.startsWith("/admin/dashboard/")
+  const accountActive = auth.isAuthenticated || authRouteActive || accountRouteActive
 
   const handleLogout = () => {
     auth.logout()
@@ -66,19 +83,80 @@ export function StorefrontHeader({ categories }: { categories: HeaderCategory[] 
         </div>
 
         <div className="ml-auto flex items-center gap-2">
-          <Link to="/wishlist" className={buttonVariants({ variant: "ghost", size: "icon", className: "relative rounded-full" })}>
-            <HeartIcon className="size-5" />
-            {wishlistCount > 0 ? <Badge className="absolute -top-1 -right-1 min-w-5 justify-center rounded-full px-1 text-[10px]">{wishlistCount}</Badge> : null}
+          <Link
+            to="/wishlist"
+            aria-label={wishlistActive ? `Wishlist, ${wishlistCount} saved items` : "Wishlist"}
+            className={cn(
+              buttonVariants({ variant: "ghost", size: "icon" }),
+              "group relative rounded-full border !bg-transparent transition-all duration-300 ease-out hover:!bg-transparent active:!bg-transparent",
+              wishlistActive
+                ? "border-accent/25 text-accent"
+                : "border-transparent text-muted-foreground hover:scale-105 hover:border-accent/25",
+            )}
+          >
+            <HeartIcon
+              className={cn(
+                "size-5 transition-all duration-300 ease-out",
+                wishlistActive
+                  ? "fill-current stroke-current text-accent"
+                  : "fill-transparent stroke-current text-current group-hover:scale-110 group-hover:fill-current group-hover:text-accent",
+              )}
+              strokeWidth={1.9}
+            />
+            {wishlistCount > 0 ? (
+              <Badge className="absolute -top-1 -right-1 min-w-5 justify-center rounded-full border border-white/80 bg-primary px-1 text-[10px] text-primary-foreground shadow-sm">
+                {wishlistCount}
+              </Badge>
+            ) : null}
           </Link>
-          <Link to="/cart" className={buttonVariants({ variant: "ghost", size: "icon", className: "relative rounded-full" })}>
-            <ShoppingCartIcon className="size-5" />
-            {cartItemsCount > 0 ? <Badge className="absolute -top-1 -right-1 min-w-5 justify-center rounded-full px-1 text-[10px]">{cartItemsCount}</Badge> : null}
+          <Link
+            to="/cart"
+            aria-label={cartActive ? `Cart, ${cartItemsCount} items` : "Cart"}
+            className={cn(
+              buttonVariants({ variant: "ghost", size: "icon" }),
+              "group relative rounded-full border !bg-transparent transition-all duration-300 ease-out hover:!bg-transparent active:!bg-transparent",
+              cartActive
+                ? "border-accent/25 text-accent"
+                : "border-transparent text-muted-foreground hover:scale-105 hover:border-accent/25",
+            )}
+          >
+            <ShoppingCartIcon
+              className={cn(
+                "size-5 transition-all duration-300 ease-out",
+                cartActive
+                  ? "fill-current stroke-current text-accent"
+                  : "fill-transparent stroke-current text-current group-hover:scale-110 group-hover:fill-current group-hover:text-accent",
+              )}
+              strokeWidth={1.9}
+            />
+            {cartItemsCount > 0 ? (
+              <Badge className="absolute -top-1 -right-1 min-w-5 justify-center rounded-full border border-white/80 bg-primary px-1 text-[10px] text-primary-foreground shadow-sm">
+                {cartItemsCount}
+              </Badge>
+            ) : null}
           </Link>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="group cursor-pointer rounded-full px-3 data-[state=open]:bg-accent data-[state=open]:text-accent-foreground md:px-4">
-                <UserCircle2Icon className="size-5 md:mr-2" />
+              <Button
+                variant="ghost"
+                className={cn(
+                  "group cursor-pointer rounded-full border !bg-transparent px-3 transition-all duration-300 ease-out hover:!bg-accent hover:!text-accent-foreground active:!bg-transparent md:px-4",
+                  accountActive
+                    ? "border-accent/25 text-foreground"
+                    : "border-transparent text-muted-foreground hover:scale-105 hover:border-transparent",
+                  "data-[state=open]:border-transparent data-[state=open]:!bg-accent data-[state=open]:!text-accent-foreground",
+                )}
+              >
+                <UserCircle2Icon
+                  className={cn(
+                    "size-5 transition-all duration-300 ease-out md:mr-2",
+                    accountActive
+                      ? "fill-current stroke-current text-accent group-hover:text-current group-data-[state=open]:text-current"
+                      : "fill-transparent stroke-current text-current group-hover:scale-110 group-hover:fill-current group-hover:text-current group-data-[state=open]:fill-current group-data-[state=open]:text-current",
+                  )}
+                  strokeWidth={1.9}
+                />
                 <span className="hidden md:inline-block">{auth.isAuthenticated ? "Account" : "Login"}</span>
                 <ChevronDownIcon className="hidden size-4 transition-transform group-data-open:-rotate-180 group-data-[state=open]:-rotate-180 md:ml-1 md:block" />
               </Button>
@@ -125,14 +203,26 @@ export function StorefrontHeader({ categories }: { categories: HeaderCategory[] 
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="cursor-pointer">
                 <Link to="/wishlist">
-                  <HeartIcon className="mr-3 size-4 text-muted-foreground" />
+                  <HeartIcon
+                    className={cn(
+                      "mr-3 size-4",
+                      wishlistHasItems ? "fill-current text-primary" : "text-muted-foreground",
+                    )}
+                    strokeWidth={1.9}
+                  />
                   <span>Wishlist</span>
                   {wishlistCount > 0 ? <Badge className="ml-auto min-w-5 justify-center rounded-full px-1 text-[10px]">{wishlistCount}</Badge> : null}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="cursor-pointer">
                 <Link to="/cart">
-                  <ShoppingCartIcon className="mr-3 size-4 text-muted-foreground" />
+                  <ShoppingCartIcon
+                    className={cn(
+                      "mr-3 size-4",
+                      cartHasItems ? "fill-current text-primary" : "text-muted-foreground",
+                    )}
+                    strokeWidth={1.9}
+                  />
                   <span>Cart</span>
                   {cartItemsCount > 0 ? <Badge className="ml-auto min-w-5 justify-center rounded-full px-1 text-[10px]">{cartItemsCount}</Badge> : null}
                 </Link>
@@ -224,4 +314,3 @@ export function StorefrontHeader({ categories }: { categories: HeaderCategory[] 
     </header>
   )
 }
-
