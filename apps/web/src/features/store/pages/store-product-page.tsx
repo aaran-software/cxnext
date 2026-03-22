@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { HeartIcon, ShieldCheckIcon, TruckIcon } from 'lucide-react'
+import { useLayoutEffect, useMemo, useState } from 'react'
+import { ShieldCheckIcon, TruckIcon } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import { Badge } from '@/components/ui/badge'
@@ -10,13 +10,15 @@ import { QuantitySelector } from '@/features/store/components/product/QuantitySe
 import { RatingStars } from '@/features/store/components/product/RatingStars'
 import { ReviewForm } from '@/features/store/components/product/ReviewForm'
 import { ReviewList } from '@/features/store/components/product/ReviewList'
+import { ShareButton } from '@/features/store/components/product/ShareButton'
+import { WishlistButton } from '@/features/store/components/product/WishlistButton'
 import { useStorefront } from '@/features/store/context/storefront-context'
 import { formatCurrency, getPrimaryProductImage } from '@/features/store/lib/storefront-utils'
 
 export function StoreProductPage() {
   const navigate = useNavigate()
   const { slug } = useParams()
-  const { products, reviews, addToCart, addReview, toggleWishlist, isInWishlist, isLoading, errorMessage } = useStorefront()
+  const { products, reviews, addToCart, addReview, isLoading, errorMessage } = useStorefront()
   const product = products.find((entry) => entry.slug === slug) ?? null
   const [quantity, setQuantity] = useState(1)
   const [selectedSize, setSelectedSize] = useState(product?.sizes[0] ?? 'Default')
@@ -52,6 +54,10 @@ export function StoreProductPage() {
     [product],
   )
   const isOutOfStock = product ? product.inventory <= 0 : false
+
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [slug])
 
   if (isLoading) {
     return <div className="mx-auto max-w-7xl px-4 py-10 text-sm text-muted-foreground sm:px-6">Loading product...</div>
@@ -172,10 +178,10 @@ export function StoreProductPage() {
             >
               Buy now
             </Button>
-            <Button variant="ghost" className="rounded-full px-4" onClick={() => toggleWishlist(product.id)}>
-              <HeartIcon className={isInWishlist(product.id) ? 'size-4 fill-current' : 'size-4'} />
-              Save
-            </Button>
+            <div className="flex flex-wrap items-center gap-3 sm:gap-2.5">
+              <WishlistButton productId={product.id} size="pill" />
+              <ShareButton productName={product.name} size="pill" />
+            </div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">

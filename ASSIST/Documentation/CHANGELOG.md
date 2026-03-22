@@ -39,6 +39,20 @@
 - Adjusted the shared media manager dialog to fit the viewport with internal vertical scrolling and fixed upload/preview panel heights
 - Replaced the storefront `shop` home placeholder with a polished catalog-first merchandising page that keeps the existing store shell intact while adding category storytelling, product-driven collection grids, spotlight content, and explicit empty/error states for live catalog loading
 - Expanded the storefront `shop` target into a full static frontend shopping flow with garment-focused home, catalog filters, product detail, wishlist, cart, and checkout pages while preserving the existing menu and footer shell
+- Added storefront scroll-reset handling so route changes into product detail force the viewport back to the hero section instead of restoring prior listing scroll position
+- Added a placeholder share CTA to storefront product cards and grouped it with wishlist beside the primary add-to-cart action
+- Aligned the storefront share button hover and press treatment with the wishlist control so the product-card utility actions feel visually consistent
+- Added the Share CTA to the storefront product-detail action row after Save using the same utility-action styling and placeholder toast behavior
+- Refined the storefront category-card `Explore` affordance into a clearer inline CTA with a visible neutral-black baseline, arrow motion, and accent hover feedback
+- Corrected the storefront neutral accent tokens so the neutral theme now resolves to black-based values instead of near-white
+- Replaced the storefront catalog toolbar placeholder control with the shared search bar and synchronized it with current query and department params
+- Removed the placeholder copy from the shared storefront search input so header and catalog search bars render with a cleaner empty state
+- Converted the storefront home-page feature cards into interactive button surfaces with hover motion, accent feedback, and placeholder click toasts
+- Reworked the storefront wishlist and share buttons so icon fill, accent color, and motion carry the interaction while the button shell stays lightweight
+- Reduced the top storefront cart icon shell so the sticky-header cart now expresses hover and active state through the icon instead of a filled button background
+- Reduced the top storefront wishlist and login/account shells so those sticky-header controls now express hover and active state through their icons instead of filled button backgrounds
+- Aligned the top header login/account trigger hover surface with the adjacent `More` trigger for more consistent sticky-nav feedback
+- Removed the helper copy from the storefront catalog toolbar so the shared search bar stands alone in a cleaner browsing surface
 - Added a first-run setup mode that keeps the API online when MariaDB is missing or misconfigured, exposes setup status/configuration endpoints, persists runtime DB settings outside `.env`, and gates the React app with a WordPress-style database setup screen
 - Added production static serving from `apps/api` so the built `apps/web` bundle can be deployed as part of the same Node process
 - Moved the production Docker assets into `.container/`, switched the default Compose stack to app-only deployment against an existing MariaDB server, and added `.container/USAGE.md` for VPS setup guidance

@@ -49,6 +49,36 @@ Short description of the delivered increment.
 
 ### Task
 
+`Storefront catalog toolbar copy removal`
+
+### Summary
+
+Removed the helper copy from the catalog toolbar and left the shared search bar as the only control in that surface. The toolbar is now cleaner and more direct, without changing the underlying catalog search behavior.
+
+### Files Changed
+
+- `apps/web/src/features/store/pages/store-catalog-page.tsx` to remove the toolbar helper copy and tighten the toolbar layout around the shared search bar
+- `ASSIST/Execution/TASK.md`, `ASSIST/Execution/PLANNING.md`, and `ASSIST/Execution/WALKTHROUGH.md` to record the current storefront UX task
+
+### Validation Performed
+
+- Reviewed the catalog toolbar to confirm the helper copy and icon were defined locally in the page
+- `npx eslint apps/web/src/features/store/pages/store-catalog-page.tsx` succeeded
+
+### Decisions
+
+- Remove the helper copy entirely instead of replacing it with shorter text
+- Let the shared search bar span the toolbar width after the text block is removed
+
+### Remaining Work
+
+- Run browser QA to confirm the simplified toolbar still feels balanced
+
+### Risks
+
+- The toolbar may feel visually sparse after removing the text, depending on viewport width
+- Further spacing tweaks may still be needed after browser QA
+=======
 `Single-container VPS deploy plus first-run database setup mode`
 
 ### Summary

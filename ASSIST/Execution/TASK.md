@@ -50,6 +50,8 @@ Describe the concrete outcome to deliver in this task.
 
 ### Title
 
+`Storefront catalog toolbar copy removal`
+=======
 `Single-container VPS deploy plus first-run database setup mode`
 
 ### Status
@@ -58,6 +60,20 @@ validated
 
 ### Objective
 
+Remove the catalog-toolbar helper text so the toolbar only presents the search control without the extra “Live catalog view...” copy.
+
+### In Scope
+
+- Remove the visible helper text from the catalog toolbar
+- Keep the shared search bar intact and tighten the toolbar layout around it
+- Update execution plus documentation notes for the storefront catalog-toolbar cleanup
+
+### Out Of Scope
+
+- Reworking catalog search behavior, filtering, or sort behavior
+- Changing the catalog hero/heading copy above the toolbar
+- Revisiting other storefront helper copy outside this toolbar
+=======
 Package the web and API into a single deployable container, add Docker Compose for VPS hosting, and introduce a WordPress-style first-run setup flow that keeps the app online when the database is missing until runtime DB settings are entered and migrations complete.
 
 ### In Scope
@@ -79,6 +95,16 @@ Package the web and API into a single deployable container, add Docker Compose f
 ### Dependencies
 
 - `ASSIST/AI_RULES.md`
+- `ASSIST/Documentation/PROJECT_OVERVIEW.md`
+- `ASSIST/Documentation/ARCHITECTURE.md`
+- `ASSIST/Documentation/CHANGELOG.md`
+- `apps/web/src/features/store/pages/store-catalog-page.tsx`
+
+### Risks
+
+- Removing the helper copy may make the toolbar feel sparse if the search bar alone does not anchor the section well
+- Browser QA is still needed to confirm the simplified toolbar spacing feels intentional
+=======
 - `ASSIST/Documentation/ARCHITECTURE.md`
 - `ASSIST/Documentation/PROJECT_OVERVIEW.md`
 - `ASSIST/Documentation/SETUP_AND_RUN.md`
