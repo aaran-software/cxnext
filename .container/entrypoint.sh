@@ -114,35 +114,46 @@ sync_from_git() {
   fi
 
   SOURCE_ROOT="$RUNTIME_ROOT/source"
+  NEXT_SOURCE_ROOT="$RUNTIME_ROOT/source.next"
   should_refresh_source="false"
+  should_use_existing_source="false"
 
-  if [ -d "$SOURCE_ROOT" ] && [ ! -d "$SOURCE_ROOT/.git" ]; then
-    log "Runtime source directory exists but is not a Git checkout: $SOURCE_ROOT"
-    exit 1
+  if [ "${GIT_FORCE_UPDATE_ON_START:-false}" = "true" ] || [ "${GIT_AUTO_UPDATE_ON_START:-false}" = "true" ]; then
+    should_refresh_source="true"
   fi
 
-  if [ -d "$SOURCE_ROOT/.git" ] && [ "${GIT_FORCE_UPDATE_ON_START:-false}" != "true" ] && [ "${GIT_AUTO_UPDATE_ON_START:-false}" != "true" ]; then
+  if [ -d "$SOURCE_ROOT/.git" ] && [ "$should_refresh_source" != "true" ]; then
+    should_use_existing_source="true"
+  fi
+
+  if [ "$should_use_existing_source" = "true" ]; then
     log "Using existing runtime Git source checkout without pulling updates."
-  elif [ -d "$SOURCE_ROOT/.git" ]; then
-    log "Updating source from Git..."
-    git -C "$SOURCE_ROOT" fetch --depth 1 origin "${GIT_BRANCH:-main}"
-    git -C "$SOURCE_ROOT" checkout "${GIT_BRANCH:-main}"
-    git -C "$SOURCE_ROOT" pull --ff-only origin "${GIT_BRANCH:-main}"
-    should_refresh_source="true"
   else
-    log "Cloning source from Git..."
-    git clone --branch "${GIT_BRANCH:-main}" --depth 1 "$GIT_REPOSITORY_URL" "$SOURCE_ROOT"
+    if [ -d "$SOURCE_ROOT" ]; then
+      log "Refreshing source from Git with a clean runtime clone..."
+    else
+      log "Cloning source from Git..."
+    fi
+
+    rm -rf "$NEXT_SOURCE_ROOT"
+    git clone --branch "${GIT_BRANCH:-main}" --depth 1 "$GIT_REPOSITORY_URL" "$NEXT_SOURCE_ROOT"
+    prepare_source_layout "$NEXT_SOURCE_ROOT"
+    cd "$NEXT_SOURCE_ROOT"
+    run_npm_install
+    build_source
+    rm -rf "$SOURCE_ROOT"
+    mv "$NEXT_SOURCE_ROOT" "$SOURCE_ROOT"
     should_refresh_source="true"
   fi
 
   prepare_source_layout "$SOURCE_ROOT"
   cd "$SOURCE_ROOT"
 
-  if [ "$should_refresh_source" = "true" ] || [ ! -d node_modules ]; then
+  if [ "$should_refresh_source" != "true" ] && [ ! -d node_modules ]; then
     run_npm_install
   fi
 
-  if [ "$should_refresh_source" = "true" ] || [ ! -f apps/api/dist/server.js ] || [ ! -f apps/web/dist/index.html ]; then
+  if [ "$should_refresh_source" != "true" ] && { [ ! -f apps/api/dist/server.js ] || [ ! -f apps/web/dist/index.html ]; }; then
     build_source
   fi
 
