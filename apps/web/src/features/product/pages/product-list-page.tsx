@@ -157,7 +157,7 @@ export function ProductListPage() {
           pageTitle: 'Products',
           pageDescription: 'Manage product masters, variants, pricing, inventory references, SEO, and tags.',
           addLabel: 'New Product',
-          onAddClick: () => navigate('/dashboard/products/new'),
+          onAddClick: () => navigate('/admin/dashboard/products/new'),
         }}
         search={{
           value: searchValue,
@@ -269,7 +269,7 @@ export function ProductListPage() {
               accessor: (item) => item.name,
               cell: (item) => (
                 <div>
-                  <Link to={`/dashboard/products/${item.id}`} className="font-medium text-foreground underline-offset-4 hover:underline">
+                  <Link to={`/admin/dashboard/products/${item.id}`} className="font-medium text-foreground underline-offset-4 hover:underline">
                     {item.name}
                   </Link>
                   <p className="text-sm text-muted-foreground">{item.shortDescription ?? item.slug}</p>
@@ -349,7 +349,7 @@ export function ProductListPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem asChild>
-                        <Link to={`/dashboard/products/${item.id}/edit`}>
+                        <Link to={`/admin/dashboard/products/${item.id}/edit`}>
                           <EditIcon className="size-4" />
                           <span>Edit</span>
                         </Link>
@@ -394,3 +394,4 @@ export function ProductListPage() {
     </div>
   )
 }
+

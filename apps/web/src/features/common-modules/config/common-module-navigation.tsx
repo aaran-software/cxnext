@@ -20,6 +20,7 @@ import {
   Wallet,
   Warehouse,
 } from 'lucide-react'
+import { buildAdminPortalPath } from '@/features/auth/lib/portal-routing'
 
 export type CommonModuleGroupKey =
   | 'location'
@@ -124,8 +125,8 @@ export function getCommonModuleMenuItem(key: CommonModuleKey) {
 
 export function getCommonModuleHref(key: CommonModuleKey) {
   if (key === 'storefrontTemplates') {
-    return '/dashboard/storefront-designer'
+    return buildAdminPortalPath('/storefront-designer')
   }
 
-  return `/dashboard/common/${key}`
+  return buildAdminPortalPath(`/common/${key}`)
 }

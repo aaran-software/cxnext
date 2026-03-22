@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/features/auth/components/auth-provider'
+import { resolveAuthorizedPath } from '@/features/auth/lib/portal-routing'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -13,7 +14,7 @@ export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { login } = useAuth()
-  const redirectTo = typeof location.state?.from === 'string' ? location.state.from : '/dashboard'
+  const requestedPath = typeof location.state?.from === 'string' ? location.state.from : null
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -26,12 +27,13 @@ export function LoginPage() {
     setError(null)
 
     try {
-      await login({ email, password })
+      const session = await login({ email, password })
+      const redirectTo = resolveAuthorizedPath(session.user.actorType, requestedPath)
       showSuccessToast({
         title: 'Signed in',
-        description: redirectTo === '/dashboard'
-          ? 'You are now authenticated and redirected to the dashboard.'
-          : 'You are now authenticated and redirected to checkout.',
+        description: redirectTo === '/checkout'
+          ? 'You are now authenticated and redirected to checkout.'
+          : 'You are now authenticated and redirected to your workspace.',
       })
       void navigate(redirectTo, { replace: true })
     } catch (submissionError) {

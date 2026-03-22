@@ -138,7 +138,7 @@ export function StorefrontTemplateFormPage() {
         mode: templateId ? 'update' : 'create',
       })
 
-      void navigate(`/dashboard/storefront-designer/${savedTemplate.id}`)
+      void navigate(`/admin/dashboard/storefront-designer/${savedTemplate.id}`)
     } catch (error) {
       const message = toErrorMessage(error)
       setErrorMessage(message)
@@ -376,7 +376,7 @@ export function StorefrontTemplateFormPage() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <Button variant="ghost" size="sm" asChild className="-ml-3 mb-2">
-            <Link to="/dashboard/storefront-designer">
+            <Link to="/admin/dashboard/storefront-designer">
               <ArrowLeft className="size-4" />
               Back to storefront designer
             </Link>
@@ -384,7 +384,7 @@ export function StorefrontTemplateFormPage() {
           <p className="text-sm text-muted-foreground">Maintain dynamic storefront home-page copy, CTA labels, trust-note content, and design metadata in a dedicated editor.</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button type="button" variant="outline" onClick={() => { void navigate('/dashboard/storefront-designer') }}>
+          <Button type="button" variant="outline" onClick={() => { void navigate('/admin/dashboard/storefront-designer') }}>
             Cancel
           </Button>
           <Button type="submit" disabled={saving}>
@@ -412,3 +412,4 @@ export function StorefrontTemplateFormPage() {
     </form>
   )
 }
+

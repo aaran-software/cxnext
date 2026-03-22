@@ -23,6 +23,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-/.vscode/
-/storage/
+/\.vscode/
+/storage/private/
+/storage/public/uploads/
 /test-results/.last-run.json

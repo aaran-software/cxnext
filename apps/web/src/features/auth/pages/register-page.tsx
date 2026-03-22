@@ -4,12 +4,13 @@ import { ArrowLeft, ArrowRight, CheckCircle2, CircleAlert } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/features/auth/components/auth-provider'
+import { resolveAuthorizedPath } from '@/features/auth/lib/portal-routing'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { requestRegisterOtp, verifyRegisterOtp } from '@/shared/api/client'
-import { showErrorToast, showInfoToast, showSuccessToast, showWarningToast } from '@/shared/notifications/toast'
+import { showErrorToast, showSuccessToast, showWarningToast } from '@/shared/notifications/toast'
 import { cn } from '@/lib/utils'
 
 type StepKey = 'details' | 'otp' | 'password'
@@ -50,20 +51,12 @@ const stepMeta: Record<StepKey, { order: string; label: string }> = {
 }
 
 function normalizePhoneNumber(value: string) {
-  const trimmed = value.trim()
-  if (!trimmed) {
+  const digits = value.replace(/\D/g, '').slice(0, 10)
+  if (digits.length !== 10) {
     return ''
   }
 
-  const normalized = trimmed.startsWith('+')
-    ? `+${trimmed.slice(1).replace(/\D/g, '')}`
-    : trimmed.replace(/\D/g, '')
-
-  if (!normalized || normalized === '+') {
-    return ''
-  }
-
-  return normalized.startsWith('+') ? normalized : `+${normalized}`
+  return `+91${digits}`
 }
 
 function resetVerificationState() {
@@ -74,7 +67,7 @@ export function RegisterPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { register } = useAuth()
-  const redirectTo = typeof location.state?.from === 'string' ? location.state.from : '/dashboard'
+  const requestedPath = typeof location.state?.from === 'string' ? location.state.from : '/dashboard'
 
   const [currentStep, setCurrentStep] = useState<StepKey>('details')
   const [name, setName] = useState('')
@@ -83,15 +76,14 @@ export function RegisterPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [emailVerification, setEmailVerification] = useState<VerificationState>(emptyVerificationState)
-  const [mobileVerification, setMobileVerification] = useState<VerificationState>(emptyVerificationState)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const normalizedEmail = useMemo(() => email.trim().toLowerCase(), [email])
   const normalizedMobileNumber = useMemo(() => normalizePhoneNumber(mobileNumber), [mobileNumber])
 
-  const detailsValid = name.trim().length >= 2 && emailPattern.test(normalizedEmail) && normalizedMobileNumber.length >= 11
-  const otpVerified = emailVerification.verified && mobileVerification.verified && Boolean(emailVerification.verificationId) && Boolean(mobileVerification.verificationId)
+  const detailsValid = name.trim().length >= 2 && emailPattern.test(normalizedEmail) && mobileNumber.length === 10
+  const otpVerified = emailVerification.verified && Boolean(emailVerification.verificationId)
   const passwordChecks = [
     { label: 'Minimum 8 characters', valid: password.length >= 8 },
     { label: 'Contains a letter', valid: /[A-Za-z]/.test(password) },
@@ -114,10 +106,6 @@ export function RegisterPage() {
   function handleMobileChange(value: string) {
     const digitsOnly = value.replace(/\D/g, '').slice(0, 10)
     setMobileNumber(digitsOnly)
-    setMobileVerification(resetVerificationState())
-    if (currentStep === 'password') {
-      setCurrentStep('otp')
-    }
   }
 
   function goToStep(step: StepKey) {
@@ -145,7 +133,7 @@ export function RegisterPage() {
 
   function continueToPassword() {
     if (!otpVerified) {
-      const message = 'Verify both email OTP and mobile OTP before continuing.'
+      const message = 'Verify your email OTP before continuing.'
       setError(message)
       showWarningToast({
         title: 'Verification pending',
@@ -158,10 +146,7 @@ export function RegisterPage() {
     setCurrentStep('password')
   }
 
-  async function handleRequestOtp(channel: 'email' | 'mobile') {
-    const destination = channel === 'email' ? normalizedEmail : normalizedMobileNumber
-    const setVerification = channel === 'email' ? setEmailVerification : setMobileVerification
-
+  async function handleRequestEmailOtp() {
     if (!detailsValid) {
       showWarningToast({
         title: 'Finish customer details first',
@@ -170,7 +155,7 @@ export function RegisterPage() {
       return
     }
 
-    setVerification((current) => ({
+    setEmailVerification((current) => ({
       ...current,
       isRequesting: true,
       verified: false,
@@ -181,11 +166,11 @@ export function RegisterPage() {
 
     try {
       const response = await requestRegisterOtp({
-        channel,
-        destination,
+        channel: 'email',
+        destination: normalizedEmail,
       })
 
-      setVerification((current) => ({
+      setEmailVerification((current) => ({
         ...current,
         verificationId: response.verificationId,
         verified: false,
@@ -194,39 +179,29 @@ export function RegisterPage() {
       }))
 
       showSuccessToast({
-        title: channel === 'email' ? 'Email OTP sent' : 'Mobile OTP sent',
-        description: `Use the verification code sent to your ${channel === 'email' ? 'email address' : 'mobile number'}.`,
+        title: 'Email OTP sent',
+        description: 'Use the verification code sent to your email address.',
       })
-
-      if (response.debugOtp) {
-        showInfoToast({
-          title: `${channel === 'email' ? 'Email' : 'Mobile'} OTP`,
-          description: `Local dev code: ${response.debugOtp}`,
-        })
-      }
     } catch (requestError) {
       const message = requestError instanceof Error ? requestError.message : 'Unable to request OTP right now.'
-      setVerification((current) => ({ ...current, isRequesting: false, hasError: true }))
+      setEmailVerification((current) => ({ ...current, isRequesting: false, hasError: true }))
       showErrorToast({
-        title: channel === 'email' ? 'Email OTP not sent' : 'Mobile OTP not sent',
+        title: 'Email OTP not sent',
         description: message,
       })
     }
   }
 
-  async function handleVerifyOtp(channel: 'email' | 'mobile') {
-    const verification = channel === 'email' ? emailVerification : mobileVerification
-    const setVerification = channel === 'email' ? setEmailVerification : setMobileVerification
-
-    if (!verification.verificationId) {
+  async function handleVerifyEmailOtp() {
+    if (!emailVerification.verificationId) {
       showWarningToast({
         title: 'Request OTP first',
-        description: `Request the ${channel} OTP before verifying it.`,
+        description: 'Request the email OTP before verifying it.',
       })
       return
     }
 
-    if (verification.otp.trim().length !== 6) {
+    if (emailVerification.otp.trim().length !== 6) {
       showWarningToast({
         title: 'OTP incomplete',
         description: 'Enter the 6-digit OTP before verifying.',
@@ -234,18 +209,18 @@ export function RegisterPage() {
       return
     }
 
-    setVerification((current) => ({
+    setEmailVerification((current) => ({
       ...current,
       isVerifying: true,
     }))
 
     try {
       await verifyRegisterOtp({
-        verificationId: verification.verificationId,
-        otp: verification.otp.trim(),
+        verificationId: emailVerification.verificationId,
+        otp: emailVerification.otp.trim(),
       })
 
-      setVerification((current) => ({
+      setEmailVerification((current) => ({
         ...current,
         verified: true,
         isVerifying: false,
@@ -253,19 +228,19 @@ export function RegisterPage() {
       }))
 
       showSuccessToast({
-        title: `${channel === 'email' ? 'Email' : 'Mobile'} verified`,
-        description: `Your ${channel === 'email' ? 'email address' : 'mobile number'} is ready for account creation.`,
+        title: 'Email verified',
+        description: 'Your email address is ready for account creation.',
       })
     } catch (verifyError) {
       const message = verifyError instanceof Error ? verifyError.message : 'Unable to verify OTP right now.'
-      setVerification((current) => ({
+      setEmailVerification((current) => ({
         ...current,
         isVerifying: false,
         verified: false,
         hasError: true,
       }))
       showErrorToast({
-        title: `${channel === 'email' ? 'Email' : 'Mobile'} OTP invalid`,
+        title: 'Email OTP invalid',
         description: message,
       })
     }
@@ -276,38 +251,47 @@ export function RegisterPage() {
     setError(null)
 
     if (!detailsValid) {
-      const message = 'Customer details are incomplete.'
+      const message = 'Update your customer details before creating the account.'
       setError(message)
-      setCurrentStep('details')
+      showWarningToast({
+        title: 'Customer details incomplete',
+        description: message,
+      })
       return
     }
 
     if (!otpVerified) {
-      const message = 'Verify both OTPs before creating the account.'
+      const message = 'Verify your email OTP before creating the account.'
       setError(message)
-      setCurrentStep('otp')
+      showWarningToast({
+        title: 'Verification pending',
+        description: message,
+      })
       return
     }
 
     if (!passwordValid) {
-      const message = 'Set a valid password before creating the account.'
+      const message = 'Make sure the password meets every rule before continuing.'
       setError(message)
-      setCurrentStep('password')
+      showWarningToast({
+        title: 'Password incomplete',
+        description: message,
+      })
       return
     }
 
     setIsSubmitting(true)
 
     try {
-      await register({
+      const session = await register({
         displayName: name.trim(),
         email: normalizedEmail,
         phoneNumber: normalizedMobileNumber,
         password,
         actorType: 'customer',
         emailVerificationId: emailVerification.verificationId!,
-        mobileVerificationId: mobileVerification.verificationId!,
       })
+      const redirectTo = resolveAuthorizedPath(session.user.actorType, requestedPath)
 
       showSuccessToast({
         title: 'Account created',
@@ -465,16 +449,14 @@ export function RegisterPage() {
                           <div className="text-sm font-semibold">Email</div>
                           <div className="text-xs text-muted-foreground">{normalizedEmail}</div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <Button type="button" variant="outline" className="h-9 shrink-0 px-3 text-xs sm:text-sm" disabled={emailVerification.isRequesting || emailVerification.verified} onClick={() => void handleRequestOtp('email')}>
-                            {emailVerification.isRequesting ? 'Sending...' : emailVerification.verificationId ? 'Resend OTP' : 'Send OTP'}
-                          </Button>
-                        </div>
+                        <Button type="button" variant="outline" className="h-9 shrink-0 px-3 text-xs sm:text-sm" disabled={emailVerification.isRequesting || emailVerification.verified} onClick={() => void handleRequestEmailOtp()}>
+                          {emailVerification.isRequesting ? 'Sending...' : emailVerification.verificationId ? 'Resend OTP' : 'Send OTP'}
+                        </Button>
                       </div>
                       <div className="flex gap-3">
                         <Input
                           value={emailVerification.otp}
-                          onChange={(event) => setEmailVerification((current) => ({ ...current, otp: event.target.value }))}
+                          onChange={(event) => setEmailVerification((current) => ({ ...current, otp: event.target.value.replace(/\D/g, '').slice(0, 6) }))}
                           placeholder="Enter email OTP"
                           maxLength={6}
                           inputMode="numeric"
@@ -487,61 +469,9 @@ export function RegisterPage() {
                           emailVerification.verified ? 'bg-emerald-600 text-white hover:bg-emerald-600 disabled:opacity-100' : '',
                         )}
                         disabled={emailVerification.isVerifying || !emailVerification.verificationId || emailVerification.verified}
-                        onClick={() => void handleVerifyOtp('email')}
+                        onClick={() => void handleVerifyEmailOtp()}
                       >
                         {emailVerification.verified ? 'Verified' : emailVerification.isVerifying ? 'Verifying...' : 'Verify email OTP'}
-                      </Button>
-                    </div>
-
-                    <div
-                      className={cn(
-                        'relative h-full space-y-3 rounded-2xl border px-3 pt-6 pb-3 transition-colors sm:px-4',
-                        mobileVerification.verified
-                          ? 'border-emerald-200 bg-emerald-50/90'
-                          : mobileVerification.hasError
-                            ? 'border-destructive/25 bg-destructive/5'
-                            : 'border-border/70 bg-background/85',
-                      )}
-                    >
-                      {mobileVerification.verified ? (
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-emerald-200 bg-white p-1.5 text-emerald-600 shadow-sm">
-                          <CheckCircle2 className="size-4" />
-                        </div>
-                      ) : mobileVerification.hasError ? (
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-destructive/20 bg-white p-1.5 text-destructive shadow-sm">
-                          <CircleAlert className="size-4" />
-                        </div>
-                      ) : null}
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="space-y-1">
-                          <div className="text-sm font-semibold">Mobile</div>
-                          <div className="text-xs text-muted-foreground">{normalizedMobileNumber}</div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <Button type="button" variant="outline" className="h-9 shrink-0 px-3 text-xs sm:text-sm" disabled={mobileVerification.isRequesting || mobileVerification.verified} onClick={() => void handleRequestOtp('mobile')}>
-                            {mobileVerification.isRequesting ? 'Sending...' : mobileVerification.verificationId ? 'Resend OTP' : 'Send OTP'}
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="flex gap-3">
-                        <Input
-                          value={mobileVerification.otp}
-                          onChange={(event) => setMobileVerification((current) => ({ ...current, otp: event.target.value }))}
-                          placeholder="Enter mobile OTP"
-                          maxLength={6}
-                          inputMode="numeric"
-                        />
-                      </div>
-                      <Button
-                        type="button"
-                        className={cn(
-                          'w-full',
-                          mobileVerification.verified ? 'bg-emerald-600 text-white hover:bg-emerald-600 disabled:opacity-100' : '',
-                        )}
-                        disabled={mobileVerification.isVerifying || !mobileVerification.verificationId || mobileVerification.verified}
-                        onClick={() => void handleVerifyOtp('mobile')}
-                      >
-                        {mobileVerification.verified ? 'Verified' : mobileVerification.isVerifying ? 'Verifying...' : 'Verify mobile OTP'}
                       </Button>
                     </div>
                   </div>

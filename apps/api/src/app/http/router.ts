@@ -15,6 +15,8 @@ import { StorefrontOrderService } from '../../features/storefront/application/st
 import { StorefrontOrderRepository } from '../../features/storefront/data/storefront-order-repository'
 import { AuthService } from '../../features/auth/application/auth-service'
 import { AuthUserRepository } from '../../features/auth/data/auth-user-repository'
+import { MailboxService } from '../../features/mailbox/application/mailbox-service'
+import { MailboxRepository } from '../../features/mailbox/data/mailbox-repository'
 import { GetBootstrapSnapshot } from '../../features/bootstrap/application/get-bootstrap-snapshot'
 import { SystemOverviewRepository } from '../../features/bootstrap/data/system-overview-repository'
 import { ApplicationError } from '../../shared/errors/application-error'
@@ -24,7 +26,8 @@ import { getBearerToken, readJsonBody } from '../../shared/http/request'
 import { writeEmpty, writeJson } from '../../shared/http/response'
 
 const bootstrapUseCase = new GetBootstrapSnapshot(new SystemOverviewRepository())
-const authService = new AuthService(new AuthUserRepository())
+const mailboxService = new MailboxService(new MailboxRepository())
+const authService = new AuthService(new AuthUserRepository(), mailboxService)
 const commonModuleService = new CommonModuleService(new CommonModuleRepository())
 const companyService = new CompanyService(new CompanyRepository())
 const contactService = new ContactService(new ContactRepository())
@@ -90,6 +93,30 @@ export async function routeRequest(
       return
     }
 
+    if (method === 'GET' && url.pathname === '/mailbox/messages') {
+      writeJson(response, 200, await mailboxService.listMessages())
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/mailbox/messages/send') {
+      writeJson(response, 201, await mailboxService.send(await readJsonBody(request)))
+      return
+    }
+
+    if (method === 'GET' && url.pathname === '/mailbox/templates') {
+      writeJson(
+        response,
+        200,
+        await mailboxService.listTemplates(parseBooleanFlag(url.searchParams.get('includeInactive'))),
+      )
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/mailbox/templates') {
+      writeJson(response, 201, await mailboxService.createTemplate(await readJsonBody(request)))
+      return
+    }
+
     if (method === 'GET' && url.pathname === '/storefront/catalog') {
       writeJson(response, 200, await productService.getStorefrontCatalog())
       return
@@ -136,6 +163,12 @@ export async function routeRequest(
     const productRestoreMatch = url.pathname.match(/^\/products\/([^/]+)\/restore$/)
     if (method === 'POST' && productRestoreMatch) {
       writeJson(response, 200, await productService.restore(productRestoreMatch[1]))
+      return
+    }
+
+    const mailboxTemplateRestoreMatch = url.pathname.match(/^\/mailbox\/templates\/([^/]+)\/restore$/)
+    if (method === 'POST' && mailboxTemplateRestoreMatch) {
+      writeJson(response, 200, await mailboxService.restoreTemplate(mailboxTemplateRestoreMatch[1]))
       return
     }
 
@@ -207,6 +240,34 @@ export async function routeRequest(
 
       if (method === 'DELETE') {
         writeJson(response, 200, await productService.deactivate(productId))
+        return
+      }
+    }
+
+    const mailboxMessageRecordMatch = url.pathname.match(/^\/mailbox\/messages\/([^/]+)$/)
+    if (mailboxMessageRecordMatch) {
+      if (method === 'GET') {
+        writeJson(response, 200, await mailboxService.getMessageById(mailboxMessageRecordMatch[1]))
+        return
+      }
+    }
+
+    const mailboxTemplateRecordMatch = url.pathname.match(/^\/mailbox\/templates\/([^/]+)$/)
+    if (mailboxTemplateRecordMatch) {
+      const templateId = mailboxTemplateRecordMatch[1]
+
+      if (method === 'GET') {
+        writeJson(response, 200, await mailboxService.getTemplateById(templateId))
+        return
+      }
+
+      if (method === 'PATCH') {
+        writeJson(response, 200, await mailboxService.updateTemplate(templateId, await readJsonBody(request)))
+        return
+      }
+
+      if (method === 'DELETE') {
+        writeJson(response, 200, await mailboxService.deactivateTemplate(templateId))
         return
       }
     }

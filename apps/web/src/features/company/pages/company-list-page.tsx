@@ -132,7 +132,7 @@ export function CompanyListPage() {
           pageTitle: 'Companies',
           pageDescription: 'Manage legal companies, addresses, contacts, logos, and bank details.',
           addLabel: 'New Company',
-          onAddClick: () => navigate('/dashboard/companies/new'),
+          onAddClick: () => navigate('/admin/dashboard/companies/new'),
         }}
         search={{
           value: searchValue,
@@ -176,7 +176,7 @@ export function CompanyListPage() {
               accessor: (item) => item.name,
               cell: (item) => (
                 <div>
-                  <Link to={`/dashboard/companies/${item.id}`} className="font-medium text-foreground underline-offset-4 hover:underline">
+                  <Link to={`/admin/dashboard/companies/${item.id}`} className="font-medium text-foreground underline-offset-4 hover:underline">
                     {item.name}
                   </Link>
                   <p className="text-sm text-muted-foreground">{item.legalName ?? 'No legal name'}</p>
@@ -227,7 +227,7 @@ export function CompanyListPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem asChild>
-                        <Link to={`/dashboard/companies/${item.id}/edit`}>
+                        <Link to={`/admin/dashboard/companies/${item.id}/edit`}>
                           <EditIcon className="size-4" />
                           <span>Edit</span>
                         </Link>
@@ -275,3 +275,4 @@ export function CompanyListPage() {
     </div>
   )
 }
+

@@ -84,7 +84,7 @@ export function StorefrontTemplateShowPage() {
         referenceId: item.id,
         action: 'deactivate',
       })
-      void navigate('/dashboard/storefront-designer')
+      void navigate('/admin/dashboard/storefront-designer')
     } catch (error) {
       const message = toErrorMessage(error)
       setErrorMessage(message)
@@ -238,7 +238,7 @@ export function StorefrontTemplateShowPage() {
   return (
     <div className="space-y-6">
       <EntityDetailHeader
-        backHref="/dashboard/storefront-designer"
+        backHref="/admin/dashboard/storefront-designer"
         backLabel="Back to storefront designer"
         title={item.name}
         description="Review storefront home-page copy, CTA labels, trust-note content, and presentation metadata."
@@ -246,7 +246,7 @@ export function StorefrontTemplateShowPage() {
         actions={
           <>
             <Button variant="outline" asChild>
-              <Link to={`/dashboard/storefront-designer/${item.id}/edit`}>
+              <Link to={`/admin/dashboard/storefront-designer/${item.id}/edit`}>
                 <EditIcon className="size-4" />
                 Edit
               </Link>
@@ -280,3 +280,4 @@ export function StorefrontTemplateShowPage() {
     </div>
   )
 }
+

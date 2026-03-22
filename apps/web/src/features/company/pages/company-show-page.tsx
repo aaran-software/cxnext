@@ -114,7 +114,7 @@ export function CompanyShowPage() {
         referenceId: item.id,
         action: 'deactivate',
       })
-      void navigate('/dashboard/companies')
+      void navigate('/admin/dashboard/companies')
     } catch (error) {
       const message = toErrorMessage(error)
       setErrorMessage(message)
@@ -203,7 +203,7 @@ export function CompanyShowPage() {
   return (
     <div className="space-y-6">
       <EntityDetailHeader
-        backHref="/dashboard/companies"
+        backHref="/admin/dashboard/companies"
         backLabel="Back to companies"
         title={item.name}
         description="Review legal identity, communication channels, locations, and banking records."
@@ -211,7 +211,7 @@ export function CompanyShowPage() {
         actions={(
           <>
             <Button variant="outline" asChild>
-              <Link to={`/dashboard/companies/${item.id}/edit`}>
+              <Link to={`/admin/dashboard/companies/${item.id}/edit`}>
                 <EditIcon className="size-4" />
                 Edit
               </Link>
@@ -323,3 +323,4 @@ export function CompanyShowPage() {
     </div>
   )
 }
+

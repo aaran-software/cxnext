@@ -19,6 +19,8 @@ import type { AuthUserRepository } from '../data/auth-user-repository'
 import { environment } from '../../../shared/config/environment'
 import { isDatabaseEnabled } from '../../../shared/database/database'
 import { ApplicationError } from '../../../shared/errors/application-error'
+import { normalizeMsg91Destination, verifyMsg91WidgetAccessToken } from '../../../shared/notifications/msg91-otp'
+import type { MailboxService } from '../../mailbox/application/mailbox-service'
 
 interface TokenClaims {
   sub: string
@@ -27,7 +29,10 @@ interface TokenClaims {
 }
 
 export class AuthService {
-  constructor(private readonly repository: AuthUserRepository) {}
+  constructor(
+    private readonly repository: AuthUserRepository,
+    private readonly mailboxService: MailboxService,
+  ) {}
 
   async requestRegisterOtp(payload: unknown): Promise<AuthRegisterOtpRequestResponse> {
     this.assertDatabaseEnabled()
@@ -54,7 +59,12 @@ export class AuthService {
     }
 
     const otp = String(randomInt(100000, 1000000))
-    const otpHash = await bcrypt.hash(otp, 10)
+    const otpHash = await bcrypt.hash(
+      parsedPayload.channel === 'mobile' && environment.notifications.msg91.enabled
+        ? `msg91-widget:${destination}:${Date.now()}`
+        : otp,
+      10,
+    )
     const expiresAt = new Date(Date.now() + environment.auth.otp.expiryMinutes * 60_000)
 
     await this.repository.deactivatePendingContactVerifications({
@@ -73,10 +83,38 @@ export class AuthService {
       expiresAt,
     })
 
+    try {
+      await this.deliverRegisterOtp({
+        channel: parsedPayload.channel,
+        destination,
+        otp,
+        verificationId: verification.id,
+      })
+    } catch (error) {
+      await this.repository.deactivatePendingContactVerifications({
+        purpose: 'customer_registration',
+        actorType,
+        channel: parsedPayload.channel,
+        destination,
+      })
+
+      throw new ApplicationError(
+        parsedPayload.channel === 'email'
+          ? 'Unable to send the email OTP right now.'
+          : 'Unable to send the mobile OTP right now.',
+        {
+          channel: parsedPayload.channel,
+          destination,
+          detail: error instanceof Error ? error.message : 'Unknown delivery error',
+        },
+        502,
+      )
+    }
+
     return authRegisterOtpRequestResponseSchema.parse({
       verificationId: verification.id,
       expiresAt: verification.expiresAt,
-      debugOtp: environment.auth.otp.debug ? otp : null,
+      debugOtp: environment.auth.otp.debug && !(parsedPayload.channel === 'mobile' && environment.notifications.msg91.enabled) ? otp : null,
     } satisfies AuthRegisterOtpRequestResponse)
   }
 
@@ -105,7 +143,28 @@ export class AuthService {
       throw new ApplicationError('The OTP has expired. Request a new code.', { verificationId: verification.id }, 410)
     }
 
-    const otpMatches = await bcrypt.compare(parsedPayload.otp, verification.otpHash)
+    let otpMatches = false
+
+    if (verification.channel === 'mobile' && environment.notifications.msg91.enabled) {
+      try {
+        otpMatches = await this.verifyMobileOtp(verification.destination, parsedPayload.accessToken)
+      } catch (error) {
+        if (error instanceof ApplicationError) {
+          throw error
+        }
+
+        throw new ApplicationError(
+          'Unable to validate the mobile OTP right now.',
+          {
+            verificationId: verification.id,
+            detail: error instanceof Error ? error.message : 'Unknown MSG91 verification error',
+          },
+          502,
+        )
+      }
+    } else {
+      otpMatches = await bcrypt.compare(parsedPayload.otp, verification.otpHash)
+    }
     if (!otpMatches) {
       await this.repository.incrementContactVerificationAttempts(verification.id)
       throw new ApplicationError('Invalid OTP. Check the code and try again.', { verificationId: verification.id }, 400)
@@ -132,18 +191,23 @@ export class AuthService {
     }
 
     const emailVerification = await this.repository.getContactVerification(parsedPayload.emailVerificationId)
-    const mobileVerification = await this.repository.getContactVerification(parsedPayload.mobileVerificationId)
-
     this.assertVerifiedRegistrationContact({
       verification: emailVerification,
       expectedChannel: 'email',
       expectedDestination: normalizedEmail,
     })
-    this.assertVerifiedRegistrationContact({
-      verification: mobileVerification,
-      expectedChannel: 'mobile',
-      expectedDestination: normalizedPhone,
-    })
+
+    const mobileVerification = parsedPayload.mobileVerificationId
+      ? await this.repository.getContactVerification(parsedPayload.mobileVerificationId)
+      : null
+
+    if (mobileVerification) {
+      this.assertVerifiedRegistrationContact({
+        verification: mobileVerification,
+        expectedChannel: 'mobile',
+        expectedDestination: normalizedPhone,
+      })
+    }
 
     const existingUser = await this.repository.findByEmailAndActorType(
       normalizedEmail,
@@ -179,7 +243,10 @@ export class AuthService {
     })
 
     await this.repository.consumeContactVerification(emailVerification!.id)
-    await this.repository.consumeContactVerification(mobileVerification!.id)
+
+    if (mobileVerification) {
+      await this.repository.consumeContactVerification(mobileVerification!.id)
+    }
 
     return this.createAuthResponse(user)
   }
@@ -299,14 +366,76 @@ export class AuthService {
 
   private normalizePhoneNumber(value: string) {
     const trimmed = value.trim()
-    const normalized = trimmed.startsWith('+')
-      ? `+${trimmed.slice(1).replace(/\D/g, '')}`
-      : trimmed.replace(/\D/g, '')
+    const digits = trimmed.replace(/\D/g, '')
+
+    if (!digits) {
+      throw new ApplicationError('Enter a valid mobile number.', { phoneNumber: value }, 400)
+    }
+
+    if (digits.length === 10) {
+      return `+91${digits}`
+    }
+
+    const normalized = trimmed.startsWith('+') ? `+${digits}` : `+${digits}`
 
     if (!normalized || normalized === '+') {
       throw new ApplicationError('Enter a valid mobile number.', { phoneNumber: value }, 400)
     }
 
-    return normalized.startsWith('+') ? normalized : `+${normalized}`
+    if (digits.length < 11 || digits.length > 15) {
+      throw new ApplicationError('Enter a valid mobile number.', { phoneNumber: value }, 400)
+    }
+
+    return normalized
+  }
+
+  private async deliverRegisterOtp(input: {
+    channel: 'email' | 'mobile'
+    destination: string
+    otp: string
+    verificationId: string
+  }) {
+    if (input.channel === 'email') {
+      await this.mailboxService.sendTemplatedEmail({
+        to: [{ email: input.destination }],
+        templateCode: 'customer_registration_otp',
+        templateData: {
+          brandName: environment.notifications.email.fromName || 'CXNext',
+          otp: input.otp,
+          expiryMinutes: environment.auth.otp.expiryMinutes,
+        },
+        referenceType: 'customer_registration_otp',
+        referenceId: input.verificationId,
+      }, { allowDebugFallback: true })
+      return
+    }
+
+    if (environment.notifications.msg91.enabled) {
+      return
+    }
+
+    if (environment.auth.otp.debug) {
+      return
+    }
+
+    throw new Error('MSG91 mobile OTP delivery is not configured.')
+  }
+
+  private async verifyMobileOtp(destination: string, accessToken: string | undefined) {
+    if (!accessToken?.trim()) {
+      throw new ApplicationError('Complete mobile verification before continuing.', { destination }, 400)
+    }
+
+    const verification = await verifyMsg91WidgetAccessToken(accessToken.trim())
+    const expectedDestination = normalizeMsg91Destination(destination)
+
+    if (verification.identifier && verification.identifier !== expectedDestination) {
+      throw new ApplicationError('Verified mobile number does not match the registration number.', {
+        expectedDestination,
+        verifiedDestination: verification.identifier,
+      }, 400)
+    }
+
+    return true
   }
 }

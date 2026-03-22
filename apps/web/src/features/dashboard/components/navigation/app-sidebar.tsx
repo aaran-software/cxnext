@@ -6,6 +6,7 @@ import {
   ChevronRight,
   ContactRound,
   Image,
+  Mail,
   LayoutDashboard,
   LogOut,
   Package,
@@ -30,13 +31,14 @@ import {
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/features/auth/components/auth-provider"
+import { buildAdminPortalPath } from "@/features/auth/lib/portal-routing"
 import { commonModuleMenuGroups, getCommonModuleHref } from "@/features/common-modules/config/common-module-navigation"
 import { BrandMark } from "@/shared/branding/brand-mark"
 
 function getActiveGroupKey(pathname: string) {
-  const moduleKey = pathname.startsWith('/dashboard/storefront-designer')
+  const moduleKey = pathname.startsWith(buildAdminPortalPath('/storefront-designer'))
     ? 'storefrontTemplates'
-    : pathname.match(/^\/dashboard\/common\/([^/]+)$/)?.[1]
+    : pathname.match(/^\/admin\/dashboard\/common\/([^/]+)$/)?.[1]
 
   if (!moduleKey) return null
 
@@ -65,7 +67,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton size="lg" asChild>
-                <NavLink to="/dashboard">
+                <NavLink to={buildAdminPortalPath()}>
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <BrandMark compact className="items-start" />
                   </div>
@@ -81,7 +83,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild tooltip="Dashboard">
-                    <NavLink to="/dashboard">
+                    <NavLink to={buildAdminPortalPath()}>
                       <LayoutDashboard />
                       <span>Overview</span>
                     </NavLink>
@@ -89,7 +91,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild tooltip="Companies">
-                    <NavLink to="/dashboard/companies">
+                    <NavLink to={buildAdminPortalPath('/companies')}>
                       <Building2 />
                       <span>Companies</span>
                     </NavLink>
@@ -97,7 +99,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild tooltip="Contacts">
-                    <NavLink to="/dashboard/contacts">
+                    <NavLink to={buildAdminPortalPath('/contacts')}>
                       <ContactRound />
                       <span>Contacts</span>
                     </NavLink>
@@ -105,7 +107,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild tooltip="Media">
-                    <NavLink to="/dashboard/media">
+                    <NavLink to={buildAdminPortalPath('/media')}>
                       <Image />
                       <span>Media</span>
                     </NavLink>
@@ -113,9 +115,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild tooltip="Products">
-                    <NavLink to="/dashboard/products">
+                    <NavLink to={buildAdminPortalPath('/products')}>
                       <Package />
                       <span>Products</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="Mailbox">
+                    <NavLink to={buildAdminPortalPath('/mailbox/messages')}>
+                      <Mail />
+                      <span>Mailbox</span>
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -129,7 +139,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild tooltip="All masters">
-                    <NavLink to="/dashboard/common">
+                    <NavLink to={buildAdminPortalPath('/common')}>
                       <LayoutDashboard />
                       <span>Common Workspace</span>
                     </NavLink>
@@ -161,8 +171,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                               <SidebarMenuSubButton
                                 asChild
                                 isActive={item.key === 'storefrontTemplates'
-                                  ? location.pathname.startsWith('/dashboard/storefront-designer')
-                                  : location.pathname === `/dashboard/common/${item.key}`}
+                                  ? location.pathname.startsWith(buildAdminPortalPath('/storefront-designer'))
+                                  : location.pathname === buildAdminPortalPath(`/common/${item.key}`)}
                               >
                                 <NavLink to={getCommonModuleHref(item.key)}>
                                   <item.icon />
@@ -200,3 +210,4 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </Sidebar>
   )
 }
+

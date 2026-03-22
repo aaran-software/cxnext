@@ -458,7 +458,7 @@ export function ProductFormPage() {
         mode: productId ? 'update' : 'create',
       })
 
-      void navigate('/dashboard/products')
+      void navigate('/admin/dashboard/products')
     } catch (error) {
       const message = toErrorMessage(error)
       setErrorMessage(message)
@@ -865,7 +865,7 @@ export function ProductFormPage() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <Button variant="ghost" size="sm" asChild className="-ml-3 mb-2">
-            <Link to="/dashboard/products">
+            <Link to="/admin/dashboard/products">
               <ArrowLeft className="size-4" />
               Back to products
             </Link>
@@ -873,7 +873,7 @@ export function ProductFormPage() {
           <p className="text-sm text-muted-foreground">Capture product identity, variants, pricing, stock, SEO, and catalog presentation.</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button type="button" variant="outline" onClick={() => { void navigate('/dashboard/products') }}>Cancel</Button>
+          <Button type="button" variant="outline" onClick={() => { void navigate('/admin/dashboard/products') }}>Cancel</Button>
           <Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save Product'}</Button>
         </div>
       </div>
@@ -901,3 +901,4 @@ export function ProductFormPage() {
     </form>
   )
 }
+

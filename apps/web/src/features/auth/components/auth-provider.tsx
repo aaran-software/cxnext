@@ -21,8 +21,8 @@ interface AuthSession {
 interface AuthContextValue {
   session: AuthSession | null
   isAuthenticated: boolean
-  login: (payload: AuthLoginPayload) => Promise<void>
-  register: (payload: AuthRegisterPayload) => Promise<void>
+  login: (payload: AuthLoginPayload) => Promise<AuthSession>
+  register: (payload: AuthRegisterPayload) => Promise<AuthSession>
   logout: () => void
 }
 
@@ -59,6 +59,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession))
     setSession(nextSession)
+    return nextSession
   }
 
   async function handleRegister(payload: AuthRegisterPayload) {
@@ -71,6 +72,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession))
     setSession(nextSession)
+    return nextSession
   }
 
   function logout() {

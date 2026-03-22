@@ -150,7 +150,7 @@ export function StorefrontTemplateListPage() {
           pageTitle: 'Storefront Design Templates',
           pageDescription: 'Curate storefront home-page sections, trust notes, and CTA copy with dedicated records instead of hardcoded content.',
           addLabel: 'New Template',
-          onAddClick: () => navigate('/dashboard/storefront-designer/new'),
+          onAddClick: () => navigate('/admin/dashboard/storefront-designer/new'),
         }}
         search={{
           value: searchValue,
@@ -258,7 +258,7 @@ export function StorefrontTemplateListPage() {
                 return (
                   <div>
                     <Link
-                      to={`/dashboard/storefront-designer/${item.id}`}
+                      to={`/admin/dashboard/storefront-designer/${item.id}`}
                       className="font-medium text-foreground underline-offset-4 hover:underline"
                     >
                       {item.name}
@@ -342,12 +342,12 @@ export function StorefrontTemplateListPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem asChild>
-                        <Link to={`/dashboard/storefront-designer/${item.id}`}>
+                        <Link to={`/admin/dashboard/storefront-designer/${item.id}`}>
                           <span>Open</span>
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link to={`/dashboard/storefront-designer/${item.id}/edit`}>
+                        <Link to={`/admin/dashboard/storefront-designer/${item.id}/edit`}>
                           <EditIcon className="size-4" />
                           <span>Edit</span>
                         </Link>
@@ -391,3 +391,4 @@ export function StorefrontTemplateListPage() {
     </div>
   )
 }
+

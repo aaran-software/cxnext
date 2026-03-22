@@ -2,20 +2,22 @@ import { HeartIcon, HomeIcon, SearchIcon, ShoppingCartIcon, UserCircle2Icon } fr
 import { Link, useLocation } from "react-router-dom"
 
 import { Badge } from "@/components/ui/badge"
+import { getPortalHomeHref } from "@/features/auth/lib/portal-routing"
+import { useAuth } from "@/features/auth/components/auth-provider"
 import { useStorefront } from "@/features/store/context/storefront-context"
 import { cn } from "@/lib/utils"
 
-const items = [
-  { label: "Home", url: "/", icon: HomeIcon },
-  { label: "Search", url: "/search", icon: SearchIcon },
-  { label: "Wishlist", url: "/wishlist", icon: HeartIcon },
-  { label: "Cart", url: "/cart", icon: ShoppingCartIcon },
-  { label: "Account", url: "/login", icon: UserCircle2Icon },
-]
-
 export function StorefrontBottomNav() {
   const location = useLocation()
+  const auth = useAuth()
   const { wishlistProductIds, cartCount } = useStorefront()
+  const items = [
+    { label: "Home", url: "/", icon: HomeIcon },
+    { label: "Search", url: "/search", icon: SearchIcon },
+    { label: "Wishlist", url: "/wishlist", icon: HeartIcon },
+    { label: "Cart", url: "/cart", icon: ShoppingCartIcon },
+    { label: "Account", url: getPortalHomeHref(auth.session?.user), icon: UserCircle2Icon },
+  ]
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border/70 bg-background/95 px-2 py-2 backdrop-blur md:hidden">

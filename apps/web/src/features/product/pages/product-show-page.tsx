@@ -118,7 +118,7 @@ export function ProductShowPage() {
         referenceId: item.id,
         action: 'deactivate',
       })
-      void navigate('/dashboard/products')
+      void navigate('/admin/dashboard/products')
     } catch (error) {
       const message = toErrorMessage(error)
       setErrorMessage(message)
@@ -207,7 +207,7 @@ export function ProductShowPage() {
   return (
     <div className="space-y-6">
       <EntityDetailHeader
-        backHref="/dashboard/products"
+        backHref="/admin/dashboard/products"
         backLabel="Back to products"
         title={item.name}
         description="Review catalog identity, pricing, variants, stock structures, and publishing data."
@@ -215,7 +215,7 @@ export function ProductShowPage() {
         actions={(
           <>
             <Button variant="outline" asChild>
-              <Link to={`/dashboard/products/${item.id}/edit`}>
+              <Link to={`/admin/dashboard/products/${item.id}/edit`}>
                 <EditIcon className="size-4" />
                 Edit
               </Link>
@@ -369,3 +369,4 @@ export function ProductShowPage() {
     </div>
   )
 }
+

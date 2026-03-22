@@ -2,6 +2,7 @@ import { ChevronDownIcon, LogInIcon } from "lucide-react"
 import { Link } from "react-router-dom"
 
 import { useAuth } from "@/features/auth/components/auth-provider"
+import { getPortalHomeHref } from "@/features/auth/lib/portal-routing"
 import { BrandMark } from "@/shared/branding/brand-mark"
 import { frontendLabels, frontendTarget } from "@/config/frontend"
 import { Navbar } from "@/features/marketing/components/navigation/navbar"
@@ -40,7 +41,7 @@ export function PortfolioHeader() {
 
         <div className="ml-auto flex items-center gap-2">
           <Link
-            to={auth.isAuthenticated ? "/dashboard" : "/login"}
+            to={getPortalHomeHref(auth.session?.user)}
             className={buttonVariants({ className: "rounded-full px-4" })}
           >
             <LogInIcon className="size-4" />

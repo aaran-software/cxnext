@@ -18,6 +18,7 @@ import {
 import { Link, useNavigate } from "react-router-dom"
 
 import { useAuth } from "@/features/auth/components/auth-provider"
+import { buildCustomerPortalPath, getPortalHomeHref } from "@/features/auth/lib/portal-routing"
 import { BrandMark } from "@/shared/branding/brand-mark"
 import { StorefrontMobileMenu } from "@/features/store/components/navigation/storefront-mobile-menu"
 import { StorefrontSearchBar } from "@/features/store/components/navigation/storefront-search-bar"
@@ -50,7 +51,7 @@ export function StorefrontHeader({ categories }: { categories: HeaderCategory[] 
     void navigate("/", { replace: true })
   }
 
-  const dashboardHref = auth.isAuthenticated ? "/dashboard" : "/login"
+  const dashboardHref = getPortalHomeHref(auth.session?.user)
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/70 bg-background/90 backdrop-blur-xl">
@@ -111,13 +112,13 @@ export function StorefrontHeader({ categories }: { categories: HeaderCategory[] 
               )}
 
               <DropdownMenuItem asChild className="cursor-pointer">
-                <Link to={dashboardHref}>
+                <Link to={auth.isAuthenticated ? buildCustomerPortalPath('/profile') : '/login'}>
                   <UserCircle2Icon className="mr-3 size-4 text-muted-foreground" />
                   <span>My Profile</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="cursor-pointer">
-                <Link to={auth.isAuthenticated ? "/account/orders" : "/login"}>
+                <Link to={auth.isAuthenticated ? buildCustomerPortalPath('/orders') : "/login"}>
                   <PackageIcon className="mr-3 size-4 text-muted-foreground" />
                   <span>Orders</span>
                 </Link>
@@ -153,7 +154,7 @@ export function StorefrontHeader({ categories }: { categories: HeaderCategory[] 
                 <>
                   <DropdownMenuSeparator className="my-2" />
                   <DropdownMenuItem asChild className="cursor-pointer">
-                    <Link to="/dashboard">
+                    <Link to={dashboardHref}>
                       <LayoutDashboardIcon className="mr-3 size-4 text-muted-foreground" />
                       <span>Dashboard</span>
                     </Link>
@@ -186,7 +187,7 @@ export function StorefrontHeader({ categories }: { categories: HeaderCategory[] 
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="cursor-pointer">
-                <Link to={auth.isAuthenticated ? "/account/notifications" : "/login"}>
+                <Link to={auth.isAuthenticated ? buildCustomerPortalPath('/notifications') : "/login"}>
                   <BellIcon className="mr-3 size-4 text-muted-foreground" />
                   <span>Notification Settings</span>
                 </Link>

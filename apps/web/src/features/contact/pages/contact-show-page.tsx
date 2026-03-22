@@ -121,7 +121,7 @@ export function ContactShowPage() {
         referenceId: item.id,
         action: 'deactivate',
       })
-      void navigate('/dashboard/contacts')
+      void navigate('/admin/dashboard/contacts')
     } catch (error) {
       const message = toErrorMessage(error)
       setErrorMessage(message)
@@ -210,7 +210,7 @@ export function ContactShowPage() {
   return (
     <div className="space-y-6">
       <EntityDetailHeader
-        backHref="/dashboard/contacts"
+        backHref="/admin/dashboard/contacts"
         backLabel="Back to contacts"
         title={item.name}
         description="Review profile, tax identity, communication channels, and financial records."
@@ -218,7 +218,7 @@ export function ContactShowPage() {
         actions={(
           <>
             <Button variant="outline" asChild>
-              <Link to={`/dashboard/contacts/${item.id}/edit`}>
+              <Link to={`/admin/dashboard/contacts/${item.id}/edit`}>
                 <EditIcon className="size-4" />
                 Edit
               </Link>
@@ -340,3 +340,4 @@ export function ContactShowPage() {
     </div>
   )
 }
+

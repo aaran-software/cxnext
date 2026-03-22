@@ -191,7 +191,7 @@ export function MediaFormPage() {
         mode: mediaId ? 'update' : 'create',
       })
 
-      void navigate('/dashboard/media')
+      void navigate('/admin/dashboard/media')
     } catch (error) {
       const message = toErrorMessage(error)
       setErrorMessage(message)
@@ -329,7 +329,7 @@ export function MediaFormPage() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <Button variant="ghost" size="sm" asChild className="-ml-3 mb-2">
-            <Link to="/dashboard/media">
+            <Link to="/admin/dashboard/media">
               <ArrowLeft className="size-4" />
               Back to media
             </Link>
@@ -338,7 +338,7 @@ export function MediaFormPage() {
           <p className="mt-2 text-sm text-muted-foreground">Capture media metadata, storage scope, usage references, and derivative versions.</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button type="button" variant="outline" onClick={() => { void navigate('/dashboard/media') }}>Cancel</Button>
+          <Button type="button" variant="outline" onClick={() => { void navigate('/admin/dashboard/media') }}>Cancel</Button>
           <Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save Media Asset'}</Button>
         </div>
       </div>
@@ -353,7 +353,7 @@ export function MediaFormPage() {
         allowPrivateAssets
         onSelect={(asset) => {
           setValues(toFormValues(asset))
-          void navigate(`/dashboard/media/${asset.id}/edit`)
+          void navigate(`/admin/dashboard/media/${asset.id}/edit`)
         }}
         title="Upload or Choose Media Asset"
         description="Persist a new media asset through the popup workflow or pick an existing one from the media library."
@@ -361,3 +361,4 @@ export function MediaFormPage() {
     </form>
   )
 }
+

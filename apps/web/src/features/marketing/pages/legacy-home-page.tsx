@@ -65,7 +65,7 @@ export function HomePage() {
             ))}
             <div className="flex flex-wrap gap-3 pt-2">
               <Button asChild>
-                <Link to="/dashboard">
+                <Link to="/admin/dashboard">
                   Open dashboard
                   <ArrowRight className="size-4" />
                 </Link>
@@ -164,4 +164,5 @@ export function HomePage() {
     </div>
   )
 }
+
 

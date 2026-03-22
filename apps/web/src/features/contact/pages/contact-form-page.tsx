@@ -294,7 +294,7 @@ export function ContactFormPage() {
         referenceId: savedContact.id,
         mode: contactId ? 'update' : 'create',
       })
-      navigate('/dashboard/contacts')
+      navigate('/admin/dashboard/contacts')
     } catch (error) {
       const message = toErrorMessage(error)
       setErrorMessage(message)
@@ -314,10 +314,10 @@ export function ContactFormPage() {
     <form className="space-y-6 pt-2" onSubmit={handleSubmit}>
       <div className="flex items-center justify-between gap-4">
         <div>
-          <Button variant="ghost" size="sm" asChild className="-ml-3 mb-2"><Link to="/dashboard/contacts"><ArrowLeft className="size-4" />Back to contacts</Link></Button>
+          <Button variant="ghost" size="sm" asChild className="-ml-3 mb-2"><Link to="/admin/dashboard/contacts"><ArrowLeft className="size-4" />Back to contacts</Link></Button>
           <p className="text-sm text-muted-foreground">Capture contact identity, tax, addresses, communication channels, and bank details.</p>
         </div>
-        <div className="flex items-center gap-3"><Button type="button" variant="outline" onClick={() => navigate('/dashboard/contacts')}>Cancel</Button><Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save Contact'}</Button></div>
+        <div className="flex items-center gap-3"><Button type="button" variant="outline" onClick={() => navigate('/admin/dashboard/contacts')}>Cancel</Button><Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save Contact'}</Button></div>
       </div>
       {errorMessage ? (
         <Card className={`${warningCardClassName} rounded-md`}>
@@ -452,3 +452,4 @@ export function ContactFormPage() {
     </form>
   )
 }
+

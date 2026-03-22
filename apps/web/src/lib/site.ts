@@ -22,7 +22,7 @@ export const publicNavigation = [
   { label: 'Home', href: '/' },
   { label: 'About', href: '/about' },
   { label: 'Contact', href: '/contact' },
-  { label: 'Dashboard', href: '/dashboard' },
+  { label: 'Dashboard', href: '/admin/dashboard' },
 ]
 
 export const modeOptions: { value: ColorMode; label: string }[] = [
@@ -52,26 +52,26 @@ export const dashboardSidebar: SidebarGroup[] = [
   {
     title: 'Operate',
     items: [
-      { title: 'Overview', href: '/dashboard', icon: LayoutDashboard },
-      { title: 'Orders', href: '/dashboard/orders', icon: ReceiptText, badge: '24' },
-      { title: 'Inventory', href: '/dashboard/inventory', icon: Boxes },
-      { title: 'Logistics', href: '/dashboard/logistics', icon: Truck },
+      { title: 'Overview', href: '/admin/dashboard', icon: LayoutDashboard },
+      { title: 'Orders', href: '/admin/dashboard/orders', icon: ReceiptText, badge: '24' },
+      { title: 'Inventory', href: '/admin/dashboard/inventory', icon: Boxes },
+      { title: 'Logistics', href: '/admin/dashboard/logistics', icon: Truck },
     ],
   },
   {
     title: 'Finance',
     items: [
-      { title: 'Billing', href: '/dashboard/billing', icon: CreditCard },
-      { title: 'Cash Flow', href: '/dashboard/cash-flow', icon: BadgeIndianRupee },
-      { title: 'Compliance', href: '/dashboard/compliance', icon: ShieldCheck },
+      { title: 'Billing', href: '/admin/dashboard/billing', icon: CreditCard },
+      { title: 'Cash Flow', href: '/admin/dashboard/cash-flow', icon: BadgeIndianRupee },
+      { title: 'Compliance', href: '/admin/dashboard/compliance', icon: ShieldCheck },
     ],
   },
   {
     title: 'Admin',
     items: [
-      { title: 'Workspace', href: '/dashboard/workspace', icon: Building2 },
-      { title: 'Teams', href: '/dashboard/teams', icon: Users },
-      { title: 'Settings', href: '/dashboard/settings', icon: Settings2 },
+      { title: 'Workspace', href: '/admin/dashboard/workspace', icon: Building2 },
+      { title: 'Teams', href: '/admin/dashboard/teams', icon: Users },
+      { title: 'Settings', href: '/admin/dashboard/settings', icon: Settings2 },
     ],
   },
 ]
@@ -100,3 +100,4 @@ export const workspaceSignals = [
     icon: Contact2,
   },
 ]
+

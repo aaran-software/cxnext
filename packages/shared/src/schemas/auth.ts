@@ -61,7 +61,16 @@ export const authRegisterOtpRequestResponseSchema = z.object({
 
 export const authRegisterOtpVerifyPayloadSchema = z.object({
   verificationId: z.string().min(1),
-  otp: z.string().trim().length(6),
+  otp: z.string().trim().length(6).optional(),
+  accessToken: z.string().trim().min(1).optional(),
+}).superRefine((value, context) => {
+  if (!value.otp && !value.accessToken) {
+    context.addIssue({
+      code: 'custom',
+      message: 'Provide either OTP or access token.',
+      path: ['otp'],
+    })
+  }
 })
 
 export const authRegisterOtpVerifyResponseSchema = z.object({
@@ -76,7 +85,7 @@ export const authRegisterPayloadSchema = z.object({
   displayName: z.string().min(2),
   actorType: actorTypeSchema.default('customer'),
   emailVerificationId: z.string().min(1),
-  mobileVerificationId: z.string().min(1),
+  mobileVerificationId: z.string().min(1).optional(),
   organizationName: z.string().trim().min(2).max(120).optional(),
 })
 

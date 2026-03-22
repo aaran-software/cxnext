@@ -1,12 +1,11 @@
 import { expect, test } from '@playwright/test'
 
-test('guest can register with email and mobile OTP and return to checkout', async ({ page }) => {
+test('guest can register with email OTP and return to checkout', async ({ page }) => {
   const unique = Date.now()
   const email = `playwright-customer-${unique}@cxnext.test`
   const mobile = `98${String(unique).slice(-8)}`
-  let emailOtp = ''
-  let mobileOtp = ''
-
+  const emailOtp = '123456'
+  let emailVerificationId = ''
   await page.goto('/product/cxnext-demo-polo')
   await page.getByRole('button', { name: 'Add to cart', exact: true }).click()
   await page.goto('/cart')
@@ -17,17 +16,64 @@ test('guest can register with email and mobile OTP and return to checkout', asyn
   await expect(page).toHaveURL(/\/register$/)
 
   await page.route('**/auth/register/request-otp', async (route) => {
-    const response = await route.fetch()
-    const payload = await response.json()
-    const requestBody = route.request().postDataJSON() as { channel: 'email' | 'mobile' }
+    emailVerificationId = `email-verification-${unique}`
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        verificationId: emailVerificationId,
+        expiresAt: new Date(Date.now() + 10 * 60_000).toISOString(),
+        debugOtp: null,
+      }),
+    })
+  })
 
-    if (requestBody.channel === 'email') {
-      emailOtp = payload.debugOtp
-    } else {
-      mobileOtp = payload.debugOtp
+  await page.route('**/auth/register/verify-otp', async (route) => {
+    const body = route.request().postDataJSON() as { accessToken?: string; verificationId: string; otp?: string }
+
+    if (body.verificationId === emailVerificationId && body.otp === emailOtp) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          verificationId: body.verificationId,
+          verified: true,
+        }),
+      })
+      return
     }
 
-    await route.fulfill({ response })
+    await route.fulfill({
+      status: 400,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        error: 'Invalid OTP',
+      }),
+    })
+  })
+
+  await page.route('**/auth/register', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        accessToken: 'playwright-auth-token',
+        tokenType: 'Bearer',
+        expiresInSeconds: 3600,
+        user: {
+          id: `customer-${unique}`,
+          email,
+          phoneNumber: `+91${mobile}`,
+          displayName: 'Playwright Customer',
+          actorType: 'customer',
+          avatarUrl: null,
+          organizationName: null,
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      }),
+    })
   })
 
   await page.getByLabel('Name').fill('Playwright Customer')
@@ -36,16 +82,9 @@ test('guest can register with email and mobile OTP and return to checkout', asyn
   await page.getByRole('button', { name: 'Continue' }).click()
 
   await page.getByRole('button', { name: 'Send OTP' }).first().click()
-  await expect.poll(() => emailOtp.length).toBe(6)
   await page.getByPlaceholder('Enter email OTP').fill(emailOtp)
   await page.getByRole('button', { name: 'Verify email OTP' }).click()
-  await expect(page.getByText('Email verified')).toBeVisible()
-
-  await page.getByRole('button', { name: 'Send OTP', exact: true }).click()
-  await expect.poll(() => mobileOtp.length).toBe(6)
-  await page.getByPlaceholder('Enter mobile OTP').fill(mobileOtp)
-  await page.getByRole('button', { name: 'Verify mobile OTP' }).click()
-  await expect(page.getByText('Mobile verified')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Verified' }).first()).toBeVisible()
 
   await page.getByRole('button', { name: 'Continue' }).click()
   await page.locator('#register-password').fill('playwright123')

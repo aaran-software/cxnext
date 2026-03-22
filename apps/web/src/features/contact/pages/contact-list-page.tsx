@@ -96,7 +96,7 @@ export function ContactListPage() {
           pageTitle: 'Contacts',
           pageDescription: 'Manage vendors, suppliers, customers, and other business contacts.',
           addLabel: 'New Contact',
-          onAddClick: () => navigate('/dashboard/contacts/new'),
+          onAddClick: () => navigate('/admin/dashboard/contacts/new'),
         }}
         search={{ value: searchValue, onChange: (value) => { setSearchValue(value); setCurrentPage(1) }, placeholder: 'Search contacts' }}
         filters={{
@@ -113,7 +113,7 @@ export function ContactListPage() {
         table={{
           columns: [
             { id: 'serial', header: 'Sl.No', cell: (item) => ((safeCurrentPage - 1) * pageSize) + paginatedItems.findIndex((entry) => entry.id === item.id) + 1, className: 'w-12 min-w-12 px-2 text-center', headerClassName: 'w-12 min-w-12 px-2 text-center', sticky: 'left' },
-            { id: 'name', header: 'Contact', sortable: true, accessor: (item) => item.name, cell: (item) => <div><Link to={`/dashboard/contacts/${item.id}`} className="font-medium text-foreground underline-offset-4 hover:underline">{item.name}</Link><p className="text-sm text-muted-foreground">{item.legalName ?? 'No legal name'}</p></div> },
+            { id: 'name', header: 'Contact', sortable: true, accessor: (item) => item.name, cell: (item) => <div><Link to={`/admin/dashboard/contacts/${item.id}`} className="font-medium text-foreground underline-offset-4 hover:underline">{item.name}</Link><p className="text-sm text-muted-foreground">{item.legalName ?? 'No legal name'}</p></div> },
             { id: 'tax', header: 'Tax', accessor: (item) => item.gstin ?? item.pan, cell: (item) => <div><p>{item.gstin ?? 'No GSTIN'}</p><p className="text-sm text-muted-foreground">{item.pan ?? 'No PAN'}</p></div> },
             { id: 'financial', header: 'Balance', accessor: (item) => item.openingBalance, cell: (item) => <div><p>{item.openingBalance.toFixed(2)}</p><p className="text-sm text-muted-foreground">{item.balanceType ?? 'Not set'}</p></div> },
             { id: 'contact', header: 'Primary Contact', accessor: (item) => item.primaryEmail ?? item.primaryPhone, cell: (item) => <div><p>{item.primaryEmail ?? 'No email'}</p><p className="text-sm text-muted-foreground">{item.primaryPhone ?? 'No phone'}</p></div> },
@@ -125,7 +125,7 @@ export function ContactListPage() {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild><Button type="button" size="icon-sm" variant="ghost"><MoreHorizontalIcon className="size-4" /></Button></DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild><Link to={`/dashboard/contacts/${item.id}/edit`}><EditIcon className="size-4" /><span>Edit</span></Link></DropdownMenuItem>
+                      <DropdownMenuItem asChild><Link to={`/admin/dashboard/contacts/${item.id}/edit`}><EditIcon className="size-4" /><span>Edit</span></Link></DropdownMenuItem>
                       <DropdownMenuItem onClick={() => void handleToggleActive(item)}><PowerIcon className="size-4" /><span>{item.isActive ? 'Deactivate' : 'Restore'}</span></DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -145,3 +145,4 @@ export function ContactListPage() {
     </div>
   )
 }
+

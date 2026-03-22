@@ -28,6 +28,14 @@ import type {
   ProductListResponse,
   ProductResponse,
   ProductUpsertPayload,
+  MailboxMessage,
+  MailboxMessageListResponse,
+  MailboxMessageResponse,
+  MailboxSendPayload,
+  MailboxTemplate,
+  MailboxTemplateListResponse,
+  MailboxTemplateResponse,
+  MailboxTemplateUpsertPayload,
   StorefrontCatalogResponse,
   StorefrontCheckoutPayload,
   StorefrontCheckoutResponse,
@@ -283,6 +291,64 @@ export async function deactivateProduct(id: string) {
 
 export async function restoreProduct(id: string) {
   const response = await request<ProductResponse>(`/products/${id}/restore`, { method: 'POST' })
+  return response.item
+}
+
+export async function listMailboxMessages() {
+  const response = await request<MailboxMessageListResponse>('/mailbox/messages')
+  return response.items
+}
+
+export async function getMailboxMessage(id: string) {
+  const response = await request<MailboxMessageResponse>(`/mailbox/messages/${id}`)
+  return response.item
+}
+
+export async function sendMailboxMessage(payload: MailboxSendPayload) {
+  const response = await request<MailboxMessageResponse>('/mailbox/messages/send', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  return response.item
+}
+
+export async function listMailboxTemplates(includeInactive = true) {
+  const response = await request<MailboxTemplateListResponse>(`/mailbox/templates?includeInactive=${includeInactive ? 'true' : 'false'}`)
+  return response.items
+}
+
+export async function getMailboxTemplate(id: string) {
+  const response = await request<MailboxTemplateResponse>(`/mailbox/templates/${id}`)
+  return response.item
+}
+
+export async function createMailboxTemplate(payload: MailboxTemplateUpsertPayload) {
+  const response = await request<MailboxTemplateResponse>('/mailbox/templates', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  return response.item
+}
+
+export async function updateMailboxTemplate(id: string, payload: MailboxTemplateUpsertPayload) {
+  const response = await request<MailboxTemplateResponse>(`/mailbox/templates/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+  return response.item
+}
+
+export async function deactivateMailboxTemplate(id: string) {
+  const response = await request<MailboxTemplateResponse>(`/mailbox/templates/${id}`, {
+    method: 'DELETE',
+  })
+  return response.item
+}
+
+export async function restoreMailboxTemplate(id: string) {
+  const response = await request<MailboxTemplateResponse>(`/mailbox/templates/${id}/restore`, {
+    method: 'POST',
+  })
   return response.item
 }
 

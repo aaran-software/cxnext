@@ -1,6 +1,6 @@
 import type { CommonModuleKey } from '@shared/index'
 import { Link, useLocation } from 'react-router-dom'
-import { Building2, ChevronRight, ContactRound, Home, Image, LayoutDashboard, Package, Store } from 'lucide-react'
+import { Building2, ChevronRight, ContactRound, Home, Image, LayoutDashboard, Mail, Package, Store } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
@@ -10,154 +10,196 @@ import { getCommonModuleMenuItem } from '@/features/common-modules/config/common
 import { ThemeSwitcher } from '@/shared/theme/theme-switcher'
 
 function resolveCurrentTitle(pathname: string) {
-  if (pathname === '/dashboard' || pathname === '/dashboard/') {
+  if (pathname === '/admin/dashboard' || pathname === '/admin/dashboard/') {
     return {
       section: 'Dashboard',
       title: 'Workspace overview',
     }
   }
 
-  if (pathname === '/dashboard/common' || pathname === '/dashboard/common/') {
+  if (pathname === '/admin/dashboard/common' || pathname === '/admin/dashboard/common/') {
     return {
       section: 'Common Modules',
       title: 'Common workspace',
     }
   }
 
-  if (pathname === '/dashboard/companies' || pathname === '/dashboard/companies/') {
+  if (pathname === '/admin/dashboard/companies' || pathname === '/admin/dashboard/companies/') {
     return {
       section: 'Organization',
       title: 'Companies',
     }
   }
 
-  if (pathname === '/dashboard/companies/new') {
+  if (pathname === '/admin/dashboard/companies/new') {
     return {
       section: 'Organization',
       title: 'New Company',
     }
   }
 
-  if (/^\/dashboard\/companies\/[^/]+\/edit$/.test(pathname)) {
+  if (/^\/admin\/dashboard\/companies\/[^/]+\/edit$/.test(pathname)) {
     return {
       section: 'Organization',
       title: 'Edit Company',
     }
   }
 
-  if (/^\/dashboard\/companies\/[^/]+$/.test(pathname)) {
+  if (/^\/admin\/dashboard\/companies\/[^/]+$/.test(pathname)) {
     return {
       section: 'Organization',
       title: 'Company Details',
     }
   }
 
-  if (pathname === '/dashboard/contacts' || pathname === '/dashboard/contacts/') {
+  if (pathname === '/admin/dashboard/contacts' || pathname === '/admin/dashboard/contacts/') {
     return {
       section: 'CRM',
       title: 'Contacts',
     }
   }
 
-  if (pathname === '/dashboard/contacts/new') {
+  if (pathname === '/admin/dashboard/contacts/new') {
     return {
       section: 'CRM',
       title: 'New Contact',
     }
   }
 
-  if (/^\/dashboard\/contacts\/[^/]+\/edit$/.test(pathname)) {
+  if (/^\/admin\/dashboard\/contacts\/[^/]+\/edit$/.test(pathname)) {
     return {
       section: 'CRM',
       title: 'Edit Contact',
     }
   }
 
-  if (/^\/dashboard\/contacts\/[^/]+$/.test(pathname)) {
+  if (/^\/admin\/dashboard\/contacts\/[^/]+$/.test(pathname)) {
     return {
       section: 'CRM',
       title: 'Contact Details',
     }
   }
 
-  if (pathname === '/dashboard/products' || pathname === '/dashboard/products/') {
+  if (pathname === '/admin/dashboard/products' || pathname === '/admin/dashboard/products/') {
     return {
       section: 'Catalog',
       title: 'Products',
     }
   }
 
-  if (pathname === '/dashboard/media' || pathname === '/dashboard/media/') {
+  if (pathname === '/admin/dashboard/media' || pathname === '/admin/dashboard/media/') {
     return {
       section: 'Catalog',
       title: 'Media Manager',
     }
   }
 
-  if (pathname === '/dashboard/media/new') {
+  if (pathname === '/admin/dashboard/media/new') {
     return {
       section: 'Catalog',
       title: 'New Media Asset',
     }
   }
 
-  if (/^\/dashboard\/media\/[^/]+\/edit$/.test(pathname)) {
+  if (/^\/admin\/dashboard\/media\/[^/]+\/edit$/.test(pathname)) {
     return {
       section: 'Catalog',
       title: 'Edit Media Asset',
     }
   }
 
-  if (pathname === '/dashboard/products/new') {
+  if (pathname === '/admin/dashboard/products/new') {
     return {
       section: 'Catalog',
       title: 'New Product',
     }
   }
 
-  if (/^\/dashboard\/products\/[^/]+\/edit$/.test(pathname)) {
+  if (pathname === '/admin/dashboard/mailbox/messages' || pathname === '/admin/dashboard/mailbox/messages/') {
+    return {
+      section: 'Communication',
+      title: 'Mailbox',
+    }
+  }
+
+  if (/^\/admin\/dashboard\/mailbox\/messages\/[^/]+$/.test(pathname)) {
+    return {
+      section: 'Communication',
+      title: 'Mailbox Message',
+    }
+  }
+
+  if (pathname === '/admin/dashboard/mailbox/compose') {
+    return {
+      section: 'Communication',
+      title: 'Compose Email',
+    }
+  }
+
+  if (pathname === '/admin/dashboard/mailbox/templates' || pathname === '/admin/dashboard/mailbox/templates/') {
+    return {
+      section: 'Communication',
+      title: 'Mail Templates',
+    }
+  }
+
+  if (pathname === '/admin/dashboard/mailbox/templates/new') {
+    return {
+      section: 'Communication',
+      title: 'New Mail Template',
+    }
+  }
+
+  if (/^\/admin\/dashboard\/mailbox\/templates\/[^/]+\/edit$/.test(pathname)) {
+    return {
+      section: 'Communication',
+      title: 'Edit Mail Template',
+    }
+  }
+
+  if (/^\/admin\/dashboard\/products\/[^/]+\/edit$/.test(pathname)) {
     return {
       section: 'Catalog',
       title: 'Edit Product',
     }
   }
 
-  if (/^\/dashboard\/products\/[^/]+$/.test(pathname)) {
+  if (/^\/admin\/dashboard\/products\/[^/]+$/.test(pathname)) {
     return {
       section: 'Catalog',
       title: 'Product Details',
     }
   }
 
-  if (pathname === '/dashboard/storefront-designer' || pathname === '/dashboard/storefront-designer/') {
+  if (pathname === '/admin/dashboard/storefront-designer' || pathname === '/admin/dashboard/storefront-designer/') {
     return {
       section: 'Storefront',
       title: 'Storefront Designer',
     }
   }
 
-  if (pathname === '/dashboard/storefront-designer/new') {
+  if (pathname === '/admin/dashboard/storefront-designer/new') {
     return {
       section: 'Storefront',
       title: 'New Storefront Template',
     }
   }
 
-  if (/^\/dashboard\/storefront-designer\/[^/]+\/edit$/.test(pathname)) {
+  if (/^\/admin\/dashboard\/storefront-designer\/[^/]+\/edit$/.test(pathname)) {
     return {
       section: 'Storefront',
       title: 'Edit Storefront Template',
     }
   }
 
-  if (/^\/dashboard\/storefront-designer\/[^/]+$/.test(pathname)) {
+  if (/^\/admin\/dashboard\/storefront-designer\/[^/]+$/.test(pathname)) {
     return {
       section: 'Storefront',
       title: 'Storefront Template Details',
     }
   }
 
-  const match = pathname.match(/^\/dashboard\/common\/([^/]+)$/)
+  const match = pathname.match(/^\/admin\/dashboard\/common\/([^/]+)$/)
   if (match) {
     const moduleItem = getCommonModuleMenuItem(match[1] as CommonModuleKey)
     if (moduleItem) {
@@ -191,7 +233,7 @@ export function AppHeader() {
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon-sm" asChild className="shrink-0">
-              <Link to="/dashboard" aria-label="Go to dashboard">
+              <Link to="/admin/dashboard" aria-label="Go to dashboard">
                 <Home className="size-4" />
               </Link>
             </Button>
@@ -203,31 +245,37 @@ export function AppHeader() {
 
       <div className="flex items-center gap-2">
         <Button variant="outline" size="sm" asChild>
-          <Link to="/dashboard/contacts">
+          <Link to="/admin/dashboard/contacts">
             <ContactRound className="size-4" />
             Contacts
           </Link>
         </Button>
         <Button variant="outline" size="sm" asChild>
-          <Link to="/dashboard/products">
+          <Link to="/admin/dashboard/products">
             <Package className="size-4" />
             Products
           </Link>
         </Button>
         <Button variant="outline" size="sm" asChild>
-          <Link to="/dashboard/media">
+          <Link to="/admin/dashboard/mailbox/messages">
+            <Mail className="size-4" />
+            Mailbox
+          </Link>
+        </Button>
+        <Button variant="outline" size="sm" asChild>
+          <Link to="/admin/dashboard/media">
             <Image className="size-4" />
             Media
           </Link>
         </Button>
         <Button variant="outline" size="sm" asChild>
-          <Link to="/dashboard/companies">
+          <Link to="/admin/dashboard/companies">
             <Building2 className="size-4" />
             Companies
           </Link>
         </Button>
         <Button variant="outline" size="sm" asChild>
-          <Link to="/dashboard">
+          <Link to="/admin/dashboard">
             <LayoutDashboard className="size-4" />
             Overview
           </Link>
@@ -246,3 +294,6 @@ export function AppHeader() {
     </header>
   )
 }
+
+
+

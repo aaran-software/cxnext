@@ -301,7 +301,7 @@ export function MediaListPage() {
           pageTitle: 'Media Manager',
           pageDescription: 'Manage media metadata, storage scope, folders, tags, usage references, and derived versions.',
           addLabel: 'New Asset',
-          onAddClick: () => navigate('/dashboard/media/new'),
+          onAddClick: () => navigate('/admin/dashboard/media/new'),
         }}
         search={{
           value: searchValue,
@@ -414,7 +414,7 @@ export function MediaListPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem asChild>
-                        <Link to={`/dashboard/media/${item.id}/edit`}>
+                        <Link to={`/admin/dashboard/media/${item.id}/edit`}>
                           <EditIcon className="size-4" />
                           <span>Edit</span>
                         </Link>
@@ -458,3 +458,4 @@ export function MediaListPage() {
     </div>
   )
 }
+

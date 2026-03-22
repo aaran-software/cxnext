@@ -89,3 +89,9 @@ export const storefrontTableNames = {
   orders: 'storefront_orders',
   orderItems: 'storefront_order_items',
 } as const
+
+export const mailboxTableNames = {
+  templates: 'mailbox_templates',
+  messages: 'mailbox_messages',
+  recipients: 'mailbox_message_recipients',
+} as const

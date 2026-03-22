@@ -379,7 +379,7 @@ export function CompanyFormPage() {
         mode: companyId ? 'update' : 'create',
       })
 
-      void navigate('/dashboard/companies')
+      void navigate('/admin/dashboard/companies')
     } catch (error) {
       const message = toErrorMessage(error)
       setErrorMessage(message)
@@ -406,7 +406,7 @@ export function CompanyFormPage() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <Button variant="ghost" size="sm" asChild className="-ml-3 mb-2">
-            <Link to="/dashboard/companies">
+            <Link to="/admin/dashboard/companies">
               <ArrowLeft className="size-4" />
               Back to companies
             </Link>
@@ -414,7 +414,7 @@ export function CompanyFormPage() {
           <p className="text-sm text-muted-foreground">Capture company identity, contacts, addresses, and bank details.</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button type="button" variant="outline" onClick={() => { void navigate('/dashboard/companies') }}>Cancel</Button>
+          <Button type="button" variant="outline" onClick={() => { void navigate('/admin/dashboard/companies') }}>Cancel</Button>
           <Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save Company'}</Button>
         </div>
       </div>
@@ -552,3 +552,4 @@ export function CompanyFormPage() {
     </form>
   )
 }
+
