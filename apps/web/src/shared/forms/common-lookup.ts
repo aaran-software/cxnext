@@ -101,6 +101,27 @@ function buildCommonLookupPayload(
         icon_key: null,
         theme_key: null,
       }
+    case 'sliderThemes':
+      return {
+        code,
+        name: label,
+        sort_order: 0,
+        add_to_cart_label: 'Add to cart',
+        view_details_label: 'View details',
+        background_from: '#2b1a14',
+        background_via: '#6b4633',
+        background_to: '#f2ddc8',
+        text_color: null,
+        muted_text_color: null,
+        badge_background: null,
+        badge_text_color: null,
+        primary_button_background: null,
+        primary_button_text_color: null,
+        secondary_button_background: null,
+        secondary_button_text_color: null,
+        nav_background: null,
+        nav_text_color: null,
+      }
   }
 }
 

@@ -109,6 +109,7 @@ export const commonModuleMenuGroups: CommonModuleMenuGroup[] = [
     icon: Sparkles,
     items: [
       { key: 'storefrontTemplates', title: 'Storefront Templates', icon: Sparkles, description: 'Home-page copy, CTA, and trust-section content for the storefront.' },
+      { key: 'sliderThemes', title: 'Slider Themes', icon: Palette, description: 'Hero-slider gradients, CTA labels, text colors, and navigation styling.' },
     ],
   },
 ]

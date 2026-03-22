@@ -35,6 +35,7 @@ export const commonTableNames = {
   destinations: 'common_destinations',
   paymentTerms: 'common_payment_terms',
   storefrontTemplates: 'common_storefront_templates',
+  sliderThemes: 'common_slider_themes',
 } as const
 
 export const companyTableNames = {

@@ -52,39 +52,33 @@ export function DealBanner() {
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.38),transparent_58%)]" />
         <div className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-[linear-gradient(270deg,rgba(255,255,255,0.18),transparent)]" />
 
-        <div className={cn('relative z-10 flex flex-col gap-6 lg:items-center lg:justify-between', imageLeft ? 'lg:flex-row' : 'lg:flex-row-reverse')}>
-          <div className="relative flex w-full justify-center lg:w-[34%] lg:shrink-0">
+        <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0 flex-1">
             <AnimatePresence mode="wait" custom={direction}>
               <motion.div
-                key={`${activeSlide.id}-image`}
+                key={`${activeSlide.id}-left`}
                 custom={direction}
-                initial={{ opacity: 0, x: direction > 0 ? 46 : -46, scale: 0.98 }}
-                animate={{ opacity: 1, x: 0, scale: 1 }}
-                exit={{ opacity: 0, x: direction > 0 ? -34 : 34, scale: 0.985 }}
-                transition={{ duration: 0.46, ease: [0.22, 1, 0.36, 1] }}
-                className="relative aspect-[4/3] w-full max-w-[240px] overflow-hidden rounded-[1.7rem] border border-white/60 bg-white/35 shadow-[0_22px_54px_-36px_rgba(38,27,19,0.28)] backdrop-blur-md sm:max-w-[280px]"
+                initial={{ opacity: 0, x: direction > 0 ? 34 : -34 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: direction > 0 ? -24 : 24 }}
+                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                className={cn('flex items-center gap-5 sm:gap-6', imageLeft ? 'flex-row' : 'flex-row-reverse')}
               >
-                <img
-                  src={getPrimaryProductImage(activeSlide)}
-                  alt={activeSlide.name}
-                  className="h-full w-full object-cover"
-                />
-              </motion.div>
-            </AnimatePresence>
-          </div>
-
-          <div className={cn('flex w-full items-end justify-between gap-6', imageLeft ? 'lg:flex-row' : 'lg:flex-row-reverse')}>
-            <div className="min-w-0 flex-1">
-              <AnimatePresence mode="wait" custom={direction}>
                 <motion.div
-                  key={`${activeSlide.id}-content`}
-                  custom={direction}
-                  initial={{ opacity: 0, x: direction > 0 ? 34 : -34 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: direction > 0 ? -24 : 24 }}
-                  transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                  className="space-y-4"
+                  initial={{ opacity: 0, x: direction > 0 ? 46 : -46, scale: 0.98 }}
+                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  exit={{ opacity: 0, x: direction > 0 ? -34 : 34, scale: 0.985 }}
+                  transition={{ duration: 0.46, ease: [0.22, 1, 0.36, 1] }}
+                  className="relative aspect-[4/3] w-full max-w-[180px] shrink-0 overflow-hidden rounded-[1.7rem] border border-white/60 bg-white/35 shadow-[0_22px_54px_-36px_rgba(38,27,19,0.28)] backdrop-blur-md sm:max-w-[220px] lg:max-w-[240px]"
                 >
+                  <img
+                    src={getPrimaryProductImage(activeSlide)}
+                    alt={activeSlide.name}
+                    className="h-full w-full object-cover"
+                  />
+                </motion.div>
+
+                <div className="min-w-0 flex-1">
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -99,7 +93,7 @@ export function DealBanner() {
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.34, delay: 0.08 }}
-                    className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl md:text-4xl"
+                    className="mt-4 text-2xl font-bold tracking-tight text-foreground sm:text-3xl md:text-4xl"
                   >
                     {activeSlide.name}
                   </motion.h2>
@@ -108,7 +102,7 @@ export function DealBanner() {
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.34, delay: 0.12 }}
-                    className="max-w-2xl text-sm leading-relaxed text-foreground/70 sm:text-base"
+                    className="mt-3 max-w-2xl text-sm leading-relaxed text-foreground/70 sm:text-base"
                   >
                     {activeSlide.shortDescription ?? activeSlide.description ?? 'Promotional storefront feature.'}
                   </motion.p>
@@ -117,7 +111,7 @@ export function DealBanner() {
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.34, delay: 0.16 }}
-                    className="flex flex-wrap items-center gap-5 text-sm"
+                    className="mt-4 flex flex-wrap items-center gap-5 text-sm"
                   >
                     <div className="flex flex-col">
                       <span className="text-[11px] uppercase tracking-[0.16em] text-foreground/55">Price</span>
@@ -129,47 +123,47 @@ export function DealBanner() {
                       <span className="text-xl font-semibold text-foreground">{activeSlide.rating.toFixed(1)}</span>
                     </div>
                   </motion.div>
-                </motion.div>
-              </AnimatePresence>
-            </div>
-
-            <div className="hidden shrink-0 items-center gap-2 lg:flex">
-              <Link
-                to={`/product/${activeSlide.slug}`}
-                className={buttonVariants({
-                  className:
-                    'group h-11 rounded-full bg-black px-6 text-sm font-semibold text-white shadow-md hover:bg-black/85 sm:h-12 sm:px-8 sm:text-base',
-                })}
-              >
-                View product
-                <ArrowRightIcon className="ml-2 size-4 transition-transform group-hover:translate-x-1" />
-              </Link>
-            </div>
+                </div>
+              </motion.div>
+            </AnimatePresence>
           </div>
 
-          <div className="hidden items-center gap-2 lg:flex">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => {
-                setDirection(-1)
-                setSelectedIndex((current) => (current - 1 + promoProducts.length) % promoProducts.length)
-              }}
-              className="size-10 rounded-full border-black/10 bg-white/45 text-foreground backdrop-blur-md hover:bg-white/65 hover:text-foreground"
+          <div className="hidden shrink-0 lg:flex lg:w-[180px] lg:flex-col lg:items-end lg:justify-center lg:gap-5">
+            <Link
+              to={`/product/${activeSlide.slug}`}
+              className={buttonVariants({
+                className:
+                  'group h-11 rounded-full bg-black px-6 text-sm font-semibold text-white shadow-md hover:bg-black/85 sm:h-12 sm:px-8 sm:text-base',
+              })}
             >
-              <ChevronLeftIcon className="size-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => {
-                setDirection(1)
-                setSelectedIndex((current) => (current + 1) % promoProducts.length)
-              }}
-              className="size-10 rounded-full border-black/10 bg-white/45 text-foreground backdrop-blur-md hover:bg-white/65 hover:text-foreground"
-            >
-              <ChevronRightIcon className="size-4" />
-            </Button>
+              View product
+              <ArrowRightIcon className="ml-2 size-4 transition-transform group-hover:translate-x-1" />
+            </Link>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => {
+                  setDirection(-1)
+                  setSelectedIndex((current) => (current - 1 + promoProducts.length) % promoProducts.length)
+                }}
+                className="size-10 rounded-full border-black/10 bg-white/45 text-foreground backdrop-blur-md hover:bg-white/65 hover:text-foreground"
+              >
+                <ChevronLeftIcon className="size-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => {
+                  setDirection(1)
+                  setSelectedIndex((current) => (current + 1) % promoProducts.length)
+                }}
+                className="size-10 rounded-full border-black/10 bg-white/45 text-foreground backdrop-blur-md hover:bg-white/65 hover:text-foreground"
+              >
+                <ChevronRightIcon className="size-4" />
+              </Button>
+            </div>
           </div>
         </div>
 
