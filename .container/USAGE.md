@@ -1,20 +1,37 @@
 # CXNext Deploy
 
+### 1. Check network is installed
+
 ```bash
 docker network create codexion-network
 ```
 
-Local MariaDB from uploaded file:
+## 2. install MariaDB:
 
 ```bash
 docker compose -f .container/mariadb.yml up -d
 ```
+### 3. Check mariadb is installed
 
-App deploy:
+```
+docker exec -it mariadb mariadb -u root -p
+```
+
+### 4. remote access for root user
+
+```
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
+```
+
+
+# 5. App deploy:
 
 ```bash
 docker compose -f .container/docker-compose.yml up -d --build
 ```
+
+# 6. console app:
 
 ```bash
 docker exec -it cxnext-app bash
