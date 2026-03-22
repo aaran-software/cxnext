@@ -50,7 +50,7 @@ Describe the concrete outcome to deliver in this task.
 
 ### Title
 
-`Media manager viewport fit and fixed preview sizing`
+`Single-container VPS deploy plus first-run database setup mode`
 
 ### Status
 
@@ -58,29 +58,37 @@ validated
 
 ### Objective
 
-Keep the shared media upload dialog within the viewport by fixing preview/upload panel heights, enabling internal vertical scrolling, and making the "new media" upload surface fit cleanly on page.
+Package the web and API into a single deployable container, add Docker Compose for VPS hosting, and introduce a WordPress-style first-run setup flow that keeps the app online when the database is missing until runtime DB settings are entered and migrations complete.
 
 ### In Scope
 
-- Constrain the shared media asset manager dialog to viewport height
-- Set fixed upload and preview panel sizes for the upload tab
-- Add y-axis scrolling to the dialog body so long content stays usable
-- Update execution notes and changelog for the layout adjustment
+- Add production container assets and startup scripts for single-container deployment
+- Support optional Git sync plus build-on-start behavior inside the container
+- Let the API boot in setup mode when database settings are missing or invalid
+- Persist runtime database settings outside `.env`
+- Add a frontend first-run setup form for database configuration
+- Serve the built React app from the API in production
+- Update execution notes, architecture/setup docs, and changelog
 
 ### Out Of Scope
 
-- Changing the backend media upload contract or stored metadata
-- Redesigning unrelated storefront or dashboard surfaces
-- Adding new media schema fields beyond the current form
+- Reverse proxy or TLS automation on the VPS host
+- A full in-browser updater UI for Git sync controls
+- Reworking existing business modules to operate meaningfully without a database
 
 ### Dependencies
 
 - `ASSIST/AI_RULES.md`
-- `ASSIST/Documentation/CHANGELOG.md`
-- `apps/web/src/components/forms/media-asset-manager-dialog.tsx`
-- Existing shared media form components and upload API flow
+- `ASSIST/Documentation/ARCHITECTURE.md`
+- `ASSIST/Documentation/PROJECT_OVERVIEW.md`
+- `ASSIST/Documentation/SETUP_AND_RUN.md`
+- `apps/api/src/server.ts`
+- `apps/api/src/app/http/router.ts`
+- `apps/web/src/App.tsx`
+- `packages/shared/src/schemas/setup.ts`
 
 ### Risks
 
-- Responsive behavior still benefits from live browser QA at very small viewport heights
-- The media dialog remains image-focused and does not solve large-file handling constraints in the current JSON upload flow
+- Container self-update/build-on-start is intentionally convenient but heavier and less deterministic than immutable-image deploys
+- The first-run setup screen does not validate every MariaDB privilege nuance before attempting schema bootstrap
+- Browser-level QA for the setup screen still needs manual verification

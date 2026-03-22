@@ -26,4 +26,5 @@ dist-ssr
 /\.vscode/
 /storage/private/
 /storage/public/uploads/
+/storage/config/runtime-config.json
 /test-results/.last-run.json

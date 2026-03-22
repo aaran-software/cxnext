@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 
 import { getStorefrontCatalog } from '@/shared/api/client'
+import { showSuccessToast } from '@/shared/notifications/toast'
 import { getCartSubtotal } from '@/features/store/lib/storefront-utils'
 import type {
   StorefrontBrand,
@@ -23,7 +24,13 @@ type StorefrontContextValue = {
   cartSubtotal: number
   isLoading: boolean
   errorMessage: string | null
-  addToCart: (productId: string, quantity: number, size?: string, color?: string) => void
+  addToCart: (
+    productId: string,
+    quantity: number,
+    size?: string,
+    color?: string,
+    options?: { toast?: boolean },
+  ) => void
   updateCartItem: (productId: string, next: Partial<StorefrontCartItem>) => void
   removeFromCart: (productId: string) => void
   toggleWishlist: (productId: string) => void
@@ -140,7 +147,7 @@ export function StorefrontProvider({ children }: { children: ReactNode }) {
       cartSubtotal,
       isLoading,
       errorMessage,
-      addToCart: (productId, quantity, size, color) => {
+      addToCart: (productId, quantity, size, color, options) => {
         const product = products.find((entry) => entry.id === productId)
         if (!product) return
 
@@ -163,6 +170,18 @@ export function StorefrontProvider({ children }: { children: ReactNode }) {
             item === existing ? { ...item, quantity: item.quantity + quantity } : item,
           )
         })
+
+        if (options?.toast !== false) {
+          const variantSummary =
+            resolvedSize !== 'Default' || resolvedColor !== 'Default'
+              ? ` (${resolvedSize}, ${resolvedColor})`
+              : ''
+
+          showSuccessToast({
+            title: 'Added to cart',
+            description: `${product.name}${variantSummary} x${quantity} added to your cart.`,
+          })
+        }
       },
       updateCartItem: (productId, next) => {
         setCartItems((current) =>

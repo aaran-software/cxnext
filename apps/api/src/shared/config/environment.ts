@@ -34,6 +34,8 @@ const environmentSchema = z.object({
   DB_USER: z.string().min(1).optional(),
   DB_PASSWORD: z.string().optional(),
   DB_NAME: z.string().min(1).optional(),
+  RUNTIME_CONFIG_PATH: z.string().min(1).optional(),
+  WEB_DIST_ROOT: z.string().min(1).optional(),
   SEED_DEFAULT_USER: z
     .string()
     .optional()
@@ -86,6 +88,14 @@ const resolvedWebPublicSymlink = path.resolve(
   process.cwd(),
   parsedEnvironment.MEDIA_WEB_PUBLIC_SYMLINK ?? 'apps/web/public/storage',
 )
+const resolvedRuntimeConfigPath = path.resolve(
+  process.cwd(),
+  parsedEnvironment.RUNTIME_CONFIG_PATH ?? 'storage/config/runtime-config.json',
+)
+const resolvedWebDistRoot = path.resolve(
+  process.cwd(),
+  parsedEnvironment.WEB_DIST_ROOT ?? 'apps/web/dist',
+)
 const mediaPublicBaseUrl =
   parsedEnvironment.MEDIA_PUBLIC_BASE_URL ?? `http://localhost:${parsedEnvironment.PORT}/media/public`
 
@@ -101,6 +111,12 @@ export const environment = {
     user: parsedEnvironment.DB_USER ?? 'root',
     password: parsedEnvironment.DB_PASSWORD ?? '',
     name: parsedEnvironment.DB_NAME ?? 'cxnext',
+  },
+  runtime: {
+    configPath: resolvedRuntimeConfigPath,
+  },
+  web: {
+    distRoot: resolvedWebDistRoot,
   },
   seed: {
     enabled: parsedEnvironment.SEED_DEFAULT_USER,

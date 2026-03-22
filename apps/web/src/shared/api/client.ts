@@ -7,16 +7,12 @@ import type {
   AuthRegisterOtpVerifyResponse,
   AuthTokenResponse,
   AuthUser,
-  Company,
   CompanyListResponse,
   CompanyResponse,
   CompanyUpsertPayload,
-  Contact,
   ContactListResponse,
   ContactResponse,
   ContactUpsertPayload,
-  Media,
-  MediaFolder,
   MediaFolderListResponse,
   MediaFolderResponse,
   MediaFolderUpsertPayload,
@@ -24,15 +20,12 @@ import type {
   MediaListResponse,
   MediaResponse,
   MediaUpsertPayload,
-  Product,
   ProductListResponse,
   ProductResponse,
   ProductUpsertPayload,
-  MailboxMessage,
   MailboxMessageListResponse,
   MailboxMessageResponse,
   MailboxSendPayload,
-  MailboxTemplate,
   MailboxTemplateListResponse,
   MailboxTemplateResponse,
   MailboxTemplateUpsertPayload,
@@ -47,6 +40,8 @@ import type {
   CommonModuleMetadataListResponse,
   CommonModuleRecordResponse,
   CommonModuleUpsertPayload,
+  DatabaseSetupPayload,
+  SetupStatusResponse,
 } from '@shared/index'
 
 const apiBaseUrl = String(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000')
@@ -87,6 +82,19 @@ export async function request<T>(path: string, init?: RequestInit) {
   }
 
   return payload as T
+}
+
+export async function fetchSetupStatus() {
+  const response = await request<SetupStatusResponse>('/setup/status')
+  return response.status
+}
+
+export async function saveDatabaseSetup(payload: DatabaseSetupPayload) {
+  const response = await request<SetupStatusResponse>('/setup/database', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  return response.status
 }
 
 export function login(payload: AuthLoginPayload) {

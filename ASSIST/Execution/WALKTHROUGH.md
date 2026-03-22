@@ -49,35 +49,45 @@ Short description of the delivered increment.
 
 ### Task
 
-`Media manager viewport fit and fixed preview sizing`
+`Single-container VPS deploy plus first-run database setup mode`
 
 ### Summary
 
-Adjusted the shared media upload dialog so the "new media" surface fits within the viewport. The dialog now uses a capped height with an internal y-axis scroll region, while the upload drop zone and preview panel use fixed heights so large images no longer stretch the modal off-page.
+Added a production-oriented deployment path that can run CXNext as a single container serving both the Node API and the built React app. The API now starts in setup mode when MariaDB settings are missing or invalid, persists runtime DB configuration in a volume-backed JSON file, exposes setup endpoints, and lets the frontend block on a WordPress-style first-run database form until bootstrap succeeds.
 
 ### Files Changed
 
-- `ASSIST/Execution/TASK.md` and `ASSIST/Execution/WALKTHROUGH.md` to record the focused media manager sizing follow-up
-- `apps/web/src/components/forms/media-asset-manager-dialog.tsx` to cap the dialog height, add internal vertical scrolling, and lock the upload/preview panels to fixed heights
-- `ASSIST/Documentation/CHANGELOG.md` to note the viewport-fit adjustment
+- `packages/shared/src/schemas/setup.ts` and `packages/shared/src/index.ts` to add shared contracts for setup status and database configuration payloads
+- `apps/api/src/shared/config/environment.ts`, `apps/api/src/shared/config/runtime-settings.ts`, `apps/api/src/shared/database/database-config.ts`, `apps/api/src/shared/database/database.ts`, and `apps/api/src/shared/database/orm.ts` to support runtime DB config persistence, setup-state tracking, DB auto-create-if-missing, and non-fatal startup when DB setup is incomplete
+- `apps/api/src/app/http/router.ts`, `apps/api/src/server.ts`, and `apps/api/src/shared/http/static-web.ts` to expose setup endpoints, include setup state in health responses, and serve the built React app from the API in production
+- `apps/web/src/features/setup/components/setup-provider.tsx`, `apps/web/src/features/setup/pages/initial-setup-page.tsx`, `apps/web/src/App.tsx`, `apps/web/src/main.tsx`, and `apps/web/src/shared/api/client.ts` to gate the application on setup status and provide the first-run database configuration screen
+- `Dockerfile`, `docker-compose.yml`, `.dockerignore`, and `.container/*` to add the VPS container/runtime flow including optional Git sync and build-on-start behavior
+- `.env.example`, `ASSIST/Documentation/PROJECT_OVERVIEW.md`, `ASSIST/Documentation/ARCHITECTURE.md`, `ASSIST/Documentation/SETUP_AND_RUN.md`, and `ASSIST/Documentation/CHANGELOG.md` to document the new setup/deployment architecture
+- `ASSIST/Execution/TASK.md`, `ASSIST/Execution/PLANNING.md`, and `ASSIST/Execution/WALKTHROUGH.md` to keep the active-work records aligned with this change set
 
 ### Validation Performed
 
-- Reviewed the active media manager component before editing
-- `npx eslint apps/web/src/components/forms/media-asset-manager-dialog.tsx` succeeded
-- `npm run build:web` succeeded
+- `npx eslint apps/api/src/server.ts apps/api/src/app/http/router.ts apps/api/src/shared/config/environment.ts apps/api/src/shared/config/runtime-settings.ts apps/api/src/shared/database/database-config.ts apps/api/src/shared/database/database.ts apps/api/src/shared/database/orm.ts apps/api/src/shared/http/static-web.ts apps/web/src/App.tsx apps/web/src/main.tsx apps/web/src/shared/api/client.ts apps/web/src/features/setup/components/setup-provider.tsx apps/web/src/features/setup/pages/initial-setup-page.tsx packages/shared/src/schemas/setup.ts` succeeded
+- `npm run build:server` succeeded
+- `docker compose config` succeeded
+- `npm run typecheck` failed because the repository already has a large baseline of unrelated TypeScript errors in existing API, storefront, state, and notification modules
+- `npm run lint` failed because the repository already has a large baseline of unrelated ESLint violations outside the files changed for this task
 
 ### Decisions
 
-- Keep the header and footer fixed while allowing the dialog body to scroll vertically
-- Use fixed upload/preview panel heights and `object-contain` in the preview so image dimensions do not dictate dialog height
+- Store runtime DB settings in a JSON file outside `.env` so container deployments can be configured after first boot without rebuilding the image
+- Keep the API process alive in setup mode and fail DB-backed operations explicitly rather than crashing startup
+- Serve the built web bundle directly from the Node API so a single VPS container can host both the backend and SPA
+- Support Git sync/build-on-start in the container entrypoint because it was explicitly requested, while documenting that it is heavier than immutable-image deployment
 
 ### Remaining Work
 
-- Run browser QA on very short viewport heights to confirm the modal remains comfortable in real use
-- Clean the remaining text-encoding artifact in the persistence helper copy if it appears in the runtime UI
+- Run browser QA against the first-run setup screen and the production static-serving path in a real container session
+- Decide whether runtime DB settings should remain editable from an authenticated admin screen after first-run setup
+- Clean up the repository-wide pre-existing lint/typecheck failures so full validation can go green again
 
 ### Risks
 
-- The larger dialog still contributes to the general dashboard bundle size, though the build remains successful
-- Extremely tall metadata content may still need more polish if additional tabs/fields are introduced later
+- Runtime Git sync/build-on-start increases startup time and makes production state less deterministic than CI-built images
+- The setup flow assumes the provided MariaDB user can either connect to the named database or create it; more granular privilege diagnostics would improve operator feedback
+- The production web bundle is still large and emits Vite chunk-size warnings during `build:web`

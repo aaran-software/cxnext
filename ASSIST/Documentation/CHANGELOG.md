@@ -39,3 +39,6 @@
 - Adjusted the shared media manager dialog to fit the viewport with internal vertical scrolling and fixed upload/preview panel heights
 - Replaced the storefront `shop` home placeholder with a polished catalog-first merchandising page that keeps the existing store shell intact while adding category storytelling, product-driven collection grids, spotlight content, and explicit empty/error states for live catalog loading
 - Expanded the storefront `shop` target into a full static frontend shopping flow with garment-focused home, catalog filters, product detail, wishlist, cart, and checkout pages while preserving the existing menu and footer shell
+- Added a first-run setup mode that keeps the API online when MariaDB is missing or misconfigured, exposes setup status/configuration endpoints, persists runtime DB settings outside `.env`, and gates the React app with a WordPress-style database setup screen
+- Added production static serving from `apps/api` so the built `apps/web` bundle can be deployed as part of the same Node process
+- Added `.container/entrypoint.sh`, a production `Dockerfile`, `docker-compose.yml`, and runtime volume conventions for single-container VPS deployment with optional Git sync and build-on-start behavior

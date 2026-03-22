@@ -20,10 +20,15 @@ import { MailboxRepository } from '../../features/mailbox/data/mailbox-repositor
 import { GetBootstrapSnapshot } from '../../features/bootstrap/application/get-bootstrap-snapshot'
 import { SystemOverviewRepository } from '../../features/bootstrap/data/system-overview-repository'
 import { ApplicationError } from '../../shared/errors/application-error'
-import { getDatabaseHealth } from '../../shared/database/database'
+import {
+  applyDatabaseSetup,
+  getDatabaseHealth,
+  getSetupStatus,
+} from '../../shared/database/database'
 import { servePublicMediaAsset } from '../../shared/media/storage'
 import { getBearerToken, readJsonBody } from '../../shared/http/request'
 import { writeEmpty, writeJson } from '../../shared/http/response'
+import { serveBuiltWebApp } from '../../shared/http/static-web'
 
 const bootstrapUseCase = new GetBootstrapSnapshot(new SystemOverviewRepository())
 const mailboxService = new MailboxService(new MailboxRepository())
@@ -57,19 +62,32 @@ export async function routeRequest(
     }
 
     if (method === 'GET' && url.pathname === '/health') {
-      const database = await getDatabaseHealth()
+      const database = getDatabaseHealth()
 
       writeJson(response, 200, {
         status: 'ok',
         service: 'cxnext-api',
         timestamp: new Date().toISOString(),
         database,
+        setup: getSetupStatus(),
       })
       return
     }
 
     if (method === 'GET' && url.pathname === '/health/db') {
-      writeJson(response, 200, await getDatabaseHealth())
+      writeJson(response, 200, getDatabaseHealth())
+      return
+    }
+
+    if (method === 'GET' && url.pathname === '/setup/status') {
+      writeJson(response, 200, {
+        status: getSetupStatus(),
+      })
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/setup/database') {
+      writeJson(response, 200, await applyDatabaseSetup(await readJsonBody(request)))
       return
     }
 
@@ -443,6 +461,10 @@ export async function routeRequest(
       }
 
       writeJson(response, 200, await authService.getAuthenticatedUser(token))
+      return
+    }
+
+    if ((method === 'GET' || method === 'HEAD') && (await serveBuiltWebApp(response, url.pathname))) {
       return
     }
 

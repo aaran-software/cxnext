@@ -17,6 +17,7 @@ The platform is intended to cover:
 7. Ledger, trial balance, P&L, and balance sheet reports
 8. Audit trail and role-based access control
 9. CRM and commerce workflows built on the same shared platform
+10. VPS-friendly single-container deployment with runtime-first database setup
 
 ## Current State
 
@@ -32,6 +33,8 @@ Current delivery is foundation work:
 8. Upload-backed media asset management with a shared popup media manager, tabbed metadata review, and reusable image field integration across admin forms
 9. A storefront `shop` target with a full static frontend shopping flow covering home, category browsing, product detail, wishlist, cart, and checkout for design review
 10. Repository discipline and operating documentation
+11. Runtime configuration-backed setup mode that keeps the API online when MariaDB is not configured yet
+12. Single-process production serving where `apps/api` can serve the built `apps/web` bundle for VPS deployment
 
 ## Product Principles
 

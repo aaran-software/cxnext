@@ -1,0 +1,51 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cxnext-app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PORT: 4000
+      CORS_ORIGIN: "*"
+      DB_ENABLED: "false"
+      RUNTIME_CONFIG_PATH: /opt/cxnext/runtime/config/runtime-config.json
+      MEDIA_STORAGE_ROOT: /opt/cxnext/runtime/storage
+      MEDIA_PUBLIC_BASE_URL: http://localhost:4000/media/public
+      WEB_DIST_ROOT: apps/web/dist
+      GIT_SYNC_ENABLED: "false"
+      GIT_REPOSITORY_URL: ""
+      GIT_BRANCH: main
+      INSTALL_DEPS_ON_START: "false"
+      BUILD_ON_START: "false"
+    ports:
+      - "4000:4000"
+    restart: unless-stopped
+    volumes:
+      - cxnext_runtime:/opt/cxnext/runtime
+
+  db:
+    container_name: cxnext-db
+    environment:
+      MARIADB_DATABASE: cxnext
+      MARIADB_USER: cxnext
+      MARIADB_PASSWORD: cxnext
+      MARIADB_ROOT_PASSWORD: change-this-root-password
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    image: mariadb:11.8
+    ports:
+      - "3306:3306"
+    restart: unless-stopped
+    volumes:
+      - cxnext_db:/var/lib/mysql
+
+volumes:
+  cxnext_db:
+  cxnext_runtime:
