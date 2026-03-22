@@ -15,6 +15,7 @@ import {
   Scale,
   Shirt,
   ShieldCheck,
+  Sparkles,
   Truck,
   Wallet,
   Warehouse,
@@ -26,6 +27,7 @@ export type CommonModuleGroupKey =
   | 'catalog'
   | 'inventory'
   | 'commercial'
+  | 'storefront'
 
 export type CommonModuleMenuItem = {
   key: CommonModuleKey
@@ -82,7 +84,7 @@ export const commonModuleMenuGroups: CommonModuleMenuGroup[] = [
   },
   {
     key: 'inventory',
-    title: 'Inventory & Logistics',
+    title: 'Inventory',
     icon: Truck,
     items: [
       { key: 'warehouses', title: 'Warehouses', icon: Warehouse, description: 'Warehouse and stock location records.' },
@@ -100,6 +102,14 @@ export const commonModuleMenuGroups: CommonModuleMenuGroup[] = [
       { key: 'paymentTerms', title: 'Payment Terms', icon: BadgePercent, description: 'Payment due-day rules for trade flows.' },
     ],
   },
+  {
+    key: 'storefront',
+    title: 'Storefront',
+    icon: Sparkles,
+    items: [
+      { key: 'storefrontTemplates', title: 'Storefront Templates', icon: Sparkles, description: 'Home-page copy, CTA, and trust-section content for the storefront.' },
+    ],
+  },
 ]
 
 const menuItemByKey = Object.fromEntries(
@@ -110,4 +120,12 @@ const menuItemByKey = Object.fromEntries(
 
 export function getCommonModuleMenuItem(key: CommonModuleKey) {
   return menuItemByKey[key]
+}
+
+export function getCommonModuleHref(key: CommonModuleKey) {
+  if (key === 'storefrontTemplates') {
+    return '/dashboard/storefront-designer'
+  }
+
+  return `/dashboard/common/${key}`
 }

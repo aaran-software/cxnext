@@ -27,8 +27,11 @@ API auth and database bootstrap can be configured through environment variables:
 - `SEED_DEFAULT_USER_EMAIL=sundar@sundar.com`
 - `SEED_DEFAULT_USER_PASSWORD=kalarani`
 - `SEED_DEFAULT_USER_AVATAR_URL=https://...`
+- `SEED_DUMMY_PRODUCTS=true`
 
-The seeded Sundar account is intended only for development bootstrap.
+The seeded Sundar account and dummy product catalog data are intended only for development bootstrap.
+
+Media uploads created through the shared dashboard popup media manager are written into the configured `storage/public` or `storage/private` directories and registered in the media asset tables through the API. The upload dialog keeps file metadata editable in the client until the user confirms persistence.
 
 Local development has been verified with:
 

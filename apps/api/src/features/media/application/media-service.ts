@@ -9,13 +9,18 @@ import {
   mediaFolderListResponseSchema,
   mediaFolderResponseSchema,
   mediaFolderUpsertPayloadSchema,
+  mediaImageUploadPayloadSchema,
   mediaListResponseSchema,
   mediaResponseSchema,
   mediaUpsertPayloadSchema,
 } from '@shared/index'
 import type { MediaRepository } from '../data/media-repository'
 import { ApplicationError } from '../../../shared/errors/application-error'
-import { normalizeStoragePath } from '../../../shared/media/storage'
+import {
+  deleteStoredMediaFile,
+  normalizeStoragePath,
+  persistUploadedMediaFile,
+} from '../../../shared/media/storage'
 
 interface PersistenceError {
   code?: string
@@ -49,6 +54,45 @@ export class MediaService {
       return mediaResponseSchema.parse({ item } satisfies MediaResponse)
     } catch (error) {
       this.throwPersistenceError(error, 'create')
+    }
+  }
+
+  async uploadImage(payload: unknown) {
+    const parsedPayload = this.parseImageUploadPayload(payload)
+    const storedFile = await persistUploadedMediaFile({
+      dataUrl: parsedPayload.dataUrl,
+      fileName: parsedPayload.fileName,
+      originalName: parsedPayload.originalName,
+      storageScope: parsedPayload.storageScope,
+      folderId: parsedPayload.folderId,
+    })
+
+    try {
+      const item = await this.repository.create({
+        fileName: storedFile.fileName,
+        originalName: parsedPayload.originalName,
+        filePath: storedFile.filePath,
+        thumbnailPath: null,
+        fileType: 'image',
+        mimeType: storedFile.mimeType,
+        fileSize: storedFile.fileSize,
+        width: storedFile.width,
+        height: storedFile.height,
+        altText: parsedPayload.altText,
+        title: parsedPayload.title,
+        folderId: parsedPayload.folderId,
+        storageScope: parsedPayload.storageScope,
+        isOptimized: false,
+        isActive: parsedPayload.isActive,
+        tags: [],
+        usages: [],
+        versions: [],
+      })
+
+      return mediaResponseSchema.parse({ item } satisfies MediaResponse)
+    } catch (error) {
+      await deleteStoredMediaFile(parsedPayload.storageScope, storedFile.filePath)
+      this.throwPersistenceError(error, 'upload-image')
     }
   }
 
@@ -138,6 +182,10 @@ export class MediaService {
     return mediaFolderUpsertPayloadSchema.parse(payload)
   }
 
+  private parseImageUploadPayload(payload: unknown) {
+    return mediaImageUploadPayloadSchema.parse(payload)
+  }
+
   private validatePayload(payload: MediaUpsertPayload) {
     normalizeStoragePath(payload.filePath)
 
@@ -170,6 +218,7 @@ export class MediaService {
       | 'update'
       | 'deactivate'
       | 'restore'
+      | 'upload-image'
       | 'create-folder'
       | 'update-folder'
       | 'deactivate-folder'

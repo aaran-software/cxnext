@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import type { CommonMasterItem } from "@/types/common"
 import { HttpError } from "@/shared/api/client"
+import { showFailedActionToast, showSavedToast, showStatusChangeToast } from "@/shared/notifications/toast"
 
 function toErrorMessage(error: unknown) {
   if (error instanceof HttpError) {
@@ -42,6 +43,19 @@ function defaultInitialValues(fields: CommonMasterFieldDefinition[]) {
       return [field.key, ""]
     })),
   } satisfies CommonUpsertFormValues
+}
+
+function getItemLabel(item: CommonMasterItem) {
+  const labelKeys = ["name", "code", "title", "label", "displayName"] as const
+
+  for (const key of labelKeys) {
+    const value = item[key as keyof CommonMasterItem]
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value
+    }
+  }
+
+  return item.id.slice(-4).toUpperCase()
 }
 
 export function useCommonMasterState(definition: CommonMasterDefinition) {
@@ -174,8 +188,20 @@ export function useCommonMasterState(definition: CommonMasterDefinition) {
           ? { ...entry, isActive: !entry.isActive }
           : entry
       )))
+      showStatusChangeToast({
+        entityLabel: definition.entityLabel,
+        recordName: getItemLabel(item),
+        referenceId: item.id,
+        action: item.isActive ? "deactivate" : "restore",
+      })
     } catch (error) {
-      setErrorMessage(toErrorMessage(error))
+      const message = toErrorMessage(error)
+      setErrorMessage(message)
+      showFailedActionToast({
+        entityLabel: definition.entityLabel,
+        action: item.isActive ? "deactivate" : "restore",
+        detail: message,
+      })
     }
   }
 
@@ -189,14 +215,31 @@ export function useCommonMasterState(definition: CommonMasterDefinition) {
       if (dialogMode === "edit" && editingItem) {
         const updated = await definition.api.update(editingItem.id, request)
         setItems((current) => current.map((entry) => entry.id === updated.id ? updated : entry))
+        showSavedToast({
+          entityLabel: definition.entityLabel,
+          recordName: getItemLabel(updated),
+          referenceId: updated.id,
+          mode: "update",
+        })
         return
       }
 
       const created = await definition.api.create(request)
       setItems((current) => [created, ...current])
+      showSavedToast({
+        entityLabel: definition.entityLabel,
+        recordName: getItemLabel(created),
+        referenceId: created.id,
+        mode: "create",
+      })
     } catch (error) {
       const message = toErrorMessage(error)
       setDialogError(message)
+      showFailedActionToast({
+        entityLabel: definition.entityLabel,
+        action: dialogMode === "edit" ? "update" : "save",
+        detail: message,
+      })
       throw error
     }
   }

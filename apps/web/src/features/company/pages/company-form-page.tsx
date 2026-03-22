@@ -12,6 +12,7 @@ import type {
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
+import { MediaImageField } from '@/components/forms/media-image-field'
 import { AnimatedTabs, type AnimatedContentTab } from '@/components/ui/animated-tabs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -22,6 +23,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { AutocompleteLookup } from '@/components/lookups/AutocompleteLookup'
 import { createFieldErrors, inputErrorClassName, isBlank, setFieldError, summarizeFieldErrors, type FieldErrors, warningCardClassName } from '@/shared/forms/validation'
 import { createCommonLookupOption, toLookupOption } from '@/shared/forms/common-lookup'
+import { showFailedActionToast, showSavedToast, showValidationToast } from '@/shared/notifications/toast'
 import {
   createCompany,
   getCompany,
@@ -173,21 +175,36 @@ function CollectionCard({
   title,
   description,
   onAdd,
+  className,
+  contentClassName,
   children,
-}: React.PropsWithChildren<{ title: string; description: string; onAdd: () => void }>) {
+}: React.PropsWithChildren<{
+  title?: string
+  description?: string
+  onAdd?: () => void
+  className?: string
+  contentClassName?: string
+}>) {
+  const headerAction = onAdd ? (
+    <Button type="button" variant="outline" size="sm" onClick={onAdd}>
+      <Plus className="size-4" />
+      Add
+    </Button>
+  ) : null
+  const hasHeader = Boolean(title || description || headerAction)
+
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-4">
-        <div>
-          <CardTitle>{title}</CardTitle>
-          <CardDescription>{description}</CardDescription>
-        </div>
-        <Button type="button" variant="outline" size="sm" onClick={onAdd}>
-          <Plus className="size-4" />
-          Add
-        </Button>
-      </CardHeader>
-      <CardContent className="grid gap-4">{children}</CardContent>
+    <Card className={className}>
+      {hasHeader ? (
+        <CardHeader className="flex flex-row items-start justify-between gap-4">
+          <div>
+            {title ? <CardTitle>{title}</CardTitle> : null}
+            {description ? <CardDescription>{description}</CardDescription> : null}
+          </div>
+          {headerAction}
+        </CardHeader>
+      ) : null}
+      <CardContent className={contentClassName ?? 'grid gap-4'}>{children}</CardContent>
     </Card>
   )
 }
@@ -344,21 +361,33 @@ export function CompanyFormPage() {
     setFieldErrors(nextFieldErrors)
     if (Object.keys(nextFieldErrors).length > 0) {
       setErrorMessage('Validation failed.')
+      showValidationToast('company')
       return
     }
     setSaving(true)
     setErrorMessage(null)
 
     try {
-      if (companyId) {
-        await updateCompany(companyId, values)
-      } else {
-        await createCompany(values)
-      }
+      const savedCompany = companyId
+        ? await updateCompany(companyId, values)
+        : await createCompany(values)
 
-      navigate('/dashboard/companies')
+      showSavedToast({
+        entityLabel: 'company',
+        recordName: savedCompany.name,
+        referenceId: savedCompany.id,
+        mode: companyId ? 'update' : 'create',
+      })
+
+      void navigate('/dashboard/companies')
     } catch (error) {
-      setErrorMessage(toErrorMessage(error))
+      const message = toErrorMessage(error)
+      setErrorMessage(message)
+      showFailedActionToast({
+        entityLabel: 'company',
+        action: companyId ? 'update' : 'save',
+        detail: message,
+      })
     } finally {
       setSaving(false)
     }
@@ -373,7 +402,7 @@ export function CompanyFormPage() {
   }
 
   return (
-    <form className="space-y-6" onSubmit={handleSubmit}>
+    <form className="space-y-6 pt-2" onSubmit={(event) => { void handleSubmit(event) }}>
       <div className="flex items-center justify-between gap-4">
         <div>
           <Button variant="ghost" size="sm" asChild className="-ml-3 mb-2">
@@ -382,11 +411,10 @@ export function CompanyFormPage() {
               Back to companies
             </Link>
           </Button>
-          <h1 className="text-3xl font-semibold text-foreground">{isEditMode ? 'Edit Company' : 'New Company'}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Capture company identity, contacts, addresses, and bank details.</p>
+          <p className="text-sm text-muted-foreground">Capture company identity, contacts, addresses, and bank details.</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button type="button" variant="outline" onClick={() => navigate('/dashboard/companies')}>Cancel</Button>
+          <Button type="button" variant="outline" onClick={() => { void navigate('/dashboard/companies') }}>Cancel</Button>
           <Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save Company'}</Button>
         </div>
       </div>
@@ -414,12 +442,7 @@ export function CompanyFormPage() {
             value: 'company',
             content: (
               <>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Company Basics</CardTitle>
-                    <CardDescription>Legal identity and book-opening details.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="grid gap-4 md:grid-cols-2">
+                <CollectionCard className="rounded-md" contentClassName="grid gap-4 pt-5 md:grid-cols-2">
                     <div className="grid min-h-[4.75rem] gap-2"><Label className={fieldErrors.name ? 'text-destructive' : undefined}>Name</Label><Input className={inputErrorClassName(Boolean(fieldErrors.name))} value={values.name} onChange={(event) => setValues((current) => ({ ...current, name: event.target.value }))} /><FieldError message={fieldErrors.name} /></div>
                     <div className="grid gap-2"><Label>Legal Name</Label><Input value={values.legalName} onChange={(event) => setValues((current) => ({ ...current, legalName: event.target.value }))} /></div>
                     <div className="grid gap-2"><Label>Registration Number</Label><Input value={values.registrationNumber} onChange={(event) => setValues((current) => ({ ...current, registrationNumber: event.target.value }))} /></div>
@@ -429,13 +452,20 @@ export function CompanyFormPage() {
                     <div className="grid gap-2 md:col-span-2"><Label>Website</Label><Input value={values.website} onChange={(event) => setValues((current) => ({ ...current, website: event.target.value }))} /></div>
                     <div className="grid gap-2 md:col-span-2"><Label>Description</Label><Textarea value={values.description} onChange={(event) => setValues((current) => ({ ...current, description: event.target.value }))} rows={4} /></div>
                     <label className="flex items-center gap-3 md:col-span-2"><Checkbox checked={values.isActive} onCheckedChange={(checked) => setValues((current) => ({ ...current, isActive: Boolean(checked) }))} /><span className="text-sm font-medium">Active company</span></label>
-                  </CardContent>
-                </Card>
+                </CollectionCard>
                 <CollectionCard title="Company Logos" description="Primary, secondary, and favicon branding assets." onAdd={() => setValues((current) => ({ ...current, logos: [...current.logos, emptyLogo()] }))}>
                   {values.logos.map((logo, index) => (
                     <CollectionRow key={`logo-${index}`} onRemove={() => setValues((current) => ({ ...current, logos: current.logos.filter((_, rowIndex) => rowIndex !== index) }))}>
                       <div className="grid gap-4 md:grid-cols-2">
-                        <div className="grid gap-2"><Label>Logo URL</Label><Input value={logo.logoUrl} onChange={(event) => setValues((current) => ({ ...current, logos: current.logos.map((entry, rowIndex) => rowIndex === index ? { ...entry, logoUrl: event.target.value } : entry) }))} /></div>
+                        <MediaImageField
+                          label="Logo"
+                          value={logo.logoUrl}
+                          onChange={(value) => setValues((current) => ({
+                            ...current,
+                            logos: current.logos.map((entry, rowIndex) => rowIndex === index ? { ...entry, logoUrl: value } : entry),
+                          }))}
+                          description="Pick an existing public media asset or upload a new logo."
+                        />
                         <div className="grid gap-2"><Label>Logo Type</Label><Input value={logo.logoType} onChange={(event) => setValues((current) => ({ ...current, logos: current.logos.map((entry, rowIndex) => rowIndex === index ? { ...entry, logoType: event.target.value } : entry) }))} /></div>
                       </div>
                     </CollectionRow>

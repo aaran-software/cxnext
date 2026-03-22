@@ -23,6 +23,7 @@ import { AutocompleteLookup } from '@/components/lookups/AutocompleteLookup'
 import { createFieldErrors, inputErrorClassName, isBlank, setFieldError, summarizeFieldErrors, type FieldErrors, warningCardClassName } from '@/shared/forms/validation'
 import { createCommonLookupOption, toLookupOption } from '@/shared/forms/common-lookup'
 import { createContact, getContact, HttpError, listCommonModuleItems, updateContact } from '@/shared/api/client'
+import { showFailedActionToast, showSavedToast, showValidationToast } from '@/shared/notifications/toast'
 
 type ContactFormValues = ContactUpsertPayload
 
@@ -120,14 +121,34 @@ function toFormValues(contact: Contact): ContactFormValues {
   }
 }
 
-function Section({ title, description, addLabel, onAdd, children }: React.PropsWithChildren<{ title:string; description:string; addLabel?:string; onAdd?:()=>void }>) {
+function Section({
+  title,
+  description,
+  addLabel,
+  onAdd,
+  className,
+  contentClassName,
+  children,
+}: React.PropsWithChildren<{
+  title?: string
+  description?: string
+  addLabel?: string
+  onAdd?: () => void
+  className?: string
+  contentClassName?: string
+}>) {
+  const headerAction = addLabel && onAdd ? <Button type="button" variant="outline" size="sm" onClick={onAdd}><Plus className="size-4" />{addLabel}</Button> : null
+  const hasHeader = Boolean(title || description || headerAction)
+
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-4">
-        <div><CardTitle>{title}</CardTitle><CardDescription>{description}</CardDescription></div>
-        {addLabel && onAdd ? <Button type="button" variant="outline" size="sm" onClick={onAdd}><Plus className="size-4" />{addLabel}</Button> : null}
-      </CardHeader>
-      <CardContent className="grid gap-4">{children}</CardContent>
+    <Card className={className}>
+      {hasHeader ? (
+        <CardHeader className="flex flex-row items-start justify-between gap-4">
+          <div>{title ? <CardTitle>{title}</CardTitle> : null}{description ? <CardDescription>{description}</CardDescription> : null}</div>
+          {headerAction}
+        </CardHeader>
+      ) : null}
+      <CardContent className={contentClassName ?? 'grid gap-4'}>{children}</CardContent>
     </Card>
   )
 }
@@ -258,16 +279,30 @@ export function ContactFormPage() {
     setFieldErrors(nextFieldErrors)
     if (Object.keys(nextFieldErrors).length > 0) {
       setErrorMessage('Validation failed.')
+      showValidationToast('contact')
       return
     }
     setSaving(true)
     setErrorMessage(null)
     try {
-      if (contactId) await updateContact(contactId, values)
-      else await createContact(values)
+      const savedContact = contactId
+        ? await updateContact(contactId, values)
+        : await createContact(values)
+      showSavedToast({
+        entityLabel: 'contact',
+        recordName: savedContact.name,
+        referenceId: savedContact.id,
+        mode: contactId ? 'update' : 'create',
+      })
       navigate('/dashboard/contacts')
     } catch (error) {
-      setErrorMessage(toErrorMessage(error))
+      const message = toErrorMessage(error)
+      setErrorMessage(message)
+      showFailedActionToast({
+        entityLabel: 'contact',
+        action: contactId ? 'update' : 'save',
+        detail: message,
+      })
     } finally {
       setSaving(false)
     }
@@ -276,12 +311,11 @@ export function ContactFormPage() {
   if (loading) return <Card><CardContent className="p-8 text-sm text-muted-foreground">Loading contact...</CardContent></Card>
 
   return (
-    <form className="space-y-6" onSubmit={handleSubmit}>
+    <form className="space-y-6 pt-2" onSubmit={handleSubmit}>
       <div className="flex items-center justify-between gap-4">
         <div>
           <Button variant="ghost" size="sm" asChild className="-ml-3 mb-2"><Link to="/dashboard/contacts"><ArrowLeft className="size-4" />Back to contacts</Link></Button>
-          <h1 className="text-3xl font-semibold text-foreground">{contactId ? 'Edit Contact' : 'New Contact'}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Capture contact identity, tax, addresses, communication channels, and bank details.</p>
+          <p className="text-sm text-muted-foreground">Capture contact identity, tax, addresses, communication channels, and bank details.</p>
         </div>
         <div className="flex items-center gap-3"><Button type="button" variant="outline" onClick={() => navigate('/dashboard/contacts')}>Cancel</Button><Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save Contact'}</Button></div>
       </div>
@@ -307,7 +341,7 @@ export function ContactFormPage() {
             label: 'Contact',
             value: 'contact',
             content: (
-              <Section title="Contact Basics" description="Contact classification, financial defaults, and tax identifiers.">
+              <Section className="rounded-md" contentClassName="grid gap-4 pt-5">
                 <div className="grid items-start gap-4 md:grid-cols-2">
                   <div className="grid min-h-[4.75rem] gap-2"><Label className={fieldErrors.name ? 'text-destructive' : undefined}>Name</Label><Input className={inputErrorClassName(Boolean(fieldErrors.name))} value={values.name} onChange={(event) => setValues((current) => ({ ...current, name: event.target.value }))} /><FieldError message={fieldErrors.name} /></div>
                   <LookupSelect label="Contact Type" value={values.contactTypeId} options={contactTypes} moduleKey="contactTypes" onItemsChange={setContactTypes} onChange={(value) => setValues((current) => ({ ...current, contactTypeId: value ?? current.contactTypeId }))} />

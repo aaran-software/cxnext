@@ -24,6 +24,7 @@ import { StorefrontSearchBar } from "@/features/store/components/navigation/stor
 import { ThemeSwitcher } from "@/shared/theme/theme-switcher"
 import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
+import { useStorefront } from "@/features/store/context/storefront-context"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,12 +41,13 @@ type HeaderCategory = {
 export function StorefrontHeader({ categories }: { categories: HeaderCategory[] }) {
   const auth = useAuth()
   const navigate = useNavigate()
-  const wishlistCount = 0
-  const cartItemsCount = 0
+  const { wishlistProductIds, cartCount } = useStorefront()
+  const wishlistCount = wishlistProductIds.length
+  const cartItemsCount = cartCount
 
   const handleLogout = () => {
     auth.logout()
-    navigate("/", { replace: true })
+    void navigate("/", { replace: true })
   }
 
   const dashboardHref = auth.isAuthenticated ? "/dashboard" : "/login"
@@ -53,7 +55,7 @@ export function StorefrontHeader({ categories }: { categories: HeaderCategory[] 
   return (
     <header className="sticky top-0 z-50 border-b border-border/70 bg-background/90 backdrop-blur-xl">
       <div className="flex w-full items-center gap-3 px-4 py-3 sm:px-6">
-        <StorefrontMobileMenu links={[]} categories={categories.slice(0, 6)} />
+        <StorefrontMobileMenu links={[]} categories={categories.slice(0, 6)} wishlistCount={wishlistCount} cartCount={cartItemsCount} />
         <Link to="/" className="shrink-0">
           <BrandMark compact />
         </Link>
@@ -124,6 +126,14 @@ export function StorefrontHeader({ categories }: { categories: HeaderCategory[] 
                 <Link to="/wishlist">
                   <HeartIcon className="mr-3 size-4 text-muted-foreground" />
                   <span>Wishlist</span>
+                  {wishlistCount > 0 ? <Badge className="ml-auto min-w-5 justify-center rounded-full px-1 text-[10px]">{wishlistCount}</Badge> : null}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild className="cursor-pointer">
+                <Link to="/cart">
+                  <ShoppingCartIcon className="mr-3 size-4 text-muted-foreground" />
+                  <span>Cart</span>
+                  {cartItemsCount > 0 ? <Badge className="ml-auto min-w-5 justify-center rounded-full px-1 text-[10px]">{cartItemsCount}</Badge> : null}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="cursor-pointer">

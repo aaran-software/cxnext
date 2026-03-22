@@ -124,6 +124,17 @@ export const mediaUpsertPayloadSchema = z.object({
   versions: z.array(mediaVersionInputSchema).default([]),
 })
 
+export const mediaImageUploadPayloadSchema = z.object({
+  fileName: z.string().trim().min(1),
+  originalName: z.string().trim().min(1),
+  dataUrl: z.string().trim().min(1),
+  folderId: z.string().trim().nullish().transform((value) => value || null),
+  storageScope: mediaStorageScopeSchema.default('public'),
+  title: z.string().trim().nullish().transform((value) => value || null),
+  altText: z.string().trim().nullish().transform((value) => value || null),
+  isActive: z.boolean().optional().default(true),
+})
+
 export const mediaListResponseSchema = z.object({
   items: z.array(mediaSummarySchema),
 })
@@ -153,6 +164,7 @@ export type MediaTagInput = z.infer<typeof mediaTagInputSchema>
 export type MediaUsageInput = z.infer<typeof mediaUsageInputSchema>
 export type MediaVersionInput = z.infer<typeof mediaVersionInputSchema>
 export type MediaUpsertPayload = z.infer<typeof mediaUpsertPayloadSchema>
+export type MediaImageUploadPayload = z.infer<typeof mediaImageUploadPayloadSchema>
 export type MediaListResponse = z.infer<typeof mediaListResponseSchema>
 export type MediaResponse = z.infer<typeof mediaResponseSchema>
 export type MediaFolderListResponse = z.infer<typeof mediaFolderListResponseSchema>

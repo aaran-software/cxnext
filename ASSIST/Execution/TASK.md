@@ -50,42 +50,37 @@ Describe the concrete outcome to deliver in this task.
 
 ### Title
 
-`Media manager module across backend and frontend`
+`Media manager viewport fit and fixed preview sizing`
 
 ### Status
 
-completed
+validated
 
 ### Objective
 
-Implement the media manager described in `ASSIST/Execution/IDEAS.md` across backend and frontend, including shared contracts, storage-aware tables for files, folders, tags, usage, and versions, CRUD routes, dashboard list and upsert screens, and filesystem setup for public and private media storage that returns to the list after save.
+Keep the shared media upload dialog within the viewport by fixing preview/upload panel heights, enabling internal vertical scrolling, and making the "new media" upload surface fit cleanly on page.
 
 ### In Scope
 
-- Add shared media schemas in `packages/shared`
-- Add media-specific tables through a separate migration and seed a default folder and placeholder media record
-- Introduce backend CRUD routes for the media aggregate including folders, tags, usage, and versions
-- Add a frontend media list page and full-page create/edit form in the dashboard workspace
-- Add storage configuration plus `storage/public` and `storage/private` directory support with a public-serving path
-- Update execution docs and changelog for this increment
+- Constrain the shared media asset manager dialog to viewport height
+- Set fixed upload and preview panel sizes for the upload tab
+- Add y-axis scrolling to the dialog body so long content stays usable
+- Update execution notes and changelog for the layout adjustment
 
 ### Out Of Scope
 
-- Full multipart upload processing, image optimization jobs, or binary transformation pipelines
-- Authorization redesign beyond following the current dashboard access pattern
-- Reworking unrelated legacy typecheck issues outside the media module increment
+- Changing the backend media upload contract or stored metadata
+- Redesigning unrelated storefront or dashboard surfaces
+- Adding new media schema fields beyond the current form
 
 ### Dependencies
 
 - `ASSIST/AI_RULES.md`
-- `ASSIST/Execution/IDEAS.md`
-- `apps/api`
-- `apps/web`
-- `packages/shared`
-- Existing dashboard routing and navigation
-- MariaDB environment configuration in `.env`
+- `ASSIST/Documentation/CHANGELOG.md`
+- `apps/web/src/components/forms/media-asset-manager-dialog.tsx`
+- Existing shared media form components and upload API flow
 
 ### Risks
 
-- The media aggregate spans several child collections and filesystem-aware paths, so storage consistency and fetch composition need to be kept aligned
-- Public/private storage handling can become brittle if URL generation and serving paths are not normalized clearly in the first increment
+- Responsive behavior still benefits from live browser QA at very small viewport heights
+- The media dialog remains image-focused and does not solve large-file handling constraints in the current JSON upload flow

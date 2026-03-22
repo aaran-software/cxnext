@@ -1,5 +1,6 @@
 import type {
   ActorType,
+  AuthOtpChannel,
   AuthPermission,
   AuthRole,
   AuthUser,
@@ -15,6 +16,7 @@ import { authTableNames } from '../../../shared/database/table-names'
 interface UserRow extends RowDataPacket {
   id: string
   email: string
+  phone_number: string | null
   display_name: string
   avatar_url: string | null
   actor_type: ActorType
@@ -35,9 +37,41 @@ interface RoleRow extends RowDataPacket {
   permission_summary: string | null
 }
 
+interface ContactVerificationRow extends RowDataPacket {
+  id: string
+  purpose: string
+  actor_type: ActorType
+  channel: AuthOtpChannel
+  destination: string
+  otp_hash: string
+  expires_at: Date
+  verified_at: Date | null
+  consumed_at: Date | null
+  attempts_count: number
+  is_active: number
+  created_at: Date
+  updated_at: Date
+}
+
 export interface StoredAuthUser {
   user: AuthUser
   passwordHash: string
+}
+
+export interface StoredContactVerification {
+  id: string
+  purpose: string
+  actorType: ActorType
+  channel: AuthOtpChannel
+  destination: string
+  otpHash: string
+  expiresAt: string
+  verifiedAt: string | null
+  consumedAt: string | null
+  attemptsCount: number
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
 }
 
 export class AuthUserRepository {
@@ -49,6 +83,7 @@ export class AuthUserRepository {
         SELECT
           id,
           email,
+          phone_number,
           display_name,
           avatar_url,
           actor_type,
@@ -71,6 +106,7 @@ export class AuthUserRepository {
           user: {
             id: userRow.id,
             email: userRow.email,
+            phoneNumber: userRow.phone_number,
             displayName: userRow.display_name,
             avatarUrl: userRow.avatar_url,
             actorType: userRow.actor_type,
@@ -95,6 +131,7 @@ export class AuthUserRepository {
         SELECT
           id,
           email,
+          phone_number,
           display_name,
           avatar_url,
           actor_type,
@@ -119,8 +156,57 @@ export class AuthUserRepository {
     return storedUser ?? null
   }
 
+  async findByPhoneNumber(phoneNumber: string) {
+    await ensureDatabaseSchema()
+
+    const userRows = await db.query<UserRow>(
+      `
+        SELECT
+          id,
+          email,
+          phone_number,
+          display_name,
+          avatar_url,
+          actor_type,
+          password_hash,
+          organization_name,
+          is_active,
+          created_at,
+          updated_at
+        FROM ${authTableNames.users}
+        WHERE phone_number = ?
+      `,
+      [phoneNumber],
+    )
+
+    return Promise.all(
+      userRows.map(async (userRow) => {
+        const rolesAndPermissions = await this.getUserRolesAndPermissions(userRow.id)
+
+        return {
+          user: {
+            id: userRow.id,
+            email: userRow.email,
+            phoneNumber: userRow.phone_number,
+            displayName: userRow.display_name,
+            avatarUrl: userRow.avatar_url,
+            actorType: userRow.actor_type,
+            isActive: Boolean(userRow.is_active),
+            organizationName: userRow.organization_name,
+            roles: rolesAndPermissions.roles,
+            permissions: rolesAndPermissions.permissions,
+            createdAt: userRow.created_at.toISOString(),
+            updatedAt: userRow.updated_at.toISOString(),
+          },
+          passwordHash: userRow.password_hash,
+        } satisfies StoredAuthUser
+      }),
+    )
+  }
+
   async create(input: {
     email: string
+    phoneNumber: string | null
     displayName: string
     actorType: ActorType
     avatarUrl: string | null
@@ -143,17 +229,19 @@ export class AuthUserRepository {
         INSERT INTO ${authTableNames.users} (
           id,
           email,
+          phone_number,
           display_name,
           avatar_url,
           actor_type,
           password_hash,
           organization_name
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
         id,
         input.email,
+        input.phoneNumber,
         input.displayName,
         input.avatarUrl,
         input.actorType,
@@ -176,6 +264,150 @@ export class AuthUserRepository {
     }
 
     return storedUser.user
+  }
+
+  async deactivatePendingContactVerifications(input: {
+    purpose: string
+    actorType: ActorType
+    channel: AuthOtpChannel
+    destination: string
+  }) {
+    await ensureDatabaseSchema()
+
+    await db.execute(
+      `
+        UPDATE ${authTableNames.contactVerifications}
+        SET is_active = 0
+        WHERE purpose = ?
+          AND actor_type = ?
+          AND channel = ?
+          AND destination = ?
+          AND consumed_at IS NULL
+      `,
+      [input.purpose, input.actorType, input.channel, input.destination],
+    )
+  }
+
+  async createContactVerification(input: {
+    purpose: string
+    actorType: ActorType
+    channel: AuthOtpChannel
+    destination: string
+    otpHash: string
+    expiresAt: Date
+  }) {
+    await ensureDatabaseSchema()
+
+    const id = randomUUID()
+    await db.execute(
+      `
+        INSERT INTO ${authTableNames.contactVerifications} (
+          id,
+          purpose,
+          actor_type,
+          channel,
+          destination,
+          otp_hash,
+          expires_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `,
+      [id, input.purpose, input.actorType, input.channel, input.destination, input.otpHash, input.expiresAt],
+    )
+
+    const verification = await this.getContactVerification(id)
+    if (!verification) {
+      throw new Error('Expected verification challenge to be retrievable.')
+    }
+
+    return verification
+  }
+
+  async getContactVerification(id: string) {
+    await ensureDatabaseSchema()
+
+    const rows = await db.query<ContactVerificationRow>(
+      `
+        SELECT
+          id,
+          purpose,
+          actor_type,
+          channel,
+          destination,
+          otp_hash,
+          expires_at,
+          verified_at,
+          consumed_at,
+          attempts_count,
+          is_active,
+          created_at,
+          updated_at
+        FROM ${authTableNames.contactVerifications}
+        WHERE id = ?
+        LIMIT 1
+      `,
+      [id],
+    )
+
+    const row = rows[0]
+    if (!row) {
+      return null
+    }
+
+    return {
+      id: row.id,
+      purpose: row.purpose,
+      actorType: row.actor_type,
+      channel: row.channel,
+      destination: row.destination,
+      otpHash: row.otp_hash,
+      expiresAt: row.expires_at.toISOString(),
+      verifiedAt: row.verified_at?.toISOString() ?? null,
+      consumedAt: row.consumed_at?.toISOString() ?? null,
+      attemptsCount: row.attempts_count,
+      isActive: Boolean(row.is_active),
+      createdAt: row.created_at.toISOString(),
+      updatedAt: row.updated_at.toISOString(),
+    } satisfies StoredContactVerification
+  }
+
+  async incrementContactVerificationAttempts(id: string) {
+    await ensureDatabaseSchema()
+
+    await db.execute(
+      `
+        UPDATE ${authTableNames.contactVerifications}
+        SET attempts_count = attempts_count + 1
+        WHERE id = ?
+      `,
+      [id],
+    )
+  }
+
+  async markContactVerificationVerified(id: string) {
+    await ensureDatabaseSchema()
+
+    await db.execute(
+      `
+        UPDATE ${authTableNames.contactVerifications}
+        SET verified_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `,
+      [id],
+    )
+  }
+
+  async consumeContactVerification(id: string) {
+    await ensureDatabaseSchema()
+
+    await db.execute(
+      `
+        UPDATE ${authTableNames.contactVerifications}
+        SET consumed_at = CURRENT_TIMESTAMP, is_active = 0
+        WHERE id = ?
+      `,
+      [id],
+    )
   }
 
   private async getUserRolesAndPermissions(userId: string) {

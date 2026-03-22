@@ -56,6 +56,7 @@ export type CommonListFilterOption = {
   label: string
   isActive?: boolean
   onSelect: () => void
+  onCheckedChange?: (checked: boolean) => void
 }
 
 export type CommonListColumn<TData> = {
@@ -344,10 +345,20 @@ export function CommonList<TData>({
                       </div>
                       <DropdownMenuSeparator />
                       {filters.options.map((option) => (
-                        <DropdownMenuItem key={option.key} onClick={option.onSelect}>
-                          <span>{option.label}</span>
-                          {option.isActive ? <span className="ml-auto text-xs text-primary">Active</span> : null}
-                        </DropdownMenuItem>
+                        <DropdownMenuCheckboxItem
+                          key={option.key}
+                          checked={Boolean(option.isActive)}
+                          onCheckedChange={(checked) => {
+                            if (option.onCheckedChange) {
+                              option.onCheckedChange(checked)
+                              return
+                            }
+
+                            option.onSelect()
+                          }}
+                        >
+                          {option.label}
+                        </DropdownMenuCheckboxItem>
                       ))}
                     </DropdownMenuGroup>
                   </DropdownMenuContent>

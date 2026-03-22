@@ -32,6 +32,7 @@ import {
   restoreMediaFolder,
   updateMediaFolder,
 } from '@/shared/api/client'
+import { showFailedActionToast, showSavedToast, showStatusChangeToast } from '@/shared/notifications/toast'
 
 function toErrorMessage(error: unknown) {
   if (error instanceof HttpError) return error.message
@@ -122,8 +123,20 @@ export function MediaListPage() {
       setItems((current) => current.map((entry) => (
         entry.id === item.id ? { ...entry, isActive: !entry.isActive } : entry
       )))
+      showStatusChangeToast({
+        entityLabel: 'media asset',
+        recordName: item.title ?? item.fileName,
+        referenceId: item.id,
+        action: item.isActive ? 'deactivate' : 'restore',
+      })
     } catch (error) {
-      setErrorMessage(toErrorMessage(error))
+      const message = toErrorMessage(error)
+      setErrorMessage(message)
+      showFailedActionToast({
+        entityLabel: 'media asset',
+        action: item.isActive ? 'deactivate' : 'restore',
+        detail: message,
+      })
     }
   }
 
@@ -137,8 +150,20 @@ export function MediaListPage() {
       setFolders((current) => current.map((entry) => (
         entry.id === folder.id ? { ...entry, isActive: !entry.isActive } : entry
       )))
+      showStatusChangeToast({
+        entityLabel: 'folder',
+        recordName: folder.name,
+        referenceId: folder.id,
+        action: folder.isActive ? 'deactivate' : 'restore',
+      })
     } catch (error) {
-      setErrorMessage(toErrorMessage(error))
+      const message = toErrorMessage(error)
+      setErrorMessage(message)
+      showFailedActionToast({
+        entityLabel: 'folder',
+        action: folder.isActive ? 'deactivate' : 'restore',
+        detail: message,
+      })
     }
   }
 
@@ -173,9 +198,22 @@ export function MediaListPage() {
         return [folder, ...current]
       })
 
+      showSavedToast({
+        entityLabel: 'folder',
+        recordName: folder.name,
+        referenceId: folder.id,
+        mode: editingFolderId ? 'update' : 'create',
+      })
+
       resetFolderForm()
     } catch (error) {
-      setErrorMessage(toErrorMessage(error))
+      const message = toErrorMessage(error)
+      setErrorMessage(message)
+      showFailedActionToast({
+        entityLabel: 'folder',
+        action: editingFolderId ? 'update' : 'save',
+        detail: message,
+      })
     } finally {
       setSavingFolder(false)
     }

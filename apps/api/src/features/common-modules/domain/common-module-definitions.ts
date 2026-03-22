@@ -432,6 +432,34 @@ const commonModuleDefinitions = [
       { key: 'description', label: 'Description', type: 'string', required: false, nullable: true },
     ],
   },
+  {
+    key: 'storefrontTemplates',
+    label: 'Storefront Design Templates',
+    tableName: commonTableNames.storefrontTemplates,
+    idPrefix: 'storefront-template',
+    defaultSortKey: 'sort_order',
+    columns: [
+      { key: 'code', label: 'Code', type: 'string', required: true, nullable: false },
+      { key: 'name', label: 'Name', type: 'string', required: true, nullable: false },
+      {
+        key: 'sort_order',
+        label: 'Sort Order',
+        type: 'number',
+        numberMode: 'integer',
+        required: false,
+        nullable: false,
+      },
+      { key: 'badge_text', label: 'Badge', type: 'string', required: false, nullable: true },
+      { key: 'title', label: 'Title', type: 'string', required: true, nullable: false },
+      { key: 'description', label: 'Description', type: 'string', required: false, nullable: true },
+      { key: 'cta_primary_label', label: 'Primary CTA Label', type: 'string', required: false, nullable: true },
+      { key: 'cta_primary_href', label: 'Primary CTA Href', type: 'string', required: false, nullable: true },
+      { key: 'cta_secondary_label', label: 'Secondary CTA Label', type: 'string', required: false, nullable: true },
+      { key: 'cta_secondary_href', label: 'Secondary CTA Href', type: 'string', required: false, nullable: true },
+      { key: 'icon_key', label: 'Icon Key', type: 'string', required: false, nullable: true },
+      { key: 'theme_key', label: 'Theme Key', type: 'string', required: false, nullable: true },
+    ],
+  },
 ] as const satisfies readonly CommonModuleDefinition[]
 
 const commonModuleDefinitionByKey = Object.fromEntries(

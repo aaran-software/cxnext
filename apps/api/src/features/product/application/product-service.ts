@@ -1,8 +1,9 @@
-import type { ProductListResponse, ProductResponse, ProductUpsertPayload } from '@shared/index'
+import type { ProductListResponse, ProductResponse, ProductUpsertPayload, StorefrontCatalogResponse } from '@shared/index'
 import {
   productListResponseSchema,
   productResponseSchema,
   productUpsertPayloadSchema,
+  storefrontCatalogResponseSchema,
 } from '@shared/index'
 import type { ProductRepository } from '../data/product-repository'
 import { ApplicationError } from '../../../shared/errors/application-error'
@@ -29,6 +30,11 @@ export class ProductService {
     }
 
     return productResponseSchema.parse({ item } satisfies ProductResponse)
+  }
+
+  async getStorefrontCatalog() {
+    const catalog = await this.repository.listStorefrontCatalog()
+    return storefrontCatalogResponseSchema.parse(catalog satisfies StorefrontCatalogResponse)
   }
 
   async create(payload: unknown) {

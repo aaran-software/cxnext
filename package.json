@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev:web": "vite --config apps/web/vite.config.ts",
+    "dev:web:shop": "vite --config apps/web/vite.config.ts --mode shop",
     "dev:api": "tsx watch apps/api/src/server.ts",
     "dev:stack": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
     "build:web": "vite build --config apps/web/vite.config.ts",
@@ -13,6 +14,7 @@
     "build": "npm run build:api && npm run build:web && npm run build:desktop",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint .",
+    "test:e2e": "playwright test",
     "preview:web": "vite preview --config apps/web/vite.config.ts",
     "start:desktop": "npm run build:desktop && electron apps/desktop/dist/main.js"
   },
@@ -36,6 +38,7 @@
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.13.1",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.2.2",
     "zod": "^4.1.12"
@@ -43,6 +46,7 @@
   "devDependencies": {
     "@babel/core": "^7.29.0",
     "@eslint/js": "^9.39.4",
+    "@playwright/test": "^1.58.2",
     "@rolldown/plugin-babel": "^0.2.1",
     "@types/babel__core": "^7.20.5",
     "@types/jsonwebtoken": "^9.0.10",

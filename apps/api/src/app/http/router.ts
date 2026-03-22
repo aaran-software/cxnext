@@ -11,6 +11,8 @@ import { ProductService } from '../../features/product/application/product-servi
 import { ProductRepository } from '../../features/product/data/product-repository'
 import { MediaService } from '../../features/media/application/media-service'
 import { MediaRepository } from '../../features/media/data/media-repository'
+import { StorefrontOrderService } from '../../features/storefront/application/storefront-order-service'
+import { StorefrontOrderRepository } from '../../features/storefront/data/storefront-order-repository'
 import { AuthService } from '../../features/auth/application/auth-service'
 import { AuthUserRepository } from '../../features/auth/data/auth-user-repository'
 import { GetBootstrapSnapshot } from '../../features/bootstrap/application/get-bootstrap-snapshot'
@@ -28,6 +30,7 @@ const companyService = new CompanyService(new CompanyRepository())
 const contactService = new ContactService(new ContactRepository())
 const productService = new ProductService(new ProductRepository())
 const mediaService = new MediaService(new MediaRepository())
+const storefrontOrderService = new StorefrontOrderService(new StorefrontOrderRepository())
 
 function parseBooleanFlag(value: string | null) {
   if (!value) {
@@ -84,6 +87,21 @@ export async function routeRequest(
 
     if (method === 'GET' && url.pathname === '/products') {
       writeJson(response, 200, await productService.list())
+      return
+    }
+
+    if (method === 'GET' && url.pathname === '/storefront/catalog') {
+      writeJson(response, 200, await productService.getStorefrontCatalog())
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/storefront/checkout') {
+      writeJson(response, 201, await storefrontOrderService.create(await readJsonBody(request)))
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/storefront/checkout/verify-payment') {
+      writeJson(response, 200, await storefrontOrderService.verifyPayment(await readJsonBody(request)))
       return
     }
 
@@ -248,6 +266,11 @@ export async function routeRequest(
       return
     }
 
+    if (method === 'POST' && url.pathname === '/media/upload-image') {
+      writeJson(response, 201, await mediaService.uploadImage(await readJsonBody(request)))
+      return
+    }
+
     if (method === 'POST' && url.pathname === '/media/folders') {
       writeJson(response, 201, await mediaService.createFolder(await readJsonBody(request)))
       return
@@ -334,6 +357,16 @@ export async function routeRequest(
 
     if (method === 'POST' && url.pathname === '/auth/register') {
       writeJson(response, 201, await authService.register(await readJsonBody(request)))
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/auth/register/request-otp') {
+      writeJson(response, 200, await authService.requestRegisterOtp(await readJsonBody(request)))
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/auth/register/verify-otp') {
+      writeJson(response, 200, await authService.verifyRegisterOtp(await readJsonBody(request)))
       return
     }
 

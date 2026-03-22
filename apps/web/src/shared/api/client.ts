@@ -1,6 +1,10 @@
 import type {
   AuthLoginPayload,
   AuthRegisterPayload,
+  AuthRegisterOtpRequestPayload,
+  AuthRegisterOtpRequestResponse,
+  AuthRegisterOtpVerifyPayload,
+  AuthRegisterOtpVerifyResponse,
   AuthTokenResponse,
   AuthUser,
   Company,
@@ -16,6 +20,7 @@ import type {
   MediaFolderListResponse,
   MediaFolderResponse,
   MediaFolderUpsertPayload,
+  MediaImageUploadPayload,
   MediaListResponse,
   MediaResponse,
   MediaUpsertPayload,
@@ -23,6 +28,11 @@ import type {
   ProductListResponse,
   ProductResponse,
   ProductUpsertPayload,
+  StorefrontCatalogResponse,
+  StorefrontCheckoutPayload,
+  StorefrontCheckoutResponse,
+  StorefrontCheckoutSessionResponse,
+  StorefrontPaymentVerificationPayload,
   CommonModuleKey,
   CommonModuleListResponse,
   CommonModuleMetadata,
@@ -80,6 +90,20 @@ export function login(payload: AuthLoginPayload) {
 
 export function register(payload: AuthRegisterPayload) {
   return request<AuthTokenResponse>('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function requestRegisterOtp(payload: AuthRegisterOtpRequestPayload) {
+  return request<AuthRegisterOtpRequestResponse>('/auth/register/request-otp', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function verifyRegisterOtp(payload: AuthRegisterOtpVerifyPayload) {
+  return request<AuthRegisterOtpVerifyResponse>('/auth/register/verify-otp', {
     method: 'POST',
     body: JSON.stringify(payload),
   })
@@ -177,15 +201,17 @@ export async function updateCompany(id: string, payload: CompanyUpsertPayload) {
 }
 
 export async function deactivateCompany(id: string) {
-  await request<CompanyResponse>(`/companies/${id}`, {
+  const response = await request<CompanyResponse>(`/companies/${id}`, {
     method: 'DELETE',
   })
+  return response.item
 }
 
 export async function restoreCompany(id: string) {
-  await request<CompanyResponse>(`/companies/${id}/restore`, {
+  const response = await request<CompanyResponse>(`/companies/${id}/restore`, {
     method: 'POST',
   })
+  return response.item
 }
 
 export async function listContacts() {
@@ -215,11 +241,13 @@ export async function updateContact(id: string, payload: ContactUpsertPayload) {
 }
 
 export async function deactivateContact(id: string) {
-  await request<ContactResponse>(`/contacts/${id}`, { method: 'DELETE' })
+  const response = await request<ContactResponse>(`/contacts/${id}`, { method: 'DELETE' })
+  return response.item
 }
 
 export async function restoreContact(id: string) {
-  await request<ContactResponse>(`/contacts/${id}/restore`, { method: 'POST' })
+  const response = await request<ContactResponse>(`/contacts/${id}/restore`, { method: 'POST' })
+  return response.item
 }
 
 export async function listProducts() {
@@ -249,11 +277,33 @@ export async function updateProduct(id: string, payload: ProductUpsertPayload) {
 }
 
 export async function deactivateProduct(id: string) {
-  await request<ProductResponse>(`/products/${id}`, { method: 'DELETE' })
+  const response = await request<ProductResponse>(`/products/${id}`, { method: 'DELETE' })
+  return response.item
 }
 
 export async function restoreProduct(id: string) {
-  await request<ProductResponse>(`/products/${id}/restore`, { method: 'POST' })
+  const response = await request<ProductResponse>(`/products/${id}/restore`, { method: 'POST' })
+  return response.item
+}
+
+export function getStorefrontCatalog() {
+  return request<StorefrontCatalogResponse>('/storefront/catalog')
+}
+
+export async function createStorefrontCheckout(payload: StorefrontCheckoutPayload) {
+  const response = await request<StorefrontCheckoutSessionResponse>('/storefront/checkout', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  return response
+}
+
+export async function verifyStorefrontPayment(payload: StorefrontPaymentVerificationPayload) {
+  const response = await request<StorefrontCheckoutResponse>('/storefront/checkout/verify-payment', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  return response.order
 }
 
 export async function listMedia() {
@@ -268,6 +318,14 @@ export async function getMedia(id: string) {
 
 export async function createMedia(payload: MediaUpsertPayload) {
   const response = await request<MediaResponse>('/media', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  return response.item
+}
+
+export async function uploadMediaImage(payload: MediaImageUploadPayload) {
+  const response = await request<MediaResponse>('/media/upload-image', {
     method: 'POST',
     body: JSON.stringify(payload),
   })

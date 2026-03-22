@@ -15,6 +15,7 @@ import type {
   ProductReview,
   ProductReviewInput,
   ProductSeo,
+  ProductStorefront,
   ProductStockItem,
   ProductStockItemInput,
   ProductStockMovement,
@@ -26,12 +27,17 @@ import type {
   ProductVariant,
   ProductVariantInput,
   ProductVariantMap,
+  StorefrontBrand,
+  StorefrontCatalogResponse,
+  StorefrontCategory,
+  StorefrontProduct,
+  StorefrontReview,
 } from '@shared/index'
 import type { ResultSetHeader, RowDataPacket } from 'mysql2'
 import { randomUUID } from 'node:crypto'
 import { ensureDatabaseSchema } from '../../../shared/database/database'
 import { db } from '../../../shared/database/orm'
-import { productTableNames } from '../../../shared/database/table-names'
+import { commonTableNames, productTableNames } from '../../../shared/database/table-names'
 import { ApplicationError } from '../../../shared/errors/application-error'
 
 interface ProductSummaryRow extends RowDataPacket {
@@ -55,6 +61,13 @@ interface ProductSummaryRow extends RowDataPacket {
   tax_id: string | null
   is_featured: number
   is_active: number
+  storefront_department: string | null
+  home_slider_enabled: number | null
+  promo_slider_enabled: number | null
+  feature_section_enabled: number | null
+  is_new_arrival: number | null
+  is_best_seller: number | null
+  is_featured_label: number | null
   primary_image_url: string | null
   variant_count: number
   tag_count: number
@@ -76,8 +89,48 @@ interface ProductVariantMapRow extends RowDataPacket { id: string; product_id: s
 interface ProductStockItemRow extends RowDataPacket { id: string; product_id: string; variant_id: string | null; warehouse_id: string; quantity: number | string; reserved_quantity: number | string; is_active: number; created_at: Date; updated_at: Date }
 interface ProductStockMovementRow extends RowDataPacket { id: string; product_id: string; variant_id: string | null; warehouse_id: string | null; movement_type: string; quantity: number | string; reference_type: string | null; reference_id: string | null; movement_at: Date; is_active: number; created_at: Date; updated_at: Date }
 interface ProductSeoRow extends RowDataPacket { id: string; product_id: string; meta_title: string | null; meta_description: string | null; meta_keywords: string | null; is_active: number; created_at: Date; updated_at: Date }
+interface ProductStorefrontRow extends RowDataPacket { id: string; product_id: string; department: string | null; home_slider_enabled: number; home_slider_order: number; promo_slider_enabled: number; promo_slider_order: number; feature_section_enabled: number; feature_section_order: number; is_new_arrival: number; is_best_seller: number; is_featured_label: number; catalog_badge: string | null; fabric: string | null; fit: string | null; sleeve: string | null; occasion: string | null; shipping_note: string | null; is_active: number; created_at: Date; updated_at: Date }
 interface ProductTagRow extends RowDataPacket { id: string; name: string; is_active: number; created_at: Date; updated_at: Date }
 interface ProductReviewRow extends RowDataPacket { id: string; product_id: string; user_id: string | null; rating: number; review: string | null; review_date: Date; is_active: number; created_at: Date; updated_at: Date }
+interface StorefrontVariantAttributeRow extends RowDataPacket { product_id: string; attribute_name: string; attribute_value: string }
+interface StorefrontCatalogRow extends RowDataPacket {
+  id: string
+  slug: string
+  sku: string
+  name: string
+  description: string | null
+  short_description: string | null
+  created_at: Date
+  updated_at: Date
+  brand_id: string | null
+  brand_name: string | null
+  brand_description: string | null
+  category_id: string | null
+  category_name: string | null
+  category_description: string | null
+  base_price: number | string
+  compare_at_price: number | string | null
+  rating: number | string | null
+  review_count: number
+  inventory: number | string | null
+  department: string | null
+  home_slider_enabled: number | null
+  home_slider_order: number | null
+  promo_slider_enabled: number | null
+  promo_slider_order: number | null
+  feature_section_enabled: number | null
+  feature_section_order: number | null
+  is_new_arrival: number | null
+  is_best_seller: number | null
+  is_featured_label: number | null
+  catalog_badge: string | null
+  fabric: string | null
+  fit: string | null
+  sleeve: string | null
+  occasion: string | null
+  shipping_note: string | null
+  primary_image_url: string | null
+}
 
 type SqlExecutor = (sql: string, params?: (string | number | boolean | null)[]) => Promise<unknown>
 type SqlFirst = <T extends RowDataPacket = RowDataPacket>(sql: string, params?: (string | number | boolean | null)[]) => Promise<T | null>
@@ -85,6 +138,33 @@ type SqlFirst = <T extends RowDataPacket = RowDataPacket>(sql: string, params?: 
 const asTimestamp = (value: Date) => value.toISOString()
 const asDateOnly = (value: Date | null) => value ? value.toISOString().slice(0, 10) : null
 const asDateTimeInput = (value: string | null) => value ? value.replace('T', ' ').slice(0, 19) : new Date().toISOString().slice(0, 19).replace('T', ' ')
+const storefrontDepartments = new Set(['women', 'men', 'kids', 'accessories'])
+
+function isPlaceholderValue(value: string | null | undefined) {
+  const trimmed = value?.trim() ?? ''
+  return trimmed.length === 0 || trimmed === '-'
+}
+
+function normalizeCatalogText(value: string | null | undefined, fallback: string) {
+  return isPlaceholderValue(value) ? fallback : value!.trim()
+}
+
+function slugify(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+function toCatalogSlug(value: string | null | undefined, fallback: string) {
+  const normalized = normalizeCatalogText(value, fallback)
+  return slugify(normalized) || slugify(fallback) || 'catalog-item'
+}
+
+function toOptionalCatalogText(value: string | null | undefined) {
+  return isPlaceholderValue(value) ? null : value!.trim()
+}
 
 function toProductSummary(row: ProductSummaryRow): ProductSummary {
   return {
@@ -108,6 +188,16 @@ function toProductSummary(row: ProductSummaryRow): ProductSummary {
     taxId: row.tax_id,
     isFeatured: Boolean(row.is_featured),
     isActive: Boolean(row.is_active),
+    storefrontDepartment:
+      row.storefront_department && storefrontDepartments.has(row.storefront_department)
+        ? row.storefront_department as ProductSummary['storefrontDepartment']
+        : null,
+    homeSliderEnabled: Boolean(row.home_slider_enabled),
+    promoSliderEnabled: Boolean(row.promo_slider_enabled),
+    featureSectionEnabled: Boolean(row.feature_section_enabled),
+    isNewArrival: Boolean(row.is_new_arrival),
+    isBestSeller: Boolean(row.is_best_seller),
+    isFeaturedLabel: Boolean(row.is_featured_label),
     primaryImageUrl: row.primary_image_url,
     variantCount: Number(row.variant_count),
     tagCount: Number(row.tag_count),
@@ -252,6 +342,48 @@ function toProductSeo(row: ProductSeoRow): ProductSeo {
   }
 }
 
+function toProductStorefront(row: ProductStorefrontRow): ProductStorefront {
+  return {
+    id: row.id,
+    productId: row.product_id,
+    department: row.department && storefrontDepartments.has(row.department) ? row.department as ProductStorefront['department'] : null,
+    homeSliderEnabled: Boolean(row.home_slider_enabled),
+    homeSliderOrder: Number(row.home_slider_order),
+    promoSliderEnabled: Boolean(row.promo_slider_enabled),
+    promoSliderOrder: Number(row.promo_slider_order),
+    featureSectionEnabled: Boolean(row.feature_section_enabled),
+    featureSectionOrder: Number(row.feature_section_order),
+    isNewArrival: Boolean(row.is_new_arrival),
+    isBestSeller: Boolean(row.is_best_seller),
+    isFeaturedLabel: Boolean(row.is_featured_label),
+    catalogBadge: row.catalog_badge,
+    fabric: row.fabric,
+    fit: row.fit,
+    sleeve: row.sleeve,
+    occasion: row.occasion,
+    shippingNote: row.shipping_note,
+    isActive: Boolean(row.is_active),
+    createdAt: asTimestamp(row.created_at),
+    updatedAt: asTimestamp(row.updated_at),
+  }
+}
+
+function toStorefrontReview(row: ProductReviewRow): StorefrontReview {
+  const reviewText = row.review?.trim() ?? ''
+  const title = reviewText ? reviewText.split(/[.!?]/)[0]?.trim().slice(0, 72) ?? null : null
+
+  return {
+    id: row.id,
+    productId: row.product_id,
+    username: row.user_id?.trim() || 'Guest Shopper',
+    rating: Number(row.rating),
+    title: title || null,
+    review: reviewText || null,
+    createdAt: asTimestamp(row.review_date),
+    verifiedPurchase: false,
+  }
+}
+
 function toProductTag(row: ProductTagRow): ProductTag {
   return {
     id: row.id,
@@ -283,6 +415,13 @@ export class ProductRepository {
     const rows = await db.query<ProductSummaryRow>(`
       SELECT
         p.*,
+        sf.department AS storefront_department,
+        sf.home_slider_enabled,
+        sf.promo_slider_enabled,
+        sf.feature_section_enabled,
+        sf.is_new_arrival,
+        sf.is_best_seller,
+        sf.is_featured_label,
         (
           SELECT pi.image_url
           FROM ${productTableNames.images} pi
@@ -301,6 +440,7 @@ export class ProductRepository {
           WHERE ptm.product_id = p.id AND ptm.is_active = 1
         ) AS tag_count
       FROM ${productTableNames.products} p
+      LEFT JOIN ${productTableNames.storefront} sf ON sf.product_id = p.id AND sf.is_active = 1
       ORDER BY p.created_at DESC
     `)
 
@@ -313,6 +453,13 @@ export class ProductRepository {
     const row = await db.first<ProductRow>(`
       SELECT
         p.*,
+        sf.department AS storefront_department,
+        sf.home_slider_enabled,
+        sf.promo_slider_enabled,
+        sf.feature_section_enabled,
+        sf.is_new_arrival,
+        sf.is_best_seller,
+        sf.is_featured_label,
         (
           SELECT pi.image_url
           FROM ${productTableNames.images} pi
@@ -331,6 +478,7 @@ export class ProductRepository {
           WHERE ptm.product_id = p.id AND ptm.is_active = 1
         ) AS tag_count
       FROM ${productTableNames.products} p
+      LEFT JOIN ${productTableNames.storefront} sf ON sf.product_id = p.id AND sf.is_active = 1
       WHERE p.id = ?
       LIMIT 1
     `, [id])
@@ -353,6 +501,7 @@ export class ProductRepository {
       stockItems,
       stockMovements,
       seo,
+      storefront,
       tags,
       reviews,
     ] = await Promise.all([
@@ -381,6 +530,7 @@ export class ProductRepository {
       db.query<ProductStockItemRow>(`SELECT * FROM ${productTableNames.stockItems} WHERE product_id = ? AND is_active = 1 ORDER BY created_at ASC`, [id]),
       db.query<ProductStockMovementRow>(`SELECT * FROM ${productTableNames.stockMovements} WHERE product_id = ? AND is_active = 1 ORDER BY movement_at DESC, created_at DESC`, [id]),
       db.first<ProductSeoRow>(`SELECT * FROM ${productTableNames.seo} WHERE product_id = ? AND is_active = 1 LIMIT 1`, [id]),
+      db.first<ProductStorefrontRow>(`SELECT * FROM ${productTableNames.storefront} WHERE product_id = ? AND is_active = 1 LIMIT 1`, [id]),
       db.query<ProductTagRow>(`
         SELECT pt.*
         FROM ${productTableNames.tags} pt
@@ -453,6 +603,7 @@ export class ProductRepository {
       stockItems: stockItems.map(toProductStockItem),
       stockMovements: stockMovements.map(toProductStockMovement),
       seo: seo ? toProductSeo(seo) : null,
+      storefront: storefront ? toProductStorefront(storefront) : null,
       tags: tags.map(toProductTag),
       reviews: reviews.map(toProductReview),
     } satisfies Product
@@ -588,16 +739,284 @@ export class ProductRepository {
     return item
   }
 
+  async listStorefrontCatalog() {
+    await ensureDatabaseSchema()
+
+    const rows = await db.query<StorefrontCatalogRow>(`
+      SELECT
+        p.id,
+        p.slug,
+        p.sku,
+        p.name,
+        p.description,
+        p.short_description,
+        p.base_price,
+        p.created_at,
+        p.updated_at,
+        p.brand_id,
+        brand.name AS brand_name,
+        brand.description AS brand_description,
+        p.category_id,
+        category.name AS category_name,
+        category.description AS category_description,
+        sf.department,
+        sf.home_slider_enabled,
+        sf.home_slider_order,
+        sf.promo_slider_enabled,
+        sf.promo_slider_order,
+        sf.feature_section_enabled,
+        sf.feature_section_order,
+        sf.is_new_arrival,
+        sf.is_best_seller,
+        sf.is_featured_label,
+        sf.catalog_badge,
+        sf.fabric,
+        sf.fit,
+        sf.sleeve,
+        sf.occasion,
+        sf.shipping_note,
+        (
+          SELECT MAX(pp.mrp)
+          FROM ${productTableNames.prices} pp
+          WHERE pp.product_id = p.id AND pp.is_active = 1
+        ) AS compare_at_price,
+        (
+          SELECT AVG(pr.rating)
+          FROM ${productTableNames.reviews} pr
+          WHERE pr.product_id = p.id AND pr.is_active = 1
+        ) AS rating,
+        (
+          SELECT COUNT(*)
+          FROM ${productTableNames.reviews} pr
+          WHERE pr.product_id = p.id AND pr.is_active = 1
+        ) AS review_count,
+        COALESCE(
+          (
+            SELECT SUM(si.quantity - si.reserved_quantity)
+            FROM ${productTableNames.stockItems} si
+            WHERE si.product_id = p.id AND si.is_active = 1
+          ),
+          (
+            SELECT SUM(pv.stock_quantity)
+            FROM ${productTableNames.variants} pv
+            WHERE pv.product_id = p.id AND pv.is_active = 1
+          ),
+          0
+        ) AS inventory,
+        (
+          SELECT pi.image_url
+          FROM ${productTableNames.images} pi
+          WHERE pi.product_id = p.id AND pi.is_active = 1
+          ORDER BY pi.is_primary DESC, pi.sort_order ASC, pi.created_at ASC
+          LIMIT 1
+        ) AS primary_image_url
+      FROM ${productTableNames.products} p
+      INNER JOIN ${productTableNames.storefront} sf ON sf.product_id = p.id AND sf.is_active = 1
+      LEFT JOIN ${commonTableNames.brands} brand ON brand.id = p.brand_id
+      LEFT JOIN ${commonTableNames.productCategories} category ON category.id = p.category_id
+      WHERE p.is_active = 1 AND p.id <> 'product:default'
+      ORDER BY
+        sf.home_slider_enabled DESC,
+        sf.home_slider_order ASC,
+        sf.feature_section_enabled DESC,
+        sf.feature_section_order ASC,
+        p.created_at DESC
+    `)
+
+    const productIds = rows.map((row) => row.id)
+    if (productIds.length === 0) {
+      return {
+        brands: [],
+        categories: [],
+        products: [],
+        reviews: [],
+      } satisfies StorefrontCatalogResponse
+    }
+
+    const placeholders = productIds.map(() => '?').join(', ')
+    const [images, variantAttributes, reviews] = await Promise.all([
+      db.query<ProductImageRow>(
+        `SELECT * FROM ${productTableNames.images} WHERE product_id IN (${placeholders}) AND is_active = 1 ORDER BY is_primary DESC, sort_order ASC, created_at ASC`,
+        productIds,
+      ),
+      db.query<StorefrontVariantAttributeRow>(
+        `SELECT pv.product_id, pva.attribute_name, pva.attribute_value
+         FROM ${productTableNames.variantAttributes} pva
+         INNER JOIN ${productTableNames.variants} pv ON pv.id = pva.variant_id
+         WHERE pv.product_id IN (${placeholders}) AND pv.is_active = 1 AND pva.is_active = 1
+         ORDER BY pv.created_at ASC, pva.created_at ASC`,
+        productIds,
+      ),
+      db.query<ProductReviewRow>(
+        `SELECT * FROM ${productTableNames.reviews}
+         WHERE product_id IN (${placeholders}) AND is_active = 1
+         ORDER BY review_date DESC, created_at DESC`,
+        productIds,
+      ),
+    ])
+
+    const imagesByProductId = new Map<string, string[]>()
+    for (const image of images) {
+      const collection = imagesByProductId.get(image.product_id) ?? []
+      collection.push(image.image_url)
+      imagesByProductId.set(image.product_id, collection)
+    }
+
+    const sizesByProductId = new Map<string, Set<string>>()
+    const colorsByProductId = new Map<string, Map<string, string | null>>()
+    for (const attribute of variantAttributes) {
+      const attributeName = attribute.attribute_name.trim().toLowerCase()
+      const attributeValue = attribute.attribute_value.trim()
+      if (!attributeValue) {
+        continue
+      }
+
+      if (attributeName.includes('size')) {
+        const collection = sizesByProductId.get(attribute.product_id) ?? new Set<string>()
+        collection.add(attributeValue)
+        sizesByProductId.set(attribute.product_id, collection)
+      }
+
+      if (attributeName.includes('color') || attributeName.includes('colour')) {
+        const collection = colorsByProductId.get(attribute.product_id) ?? new Map<string, string | null>()
+        collection.set(attributeValue, null)
+        colorsByProductId.set(attribute.product_id, collection)
+      }
+    }
+
+    const products: StorefrontProduct[] = rows.map((row) => {
+      const imagesForProduct = imagesByProductId.get(row.id) ?? []
+      const productImages = imagesForProduct.length > 0
+        ? imagesForProduct
+        : row.primary_image_url
+          ? [row.primary_image_url]
+          : []
+      const sizeValues = [...(sizesByProductId.get(row.id) ?? new Set<string>())]
+      const colorValues = [...(colorsByProductId.get(row.id) ?? new Map<string, string | null>()).entries()]
+      const productName = normalizeCatalogText(row.name, `Product ${row.id.slice(-6)}`)
+      const productSlug = toCatalogSlug(row.slug, `${productName}-${row.id.slice(-6)}`)
+      const brandName = normalizeCatalogText(row.brand_name, 'Unbranded')
+      const brandSlug = toCatalogSlug(row.brand_name, `brand-${row.brand_id ?? row.id}`)
+      const categoryName = normalizeCatalogText(row.category_name, 'Catalog')
+      const categorySlug = toCatalogSlug(row.category_name, productSlug)
+
+      return {
+        id: row.id,
+        slug: productSlug,
+        sku: normalizeCatalogText(row.sku, `SKU-${row.id.slice(-6)}`),
+        name: productName,
+        brand: brandName,
+        brandSlug,
+        categorySlug,
+        categoryName,
+        department: row.department && storefrontDepartments.has(row.department) ? row.department as StorefrontProduct['department'] : 'women',
+        price: Number(row.base_price),
+        compareAtPrice: row.compare_at_price == null ? null : Number(row.compare_at_price),
+        rating: row.rating == null ? 0 : Number(row.rating),
+        reviewCount: Number(row.review_count),
+        inventory: row.inventory == null ? 0 : Number(row.inventory),
+        homeSlider: Boolean(row.home_slider_enabled),
+        homeSliderOrder: Number(row.home_slider_order ?? 0),
+        promoSlider: Boolean(row.promo_slider_enabled),
+        promoSliderOrder: Number(row.promo_slider_order ?? 0),
+        featureSection: Boolean(row.feature_section_enabled),
+        featureSectionOrder: Number(row.feature_section_order ?? 0),
+        featured: Boolean(row.feature_section_enabled),
+        newArrival: Boolean(row.is_new_arrival),
+        bestseller: Boolean(row.is_best_seller),
+        featuredLabel: Boolean(row.is_featured_label),
+        catalogBadge: toOptionalCatalogText(row.catalog_badge),
+        images: productImages,
+        colors: colorValues.map(([name, swatch]) => ({ name, swatch })),
+        sizes: sizeValues,
+        fabric: toOptionalCatalogText(row.fabric),
+        fit: toOptionalCatalogText(row.fit),
+        sleeve: toOptionalCatalogText(row.sleeve),
+        occasion: toOptionalCatalogText(row.occasion),
+        shortDescription: toOptionalCatalogText(row.short_description),
+        description: toOptionalCatalogText(row.description),
+        shippingNote: toOptionalCatalogText(row.shipping_note),
+        createdAt: asTimestamp(row.created_at),
+        updatedAt: asTimestamp(row.updated_at),
+      }
+    })
+
+    const productsByBrandId = new Map<string, StorefrontProduct[]>()
+    const productsByCategoryKey = new Map<string, StorefrontProduct[]>()
+    for (const product of products) {
+      const brandId = rows.find((row) => row.id === product.id)?.brand_id
+      const categoryId = rows.find((row) => row.id === product.id)?.category_id
+
+      if (brandId) {
+        const brandProducts = productsByBrandId.get(brandId) ?? []
+        brandProducts.push(product)
+        productsByBrandId.set(brandId, brandProducts)
+      }
+
+      if (categoryId) {
+        const categoryProducts = productsByCategoryKey.get(categoryId) ?? []
+        categoryProducts.push(product)
+        productsByCategoryKey.set(categoryId, categoryProducts)
+      }
+    }
+
+    const brands: StorefrontBrand[] = []
+    const seenBrandIds = new Set<string>()
+    for (const row of rows) {
+      if (!row.brand_id || row.brand_id === '1' || seenBrandIds.has(row.brand_id)) {
+        continue
+      }
+      seenBrandIds.add(row.brand_id)
+      const brandProducts = productsByBrandId.get(row.brand_id) ?? []
+      brands.push({
+        id: row.brand_id,
+        name: normalizeCatalogText(row.brand_name, 'Unbranded'),
+        slug: toCatalogSlug(row.brand_name, `brand-${row.brand_id}`),
+        description: toOptionalCatalogText(row.brand_description),
+        image: brandProducts[0]?.images[0] ?? null,
+        productCount: brandProducts.length,
+        featuredLabel: brandProducts.some((product) => product.featuredLabel),
+      })
+    }
+
+    const categories: StorefrontCategory[] = []
+    const seenCategoryIds = new Set<string>()
+    for (const row of rows) {
+      if (!row.category_id || row.category_id === '1' || seenCategoryIds.has(row.category_id)) {
+        continue
+      }
+      seenCategoryIds.add(row.category_id)
+      const categoryProducts = productsByCategoryKey.get(row.category_id) ?? []
+      categories.push({
+        id: row.category_id,
+        name: normalizeCatalogText(row.category_name, 'Catalog'),
+        slug: toCatalogSlug(row.category_name, `category-${row.category_id}`),
+        department: categoryProducts[0]?.department ?? 'women',
+        description: toOptionalCatalogText(row.category_description),
+        image: categoryProducts[0]?.images[0] ?? null,
+        productCount: categoryProducts.length,
+      })
+    }
+
+    return {
+      brands,
+      categories,
+      products,
+      reviews: reviews.map(toStorefrontReview),
+    } satisfies StorefrontCatalogResponse
+  }
+
   private async replaceChildren(execute: SqlExecutor, first: SqlFirst, productId: string, payload: ProductUpsertPayload) {
     await this.replaceProductImages(execute, productId, payload.images)
-    await this.replaceAttributes(execute, productId, payload.attributes, payload.attributeValues)
-    const variantIdByClientKey = await this.replaceVariants(execute, productId, payload.variants)
+    await this.replaceAttributes(execute, first, productId, payload.attributes, payload.attributeValues)
+    const variantIdByClientKey = await this.replaceVariants(execute, first, productId, payload.variants)
     await this.replacePrices(execute, productId, payload.prices, variantIdByClientKey)
     await this.replaceDiscounts(execute, productId, payload.discounts, variantIdByClientKey)
     await this.replaceOffers(execute, productId, payload.offers)
     await this.replaceStockItems(execute, productId, payload.stockItems, variantIdByClientKey)
     await this.replaceStockMovements(execute, productId, payload.stockMovements, variantIdByClientKey)
-    await this.replaceSeo(execute, productId, payload.seo)
+    await this.replaceSeo(execute, first, productId, payload.seo)
+    await this.replaceStorefront(execute, first, productId, payload.storefront)
     await this.replaceTags(execute, first, productId, payload.tags)
     await this.replaceReviews(execute, productId, payload.reviews)
   }
@@ -614,6 +1033,7 @@ export class ProductRepository {
 
   private async replaceAttributes(
     execute: SqlExecutor,
+    first: SqlFirst,
     productId: string,
     attributes: ProductAttributeInput[],
     attributeValues: ProductAttributeValueInput[],
@@ -625,9 +1045,21 @@ export class ProductRepository {
     const attributeIdByClientKey = new Map<string, string>()
 
     for (const attribute of attributes) {
-      const attributeId = randomUUID()
+      const existingAttribute = await first<ProductAttributeRow>(
+        `SELECT * FROM ${productTableNames.attributes} WHERE product_id = ? AND name = ? LIMIT 1`,
+        [productId, attribute.name],
+      )
+      const attributeId = existingAttribute?.id ?? randomUUID()
       attributeIdByClientKey.set(attribute.clientKey, attributeId)
-      await execute(`INSERT INTO ${productTableNames.attributes} (id, product_id, name) VALUES (?, ?, ?)`, [attributeId, productId, attribute.name])
+
+      if (existingAttribute) {
+        await execute(
+          `UPDATE ${productTableNames.attributes} SET name = ?, is_active = 1 WHERE id = ?`,
+          [attribute.name, attributeId],
+        )
+      } else {
+        await execute(`INSERT INTO ${productTableNames.attributes} (id, product_id, name) VALUES (?, ?, ?)`, [attributeId, productId, attribute.name])
+      }
     }
 
     for (const attributeValue of attributeValues) {
@@ -636,11 +1068,24 @@ export class ProductRepository {
         throw new ApplicationError('Attribute value references an unknown attribute.', { attributeClientKey: attributeValue.attributeClientKey }, 400)
       }
 
-      const valueId = randomUUID()
-      await execute(
-        `INSERT INTO ${productTableNames.attributeValues} (id, product_id, attribute_id, value) VALUES (?, ?, ?, ?)`,
-        [valueId, productId, attributeId, attributeValue.value],
+      const existingValue = await first<ProductAttributeValueRow>(
+        `SELECT * FROM ${productTableNames.attributeValues} WHERE attribute_id = ? AND value = ? LIMIT 1`,
+        [attributeId, attributeValue.value],
       )
+      const valueId = existingValue?.id ?? randomUUID()
+
+      if (existingValue) {
+        await execute(
+          `UPDATE ${productTableNames.attributeValues} SET product_id = ?, value = ?, is_active = 1 WHERE id = ?`,
+          [productId, attributeValue.value, valueId],
+        )
+      } else {
+        await execute(
+          `INSERT INTO ${productTableNames.attributeValues} (id, product_id, attribute_id, value) VALUES (?, ?, ?, ?)`,
+          [valueId, productId, attributeId, attributeValue.value],
+        )
+      }
+
       await execute(
         `INSERT INTO ${productTableNames.variantMap} (id, product_id, attribute_id, value_id) VALUES (?, ?, ?, ?)`,
         [randomUUID(), productId, attributeId, valueId],
@@ -648,7 +1093,7 @@ export class ProductRepository {
     }
   }
 
-  private async replaceVariants(execute: SqlExecutor, productId: string, variants: ProductVariantInput[]) {
+  private async replaceVariants(execute: SqlExecutor, first: SqlFirst, productId: string, variants: ProductVariantInput[]) {
     await execute(`
       UPDATE ${productTableNames.variantImages} pvi
       INNER JOIN ${productTableNames.variants} pv ON pv.id = pvi.variant_id
@@ -666,13 +1111,26 @@ export class ProductRepository {
     const variantIdByClientKey = new Map<string, string>()
 
     for (const variant of variants) {
-      const variantId = randomUUID()
+      const existingVariant = await first<ProductVariantRow>(
+        `SELECT * FROM ${productTableNames.variants} WHERE product_id = ? AND sku = ? LIMIT 1`,
+        [productId, variant.sku],
+      )
+      const variantId = existingVariant?.id ?? randomUUID()
       variantIdByClientKey.set(variant.clientKey, variantId)
 
-      await execute(
-        `INSERT INTO ${productTableNames.variants} (id, product_id, sku, variant_name, price, cost_price, stock_quantity, opening_stock, weight, barcode, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [variantId, productId, variant.sku, variant.variantName, variant.price, variant.costPrice, variant.stockQuantity, variant.openingStock, variant.weight, variant.barcode, variant.isActive],
-      )
+      if (existingVariant) {
+        await execute(
+          `UPDATE ${productTableNames.variants}
+           SET sku = ?, variant_name = ?, price = ?, cost_price = ?, stock_quantity = ?, opening_stock = ?, weight = ?, barcode = ?, is_active = ?
+           WHERE id = ?`,
+          [variant.sku, variant.variantName, variant.price, variant.costPrice, variant.stockQuantity, variant.openingStock, variant.weight, variant.barcode, variant.isActive, variantId],
+        )
+      } else {
+        await execute(
+          `INSERT INTO ${productTableNames.variants} (id, product_id, sku, variant_name, price, cost_price, stock_quantity, opening_stock, weight, barcode, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [variantId, productId, variant.sku, variant.variantName, variant.price, variant.costPrice, variant.stockQuantity, variant.openingStock, variant.weight, variant.barcode, variant.isActive],
+        )
+      }
 
       for (const image of variant.images) {
         await execute(
@@ -742,14 +1200,114 @@ export class ProductRepository {
     }
   }
 
-  private async replaceSeo(execute: SqlExecutor, productId: string, seo: ProductUpsertPayload['seo']) {
+  private async replaceSeo(execute: SqlExecutor, first: SqlFirst, productId: string, seo: ProductUpsertPayload['seo']) {
     await execute(`UPDATE ${productTableNames.seo} SET is_active = 0 WHERE product_id = ? AND is_active = 1`, [productId])
     if (!seo) {
+      return
+    }
+    const existingSeo = await first<ProductSeoRow>(
+      `SELECT * FROM ${productTableNames.seo} WHERE product_id = ? LIMIT 1`,
+      [productId],
+    )
+    if (existingSeo) {
+      await execute(
+        `UPDATE ${productTableNames.seo}
+         SET meta_title = ?, meta_description = ?, meta_keywords = ?, is_active = 1
+         WHERE id = ?`,
+        [seo.metaTitle, seo.metaDescription, seo.metaKeywords, existingSeo.id],
+      )
       return
     }
     await execute(
       `INSERT INTO ${productTableNames.seo} (id, product_id, meta_title, meta_description, meta_keywords) VALUES (?, ?, ?, ?, ?)`,
       [randomUUID(), productId, seo.metaTitle, seo.metaDescription, seo.metaKeywords],
+    )
+  }
+
+  private async replaceStorefront(
+    execute: SqlExecutor,
+    first: SqlFirst,
+    productId: string,
+    storefront: ProductUpsertPayload['storefront'],
+  ) {
+    await execute(`UPDATE ${productTableNames.storefront} SET is_active = 0 WHERE product_id = ? AND is_active = 1`, [productId])
+    if (!storefront) {
+      return
+    }
+
+    const existingStorefront = await first<ProductStorefrontRow>(
+      `SELECT * FROM ${productTableNames.storefront} WHERE product_id = ? LIMIT 1`,
+      [productId],
+    )
+
+    const values = [
+      storefront.department,
+      storefront.homeSliderEnabled,
+      storefront.homeSliderOrder,
+      storefront.promoSliderEnabled,
+      storefront.promoSliderOrder,
+      storefront.featureSectionEnabled,
+      storefront.featureSectionOrder,
+      storefront.isNewArrival,
+      storefront.isBestSeller,
+      storefront.isFeaturedLabel,
+      storefront.catalogBadge,
+      storefront.fabric,
+      storefront.fit,
+      storefront.sleeve,
+      storefront.occasion,
+      storefront.shippingNote,
+    ] as const
+
+    if (existingStorefront) {
+      await execute(
+        `UPDATE ${productTableNames.storefront}
+         SET
+           department = ?,
+           home_slider_enabled = ?,
+           home_slider_order = ?,
+           promo_slider_enabled = ?,
+           promo_slider_order = ?,
+           feature_section_enabled = ?,
+           feature_section_order = ?,
+           is_new_arrival = ?,
+           is_best_seller = ?,
+           is_featured_label = ?,
+           catalog_badge = ?,
+           fabric = ?,
+           fit = ?,
+           sleeve = ?,
+           occasion = ?,
+           shipping_note = ?,
+           is_active = 1
+         WHERE id = ?`,
+        [...values, existingStorefront.id],
+      )
+      return
+    }
+
+    await execute(
+      `INSERT INTO ${productTableNames.storefront} (
+        id,
+        product_id,
+        department,
+        home_slider_enabled,
+        home_slider_order,
+        promo_slider_enabled,
+        promo_slider_order,
+        feature_section_enabled,
+        feature_section_order,
+        is_new_arrival,
+        is_best_seller,
+        is_featured_label,
+        catalog_badge,
+        fabric,
+        fit,
+        sleeve,
+        occasion,
+        shipping_note
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [randomUUID(), productId, ...values],
     )
   }
 
@@ -767,7 +1325,16 @@ export class ProductRepository {
         await execute(`INSERT INTO ${productTableNames.tags} (id, name) VALUES (?, ?)`, [tagId, name])
       }
 
-      await execute(`INSERT INTO ${productTableNames.tagMap} (id, product_id, tag_id) VALUES (?, ?, ?)`, [randomUUID(), productId, tagId])
+      const existingTagMap = await first<ProductVariantMapRow>(
+        `SELECT * FROM ${productTableNames.tagMap} WHERE product_id = ? AND tag_id = ? LIMIT 1`,
+        [productId, tagId],
+      )
+
+      if (existingTagMap) {
+        await execute(`UPDATE ${productTableNames.tagMap} SET is_active = 1 WHERE id = ?`, [existingTagMap.id])
+      } else {
+        await execute(`INSERT INTO ${productTableNames.tagMap} (id, product_id, tag_id) VALUES (?, ?, ?)`, [randomUUID(), productId, tagId])
+      }
     }
   }
 

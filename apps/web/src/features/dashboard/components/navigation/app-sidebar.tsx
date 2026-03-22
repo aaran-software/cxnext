@@ -30,18 +30,19 @@ import {
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/features/auth/components/auth-provider"
-import { commonModuleMenuGroups } from "@/features/common-modules/config/common-module-navigation"
+import { commonModuleMenuGroups, getCommonModuleHref } from "@/features/common-modules/config/common-module-navigation"
 import { BrandMark } from "@/shared/branding/brand-mark"
 
 function getActiveGroupKey(pathname: string) {
-  const moduleMatch = pathname.match(/^\/dashboard\/common\/([^/]+)$/)
-  if (!moduleMatch) {
-    return null
-  }
+  const moduleKey = pathname.startsWith('/dashboard/storefront-designer')
+    ? 'storefrontTemplates'
+    : pathname.match(/^\/dashboard\/common\/([^/]+)$/)?.[1]
+
+  if (!moduleKey) return null
 
   const activeItem = commonModuleMenuGroups
     .flatMap((group) => group.items.map((item) => ({ groupKey: group.key, itemKey: item.key })))
-    .find((entry) => entry.itemKey === moduleMatch[1])
+    .find((entry) => entry.itemKey === moduleKey)
 
   return activeItem?.groupKey ?? null
 }
@@ -157,8 +158,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                         <SidebarMenuSub>
                           {group.items.map((item) => (
                             <SidebarMenuSubItem key={item.key}>
-                              <SidebarMenuSubButton asChild isActive={location.pathname === `/dashboard/common/${item.key}`}>
-                                <NavLink to={`/dashboard/common/${item.key}`}>
+                              <SidebarMenuSubButton
+                                asChild
+                                isActive={item.key === 'storefrontTemplates'
+                                  ? location.pathname.startsWith('/dashboard/storefront-designer')
+                                  : location.pathname === `/dashboard/common/${item.key}`}
+                              >
+                                <NavLink to={getCommonModuleHref(item.key)}>
                                   <item.icon />
                                   <span>{item.title}</span>
                                 </NavLink>

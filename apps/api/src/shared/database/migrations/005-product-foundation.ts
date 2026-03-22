@@ -410,51 +410,5 @@ export const productFoundationMigration: Migration = {
         CONSTRAINT fk_product_tag_map_tag FOREIGN KEY (tag_id) REFERENCES ${productTableNames.tags}(id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `)
-
-    await db.execute(
-      `
-        INSERT INTO ${productTableNames.products} (
-          id, uuid, name, slug, description, short_description, brand_id, category_id, product_group_id, product_type_id, unit_id, hsn_code_id, style_id, sku, has_variants, base_price, cost_price, tax_id, is_featured
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON DUPLICATE KEY UPDATE
-          description = VALUES(description),
-          short_description = VALUES(short_description),
-          brand_id = VALUES(brand_id),
-          category_id = VALUES(category_id),
-          product_group_id = VALUES(product_group_id),
-          product_type_id = VALUES(product_type_id),
-          unit_id = VALUES(unit_id),
-          hsn_code_id = VALUES(hsn_code_id),
-          style_id = VALUES(style_id),
-          has_variants = VALUES(has_variants),
-          base_price = VALUES(base_price),
-          cost_price = VALUES(cost_price),
-          tax_id = VALUES(tax_id),
-          is_featured = VALUES(is_featured),
-          is_active = 1
-      `,
-      [
-        'product:default',
-        'product-default',
-        '-',
-        'default-product',
-        'Default placeholder product.',
-        'Default placeholder product.',
-        'brand:generic',
-        'product-category:accessories',
-        'product-group:apparel',
-        'product-type:finished-goods',
-        'unit:nos',
-        'hsn:610910',
-        'style:casual',
-        'DEFAULT-SKU',
-        0,
-        0,
-        0,
-        'tax:gst-0',
-        0,
-      ],
-    )
   },
 }

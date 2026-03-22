@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { storefrontDepartmentSchema } from './storefront'
 
 export const productImageSchema = z.object({
   id: z.string().min(1),
@@ -154,6 +155,30 @@ export const productSeoSchema = z.object({
   updatedAt: z.string().min(1),
 })
 
+export const productStorefrontSchema = z.object({
+  id: z.string().min(1),
+  productId: z.string().min(1),
+  department: storefrontDepartmentSchema.nullable(),
+  homeSliderEnabled: z.boolean(),
+  homeSliderOrder: z.number().int(),
+  promoSliderEnabled: z.boolean(),
+  promoSliderOrder: z.number().int(),
+  featureSectionEnabled: z.boolean(),
+  featureSectionOrder: z.number().int(),
+  isNewArrival: z.boolean(),
+  isBestSeller: z.boolean(),
+  isFeaturedLabel: z.boolean(),
+  catalogBadge: z.string().nullable(),
+  fabric: z.string().nullable(),
+  fit: z.string().nullable(),
+  sleeve: z.string().nullable(),
+  occasion: z.string().nullable(),
+  shippingNote: z.string().nullable(),
+  isActive: z.boolean(),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+})
+
 export const productTagSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -195,6 +220,13 @@ export const productSummarySchema = z.object({
   taxId: z.string().nullable(),
   isFeatured: z.boolean(),
   isActive: z.boolean(),
+  storefrontDepartment: storefrontDepartmentSchema.nullable(),
+  homeSliderEnabled: z.boolean(),
+  promoSliderEnabled: z.boolean(),
+  featureSectionEnabled: z.boolean(),
+  isNewArrival: z.boolean(),
+  isBestSeller: z.boolean(),
+  isFeaturedLabel: z.boolean(),
   primaryImageUrl: z.string().nullable(),
   variantCount: z.number().int(),
   tagCount: z.number().int(),
@@ -214,6 +246,7 @@ export const productSchema = productSummarySchema.extend({
   stockItems: z.array(productStockItemSchema),
   stockMovements: z.array(productStockMovementSchema),
   seo: productSeoSchema.nullable(),
+  storefront: productStorefrontSchema.nullable(),
   tags: z.array(productTagSchema),
   reviews: z.array(productReviewSchema),
 })
@@ -312,6 +345,25 @@ export const productSeoInputSchema = z.object({
   metaKeywords: nullableTrimmedString,
 })
 
+export const productStorefrontInputSchema = z.object({
+  department: storefrontDepartmentSchema.nullish().transform((value) => value ?? null),
+  homeSliderEnabled: z.boolean().optional().default(false),
+  homeSliderOrder: z.number().int().optional().default(0),
+  promoSliderEnabled: z.boolean().optional().default(false),
+  promoSliderOrder: z.number().int().optional().default(0),
+  featureSectionEnabled: z.boolean().optional().default(false),
+  featureSectionOrder: z.number().int().optional().default(0),
+  isNewArrival: z.boolean().optional().default(false),
+  isBestSeller: z.boolean().optional().default(false),
+  isFeaturedLabel: z.boolean().optional().default(false),
+  catalogBadge: nullableTrimmedString,
+  fabric: nullableTrimmedString,
+  fit: nullableTrimmedString,
+  sleeve: nullableTrimmedString,
+  occasion: nullableTrimmedString,
+  shippingNote: nullableTrimmedString,
+})
+
 export const productTagInputSchema = z.object({
   name: z.string().trim().min(1),
 })
@@ -352,6 +404,7 @@ export const productUpsertPayloadSchema = z.object({
   stockItems: z.array(productStockItemInputSchema).default([]),
   stockMovements: z.array(productStockMovementInputSchema).default([]),
   seo: productSeoInputSchema.nullish().transform((value) => value ?? null),
+  storefront: productStorefrontInputSchema.nullish().transform((value) => value ?? null),
   tags: z.array(productTagInputSchema).default([]),
   reviews: z.array(productReviewInputSchema).default([]),
 })
@@ -377,6 +430,7 @@ export type ProductVariantMap = z.infer<typeof productVariantMapSchema>
 export type ProductStockItem = z.infer<typeof productStockItemSchema>
 export type ProductStockMovement = z.infer<typeof productStockMovementSchema>
 export type ProductSeo = z.infer<typeof productSeoSchema>
+export type ProductStorefront = z.infer<typeof productStorefrontSchema>
 export type ProductTag = z.infer<typeof productTagSchema>
 export type ProductReview = z.infer<typeof productReviewSchema>
 export type ProductSummary = z.infer<typeof productSummarySchema>
@@ -393,6 +447,7 @@ export type ProductAttributeValueInput = z.infer<typeof productAttributeValueInp
 export type ProductStockItemInput = z.infer<typeof productStockItemInputSchema>
 export type ProductStockMovementInput = z.infer<typeof productStockMovementInputSchema>
 export type ProductSeoInput = z.infer<typeof productSeoInputSchema>
+export type ProductStorefrontInput = z.infer<typeof productStorefrontInputSchema>
 export type ProductTagInput = z.infer<typeof productTagInputSchema>
 export type ProductReviewInput = z.infer<typeof productReviewInputSchema>
 export type ProductUpsertPayload = z.infer<typeof productUpsertPayloadSchema>

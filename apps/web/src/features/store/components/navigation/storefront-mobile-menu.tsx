@@ -1,6 +1,7 @@
 import { MenuIcon } from "lucide-react"
 import { Link } from "react-router-dom"
 
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 
@@ -17,10 +18,19 @@ type MobileMenuCategory = {
 export function StorefrontMobileMenu({
   links,
   categories = [],
+  wishlistCount = 0,
+  cartCount = 0,
 }: {
   links: MobileMenuLink[]
   categories?: MobileMenuCategory[]
+  wishlistCount?: number
+  cartCount?: number
 }) {
+  const quickLinks = [
+    { title: "Wishlist", url: "/wishlist", count: wishlistCount },
+    { title: "Cart", url: "/cart", count: cartCount },
+  ]
+
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -33,6 +43,16 @@ export function StorefrontMobileMenu({
           <SheetTitle>Browse Store</SheetTitle>
         </SheetHeader>
         <nav className="mt-6 grid gap-3">
+          {quickLinks.map((link) => (
+            <Link
+              key={link.url}
+              to={link.url}
+              className="flex items-center justify-between rounded-2xl border border-border/70 bg-card px-4 py-3 text-sm font-medium text-foreground transition hover:border-primary/40 hover:bg-accent"
+            >
+              <span>{link.title}</span>
+              {link.count > 0 ? <Badge className="min-w-5 justify-center rounded-full px-1 text-[10px]">{link.count}</Badge> : null}
+            </Link>
+          ))}
           {links.map((link) => (
             <Link
               key={link.url}

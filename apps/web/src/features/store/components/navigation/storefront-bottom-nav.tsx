@@ -1,6 +1,8 @@
 import { HeartIcon, HomeIcon, SearchIcon, ShoppingCartIcon, UserCircle2Icon } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
 
+import { Badge } from "@/components/ui/badge"
+import { useStorefront } from "@/features/store/context/storefront-context"
 import { cn } from "@/lib/utils"
 
 const items = [
@@ -13,6 +15,7 @@ const items = [
 
 export function StorefrontBottomNav() {
   const location = useLocation()
+  const { wishlistProductIds, cartCount } = useStorefront()
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border/70 bg-background/95 px-2 py-2 backdrop-blur md:hidden">
@@ -26,11 +29,21 @@ export function StorefrontBottomNav() {
               key={item.url}
               to={item.url}
               className={cn(
-                "flex flex-col items-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-medium transition",
+                "relative flex flex-col items-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-medium transition",
                 isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground",
               )}
             >
               <Icon className="size-4" />
+              {item.label === "Wishlist" && wishlistProductIds.length > 0 ? (
+                <Badge className="absolute top-1 right-3 min-w-5 justify-center rounded-full px-1 text-[10px]">
+                  {wishlistProductIds.length}
+                </Badge>
+              ) : null}
+              {item.label === "Cart" && cartCount > 0 ? (
+                <Badge className="absolute top-1 right-3 min-w-5 justify-center rounded-full px-1 text-[10px]">
+                  {cartCount}
+                </Badge>
+              ) : null}
               <span>{item.label}</span>
             </Link>
           )

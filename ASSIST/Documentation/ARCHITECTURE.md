@@ -49,11 +49,14 @@ ASSIST/
 
 ## Current Technical Foundation
 
-1. `apps/web` renders the operator-facing shell and roadmap summary.
+1. `apps/web` renders the operator-facing shell plus the storefront-facing `shop` target, now including a full static frontend shopping flow for home, catalog, product detail, wishlist, cart, and checkout.
 2. `apps/api` exposes bootstrap, health, and auth endpoints with MariaDB-backed RBAC persistence.
-3. `apps/desktop` wraps the web client in Electron.
-4. `packages/shared` centralizes domain types, schemas, auth contracts, and accounting guardrails.
-5. `packages/ui` contains reusable React primitives.
+3. API database bootstrap now separates schema migrations from optional tracked seeders for development/demo aggregate data.
+4. `apps/desktop` wraps the web client in Electron.
+5. `packages/shared` centralizes domain types, schemas, auth contracts, and accounting guardrails.
+6. `packages/ui` contains reusable React primitives.
+7. Media uploads now persist through the API into configured public/private storage and create tracked media asset records that frontend forms can reuse through shared popup manager components under `apps/web/src/components/forms`.
+8. The storefront now uses a feature-local static data/model/context layer so the shopping experience can be reviewed end to end without backend commerce wiring while keeping the existing public shop shell intact.
 
 ## Current Auth Foundation
 
@@ -61,6 +64,7 @@ ASSIST/
 2. The default table shape now expects `is_active`, `created_at`, and `updated_at` lifecycle columns unless an exception is documented.
 3. JWT auth responses expose avatar, roles, and permissions to the frontend through shared schemas.
 4. Development bootstrap can seed a default admin user and RBAC metadata from environment-driven configuration.
+5. Optional aggregate/demo data should flow through tracked seeders under `apps/api/src/shared/database/seeders` instead of being embedded in schema-only migrations.
 
 ## Architecture Constraints
 

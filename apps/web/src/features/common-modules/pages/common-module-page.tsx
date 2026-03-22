@@ -1,6 +1,6 @@
 import type { CommonModuleMetadata } from '@shared/index'
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Navigate, useParams } from 'react-router-dom'
 import { CommonList } from '@/components/forms/CommonList'
 import { CommonUpsertDialog } from '@/components/forms/CommonUpsertDialog'
 import { useCommonMasterState } from '@/components/forms/useCommonMasterState'
@@ -26,6 +26,10 @@ export function CommonModulePage() {
   const [metadata, setMetadata] = useState<CommonModuleMetadata | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+
+  if (moduleKey === 'storefrontTemplates') {
+    return <Navigate to="/dashboard/storefront-designer" replace />
+  }
 
   useEffect(() => {
     let cancelled = false

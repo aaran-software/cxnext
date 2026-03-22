@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { commonModuleMenuGroups } from '../config/common-module-navigation'
+import { commonModuleMenuGroups, getCommonModuleHref } from '../config/common-module-navigation'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
@@ -30,7 +30,7 @@ export function CommonModulesHomePage() {
                 {group.items.map((item) => (
                   <Link
                     key={item.key}
-                    to={`/dashboard/common/${item.key}`}
+                    to={getCommonModuleHref(item.key)}
                     className="flex items-center justify-between rounded-xl border border-border/60 px-4 py-3 text-sm transition hover:bg-muted/60"
                   >
                     <span className="flex items-center gap-3">

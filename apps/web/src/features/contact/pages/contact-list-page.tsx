@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { deactivateContact, HttpError, listContacts, restoreContact } from '@/shared/api/client'
+import { showFailedActionToast, showStatusChangeToast } from '@/shared/notifications/toast'
 
 function toErrorMessage(error: unknown) {
   if (error instanceof HttpError) return error.message
@@ -70,8 +71,20 @@ export function ContactListPage() {
       if (item.isActive) await deactivateContact(item.id)
       else await restoreContact(item.id)
       setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, isActive: !entry.isActive } : entry))
+      showStatusChangeToast({
+        entityLabel: 'contact',
+        recordName: item.name,
+        referenceId: item.id,
+        action: item.isActive ? 'deactivate' : 'restore',
+      })
     } catch (error) {
-      setErrorMessage(toErrorMessage(error))
+      const message = toErrorMessage(error)
+      setErrorMessage(message)
+      showFailedActionToast({
+        entityLabel: 'contact',
+        action: item.isActive ? 'deactivate' : 'restore',
+        detail: message,
+      })
     }
   }
 
@@ -100,7 +113,7 @@ export function ContactListPage() {
         table={{
           columns: [
             { id: 'serial', header: 'Sl.No', cell: (item) => ((safeCurrentPage - 1) * pageSize) + paginatedItems.findIndex((entry) => entry.id === item.id) + 1, className: 'w-12 min-w-12 px-2 text-center', headerClassName: 'w-12 min-w-12 px-2 text-center', sticky: 'left' },
-            { id: 'name', header: 'Contact', sortable: true, accessor: (item) => item.name, cell: (item) => <div><p className="font-medium text-foreground">{item.name}</p><p className="text-sm text-muted-foreground">{item.legalName ?? 'No legal name'}</p></div> },
+            { id: 'name', header: 'Contact', sortable: true, accessor: (item) => item.name, cell: (item) => <div><Link to={`/dashboard/contacts/${item.id}`} className="font-medium text-foreground underline-offset-4 hover:underline">{item.name}</Link><p className="text-sm text-muted-foreground">{item.legalName ?? 'No legal name'}</p></div> },
             { id: 'tax', header: 'Tax', accessor: (item) => item.gstin ?? item.pan, cell: (item) => <div><p>{item.gstin ?? 'No GSTIN'}</p><p className="text-sm text-muted-foreground">{item.pan ?? 'No PAN'}</p></div> },
             { id: 'financial', header: 'Balance', accessor: (item) => item.openingBalance, cell: (item) => <div><p>{item.openingBalance.toFixed(2)}</p><p className="text-sm text-muted-foreground">{item.balanceType ?? 'Not set'}</p></div> },
             { id: 'contact', header: 'Primary Contact', accessor: (item) => item.primaryEmail ?? item.primaryPhone, cell: (item) => <div><p>{item.primaryEmail ?? 'No email'}</p><p className="text-sm text-muted-foreground">{item.primaryPhone ?? 'No phone'}</p></div> },

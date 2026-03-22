@@ -24,6 +24,7 @@ const commonModuleKeys = [
   'warehouses',
   'destinations',
   'paymentTerms',
+  'storefrontTemplates',
 ] as const
 
 export const commonModuleKeySchema = z.enum(commonModuleKeys)

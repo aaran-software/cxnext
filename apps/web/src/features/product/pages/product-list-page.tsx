@@ -13,12 +13,21 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { deactivateProduct, HttpError, listProducts, restoreProduct } from '@/shared/api/client'
+import { showFailedActionToast, showStatusChangeToast } from '@/shared/notifications/toast'
 
 function toErrorMessage(error: unknown) {
   if (error instanceof HttpError) return error.message
   if (error instanceof Error) return error.message
   return 'Failed to load products.'
 }
+
+type PublishingFilterKey =
+  | 'homeSliderEnabled'
+  | 'promoSliderEnabled'
+  | 'featureSectionEnabled'
+  | 'isNewArrival'
+  | 'isBestSeller'
+  | 'isFeaturedLabel'
 
 export function ProductListPage() {
   const navigate = useNavigate()
@@ -27,6 +36,14 @@ export function ProductListPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [searchValue, setSearchValue] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
+  const [publishingFilters, setPublishingFilters] = useState<Record<PublishingFilterKey, boolean>>({
+    homeSliderEnabled: false,
+    promoSliderEnabled: false,
+    featureSectionEnabled: false,
+    isNewArrival: false,
+    isBestSeller: false,
+    isFeaturedLabel: false,
+  })
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
@@ -70,9 +87,34 @@ export function ProductListPage() {
         || (statusFilter === 'active' && item.isActive)
         || (statusFilter === 'inactive' && !item.isActive)
 
-      return matchesSearch && matchesStatus
+      const matchesPublishing = Object.entries(publishingFilters).every(([key, enabled]) => {
+        if (!enabled) {
+          return true
+        }
+
+        return Boolean(item[key as PublishingFilterKey])
+      })
+
+      return matchesSearch && matchesStatus && matchesPublishing
     })
-  }, [items, searchValue, statusFilter])
+  }, [items, publishingFilters, searchValue, statusFilter])
+
+  const publishingFilterLabels: Record<PublishingFilterKey, string> = {
+    homeSliderEnabled: 'Home slider',
+    promoSliderEnabled: 'Promo slider',
+    featureSectionEnabled: 'Feature section',
+    isNewArrival: 'New arrival',
+    isBestSeller: 'Best seller',
+    isFeaturedLabel: 'Featured label',
+  }
+
+  const activePublishingFilters = Object.entries(publishingFilters)
+    .filter(([, enabled]) => enabled)
+    .map(([key]) => ({
+      key,
+      label: 'Publishing',
+      value: publishingFilterLabels[key as PublishingFilterKey],
+    }))
 
   const totalRecords = filteredItems.length
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize))
@@ -89,8 +131,20 @@ export function ProductListPage() {
       setItems((current) => current.map((entry) => (
         entry.id === item.id ? { ...entry, isActive: !entry.isActive } : entry
       )))
+      showStatusChangeToast({
+        entityLabel: 'product',
+        recordName: item.name,
+        referenceId: item.id,
+        action: item.isActive ? 'deactivate' : 'restore',
+      })
     } catch (error) {
-      setErrorMessage(toErrorMessage(error))
+      const message = toErrorMessage(error)
+      setErrorMessage(message)
+      showFailedActionToast({
+        entityLabel: 'product',
+        action: item.isActive ? 'deactivate' : 'restore',
+        detail: message,
+      })
     }
   }
 
@@ -116,14 +170,92 @@ export function ProductListPage() {
         filters={{
           buttonLabel: 'Product filters',
           options: [
-            { key: 'all', label: 'All products', isActive: statusFilter === 'all', onSelect: () => setStatusFilter('all') },
-            { key: 'active', label: 'Active only', isActive: statusFilter === 'active', onSelect: () => setStatusFilter('active') },
-            { key: 'inactive', label: 'Inactive only', isActive: statusFilter === 'inactive', onSelect: () => setStatusFilter('inactive') },
+            {
+              key: 'all',
+              label: 'All products',
+              isActive: statusFilter === 'all',
+              onSelect: () => {
+                setStatusFilter('all')
+                setCurrentPage(1)
+              },
+              onCheckedChange: () => {
+                setStatusFilter('all')
+                setCurrentPage(1)
+              },
+            },
+            {
+              key: 'active',
+              label: 'Active only',
+              isActive: statusFilter === 'active',
+              onSelect: () => {
+                setStatusFilter('active')
+                setCurrentPage(1)
+              },
+              onCheckedChange: (checked) => {
+                setStatusFilter(checked ? 'active' : 'all')
+                setCurrentPage(1)
+              },
+            },
+            {
+              key: 'inactive',
+              label: 'Inactive only',
+              isActive: statusFilter === 'inactive',
+              onSelect: () => {
+                setStatusFilter('inactive')
+                setCurrentPage(1)
+              },
+              onCheckedChange: (checked) => {
+                setStatusFilter(checked ? 'inactive' : 'all')
+                setCurrentPage(1)
+              },
+            },
+            ...Object.entries(publishingFilterLabels).map(([key, label]) => ({
+              key,
+              label,
+              isActive: publishingFilters[key as PublishingFilterKey],
+              onSelect: () => {
+                setPublishingFilters((current) => ({
+                  ...current,
+                  [key]: !current[key as PublishingFilterKey],
+                }))
+                setCurrentPage(1)
+              },
+              onCheckedChange: (checked: boolean) => {
+                setPublishingFilters((current) => ({
+                  ...current,
+                  [key]: checked,
+                }))
+                setCurrentPage(1)
+              },
+            })),
           ],
-          activeFilters: statusFilter === 'all' ? [] : [{ key: 'status', label: 'Status', value: statusFilter === 'active' ? 'Active' : 'Inactive' }],
-          onRemoveFilter: () => setStatusFilter('all'),
+          activeFilters: [
+            ...(statusFilter === 'all' ? [] : [{ key: 'status', label: 'Status', value: statusFilter === 'active' ? 'Active' : 'Inactive' }]),
+            ...activePublishingFilters,
+          ],
+          onRemoveFilter: (key) => {
+            if (key === 'status') {
+              setStatusFilter('all')
+              return
+            }
+
+            if (key in publishingFilters) {
+              setPublishingFilters((current) => ({
+                ...current,
+                [key]: false,
+              }))
+            }
+          },
           onClearAllFilters: () => {
             setStatusFilter('all')
+            setPublishingFilters({
+              homeSliderEnabled: false,
+              promoSliderEnabled: false,
+              featureSectionEnabled: false,
+              isNewArrival: false,
+              isBestSeller: false,
+              isFeaturedLabel: false,
+            })
             setCurrentPage(1)
           },
         }}
@@ -137,7 +269,9 @@ export function ProductListPage() {
               accessor: (item) => item.name,
               cell: (item) => (
                 <div>
-                  <p className="font-medium text-foreground">{item.name}</p>
+                  <Link to={`/dashboard/products/${item.id}`} className="font-medium text-foreground underline-offset-4 hover:underline">
+                    {item.name}
+                  </Link>
                   <p className="text-sm text-muted-foreground">{item.shortDescription ?? item.slug}</p>
                 </div>
               ),
@@ -179,6 +313,23 @@ export function ProductListPage() {
                 <div className="flex items-center gap-2">
                   <Badge variant={item.isActive ? 'default' : 'secondary'}>{item.isActive ? 'Active' : 'Inactive'}</Badge>
                   {item.isFeatured ? <Badge variant="outline">Featured</Badge> : null}
+                </div>
+              ),
+            },
+            {
+              id: 'publishing',
+              header: 'Publishing',
+              cell: (item) => (
+                <div className="flex flex-wrap gap-1.5">
+                  {item.homeSliderEnabled ? <Badge variant="outline">Home</Badge> : null}
+                  {item.promoSliderEnabled ? <Badge variant="outline">Promo</Badge> : null}
+                  {item.featureSectionEnabled ? <Badge variant="outline">Feature</Badge> : null}
+                  {item.isNewArrival ? <Badge variant="outline">New</Badge> : null}
+                  {item.isBestSeller ? <Badge variant="outline">Best</Badge> : null}
+                  {item.isFeaturedLabel ? <Badge variant="outline">Label</Badge> : null}
+                  {!item.homeSliderEnabled && !item.promoSliderEnabled && !item.featureSectionEnabled && !item.isNewArrival && !item.isBestSeller && !item.isFeaturedLabel ? (
+                    <span className="text-sm text-muted-foreground">Standard</span>
+                  ) : null}
                 </div>
               ),
             },
@@ -225,6 +376,7 @@ export function ProductListPage() {
               <span>Total records: <span className="font-medium text-foreground">{totalRecords}</span></span>
               <span>Active records: <span className="font-medium text-foreground">{filteredItems.filter((item) => item.isActive).length}</span></span>
               <span>Featured records: <span className="font-medium text-foreground">{filteredItems.filter((item) => item.isFeatured).length}</span></span>
+              <span>Published records: <span className="font-medium text-foreground">{filteredItems.filter((item) => item.homeSliderEnabled || item.promoSliderEnabled || item.featureSectionEnabled || item.isNewArrival || item.isBestSeller || item.isFeaturedLabel).length}</span></span>
             </div>
           ),
         }}

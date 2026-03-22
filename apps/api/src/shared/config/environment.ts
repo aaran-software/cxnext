@@ -1,6 +1,14 @@
 import path from 'node:path'
 import { z } from 'zod'
 
+const optionalNonEmptyString = z
+  .string()
+  .optional()
+  .transform((value) => {
+    const normalized = value?.trim()
+    return normalized ? normalized : undefined
+  })
+
 const environmentSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   CORS_ORIGIN: z.string().min(1).default('*'),
@@ -25,9 +33,23 @@ const environmentSchema = z.object({
   SEED_DEFAULT_USER_AVATAR_URL: z
     .url()
     .default('https://ui-avatars.com/api/?name=Sundar&background=1f2937&color=ffffff'),
+  SEED_DUMMY_PRODUCTS: z
+    .string()
+    .optional()
+    .transform((value) => value !== 'false'),
   MEDIA_STORAGE_ROOT: z.string().min(1).optional(),
   MEDIA_PUBLIC_BASE_URL: z.string().min(1).optional(),
   MEDIA_WEB_PUBLIC_SYMLINK: z.string().min(1).optional(),
+  AUTH_OTP_DEBUG: z
+    .string()
+    .optional()
+    .transform((value) => value !== 'false'),
+  AUTH_OTP_EXPIRY_MINUTES: z.coerce.number().int().positive().default(10),
+  RAZORPAY_KEY_ID: optionalNonEmptyString,
+  RAZORPAY_KEY_SECRET: optionalNonEmptyString,
+  RAZORPAY_BUSINESS_NAME: z.string().min(1).default('CXNext'),
+  RAZORPAY_CHECKOUT_IMAGE: optionalNonEmptyString,
+  RAZORPAY_THEME_COLOR: optionalNonEmptyString.default('#1f2937'),
 })
 
 const parsedEnvironment = environmentSchema.parse(process.env)
@@ -60,6 +82,9 @@ export const environment = {
       password: parsedEnvironment.SEED_DEFAULT_USER_PASSWORD,
       avatarUrl: parsedEnvironment.SEED_DEFAULT_USER_AVATAR_URL,
     },
+    products: {
+      enabled: parsedEnvironment.SEED_DUMMY_PRODUCTS,
+    },
   },
   media: {
     storageRoot: resolvedStorageRoot,
@@ -67,5 +92,21 @@ export const environment = {
     privateDirectory: path.join(resolvedStorageRoot, 'private'),
     publicBaseUrl: mediaPublicBaseUrl.replace(/\/$/, ''),
     webPublicSymlink: resolvedWebPublicSymlink,
+  },
+  auth: {
+    otp: {
+      debug: parsedEnvironment.AUTH_OTP_DEBUG,
+      expiryMinutes: parsedEnvironment.AUTH_OTP_EXPIRY_MINUTES,
+    },
+  },
+  payments: {
+    razorpay: {
+      enabled: Boolean(parsedEnvironment.RAZORPAY_KEY_ID && parsedEnvironment.RAZORPAY_KEY_SECRET),
+      keyId: parsedEnvironment.RAZORPAY_KEY_ID ?? '',
+      keySecret: parsedEnvironment.RAZORPAY_KEY_SECRET ?? '',
+      businessName: parsedEnvironment.RAZORPAY_BUSINESS_NAME,
+      checkoutImage: parsedEnvironment.RAZORPAY_CHECKOUT_IMAGE ?? null,
+      themeColor: parsedEnvironment.RAZORPAY_THEME_COLOR,
+    },
   },
 }

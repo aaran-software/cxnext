@@ -28,7 +28,10 @@ Current delivery is foundation work:
 4. Initial React application shell
 5. Initial Electron shell
 6. MariaDB-backed authentication and RBAC foundation with frontend-connected login/register flows
-7. Repository discipline and operating documentation
+7. Tracked MariaDB bootstrap with schema migrations plus optional seeders for demo aggregate data
+8. Upload-backed media asset management with a shared popup media manager, tabbed metadata review, and reusable image field integration across admin forms
+9. A storefront `shop` target with a full static frontend shopping flow covering home, category browsing, product detail, wishlist, cart, and checkout for design review
+10. Repository discipline and operating documentation
 
 ## Product Principles
 

@@ -1,4 +1,4 @@
-import type { ContactListResponse, ContactResponse } from '@shared/index'
+import type { ContactListResponse, ContactResponse, ContactUpsertPayload } from '@shared/index'
 import { contactListResponseSchema, contactResponseSchema, contactUpsertPayloadSchema } from '@shared/index'
 import type { ContactRepository } from '../data/contact-repository'
 import { ApplicationError } from '../../../shared/errors/application-error'
@@ -19,7 +19,7 @@ export class ContactService {
   }
 
   async create(payload: unknown) {
-    const parsed = contactUpsertPayloadSchema.parse(payload)
+    const parsed = normalizePayload(contactUpsertPayloadSchema.parse(payload))
     try {
       return contactResponseSchema.parse({ item: await this.repository.create(parsed) } satisfies ContactResponse)
     } catch (error) {
@@ -28,7 +28,7 @@ export class ContactService {
   }
 
   async update(id: string, payload: unknown) {
-    const parsed = contactUpsertPayloadSchema.parse(payload)
+    const parsed = normalizePayload(contactUpsertPayloadSchema.parse(payload))
     try {
       return contactResponseSchema.parse({ item: await this.repository.update(id, parsed) } satisfies ContactResponse)
     } catch (error) {
@@ -62,5 +62,31 @@ export class ContactService {
       throw new ApplicationError('One or more referenced records do not exist.', { action, detail: persistenceError.sqlMessage ?? persistenceError.message ?? 'missing reference' }, 400)
     }
     throw new ApplicationError('Failed to persist contact data.', { action, id: id ?? 'new', detail: persistenceError.sqlMessage ?? persistenceError.message ?? 'unknown persistence error' }, 500)
+  }
+}
+
+function normalizePayload(payload: ContactUpsertPayload): ContactUpsertPayload {
+  return {
+    ...payload,
+    addresses: payload.addresses.filter((address) => (
+      address.addressLine1 !== '-'
+      || address.addressLine2 !== '-'
+      || address.cityId !== '1'
+      || address.stateId !== '1'
+      || address.countryId !== '1'
+      || address.pincodeId !== '1'
+      || address.latitude != null
+      || address.longitude != null
+    )),
+    emails: payload.emails.filter((email) => email.email !== '-'),
+    phones: payload.phones.filter((phone) => phone.phoneNumber !== '-'),
+    bankAccounts: payload.bankAccounts.filter((account) => (
+      account.bankName !== '-'
+      || account.accountNumber !== '-'
+      || account.accountHolderName !== '-'
+      || account.ifsc !== '-'
+      || account.branch !== '-'
+    )),
+    gstDetails: payload.gstDetails.filter((detail) => detail.gstin !== '-' || detail.state !== '-'),
   }
 }

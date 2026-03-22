@@ -20,6 +20,7 @@ import type {
 import { useEffect, useState, type FormEvent, type PropsWithChildren } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
+import { MediaImageField } from '@/components/forms/media-image-field'
 import { AnimatedTabs, type AnimatedContentTab } from '@/components/ui/animated-tabs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -30,6 +31,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { AutocompleteLookup } from '@/components/lookups/AutocompleteLookup'
 import { createFieldErrors, inputErrorClassName, isBlank, setFieldError, summarizeFieldErrors, type FieldErrors, warningCardClassName } from '@/shared/forms/validation'
 import { createCommonLookupOption, toLookupOption } from '@/shared/forms/common-lookup'
+import { showFailedActionToast, showSavedToast, showValidationToast } from '@/shared/notifications/toast'
 import {
   createProduct,
   getProduct,
@@ -39,6 +41,13 @@ import {
 } from '@/shared/api/client'
 
 type ProductFormValues = ProductUpsertPayload
+
+const storefrontDepartmentOptions = [
+  { value: 'women', label: 'Women' },
+  { value: 'men', label: 'Men' },
+  { value: 'kids', label: 'Kids' },
+  { value: 'accessories', label: 'Accessories' },
+]
 
 const createClientKey = () => globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2)
 
@@ -68,6 +77,24 @@ const emptyStockItem = (): ProductStockItemInput => ({ variantClientKey: null, w
 const emptyStockMovement = (): ProductStockMovementInput => ({ variantClientKey: null, warehouseId: null, movementType: 'in', quantity: 0, referenceType: null, referenceId: null, movementAt: null })
 const emptyTag = (): ProductTagInput => ({ name: '' })
 const emptyReview = (): ProductReviewInput => ({ userId: null, rating: 5, review: null, reviewDate: null })
+const createDefaultStorefront = () => ({
+  department: 'women' as const,
+  homeSliderEnabled: false,
+  homeSliderOrder: 0,
+  promoSliderEnabled: false,
+  promoSliderOrder: 0,
+  featureSectionEnabled: false,
+  featureSectionOrder: 0,
+  isNewArrival: false,
+  isBestSeller: false,
+  isFeaturedLabel: false,
+  catalogBadge: null,
+  fabric: null,
+  fit: null,
+  sleeve: null,
+  occasion: null,
+  shippingNote: null,
+})
 
 function createDefaultValues(): ProductFormValues {
   return {
@@ -103,6 +130,7 @@ function createDefaultValues(): ProductFormValues {
       metaDescription: null,
       metaKeywords: null,
     },
+    storefront: createDefaultStorefront(),
     tags: [],
     reviews: [],
   }
@@ -131,23 +159,37 @@ function Section({
   description,
   addLabel,
   onAdd,
+  className,
+  contentClassName,
   children,
-}: PropsWithChildren<{ title: string; description: string; addLabel?: string; onAdd?: () => void }>) {
+}: PropsWithChildren<{
+  title?: string
+  description?: string
+  addLabel?: string
+  onAdd?: () => void
+  className?: string
+  contentClassName?: string
+}>) {
+  const headerAction = addLabel && onAdd ? (
+    <Button type="button" variant="outline" size="sm" onClick={onAdd}>
+      <Plus className="size-4" />
+      {addLabel}
+    </Button>
+  ) : null
+  const hasHeader = Boolean(title || description || headerAction)
+
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-4">
-        <div>
-          <CardTitle>{title}</CardTitle>
-          <CardDescription>{description}</CardDescription>
-        </div>
-        {addLabel && onAdd ? (
-          <Button type="button" variant="outline" size="sm" onClick={onAdd}>
-            <Plus className="size-4" />
-            {addLabel}
-          </Button>
-        ) : null}
-      </CardHeader>
-      <CardContent className="grid gap-4">{children}</CardContent>
+    <Card className={className}>
+      {hasHeader ? (
+        <CardHeader className="flex flex-row items-start justify-between gap-4">
+          <div>
+            {title ? <CardTitle>{title}</CardTitle> : null}
+            {description ? <CardDescription>{description}</CardDescription> : null}
+          </div>
+          {headerAction}
+        </CardHeader>
+      ) : null}
+      <CardContent className={contentClassName ?? 'grid gap-4'}>{children}</CardContent>
     </Card>
   )
 }
@@ -191,7 +233,7 @@ function LookupSelect({
         onChange={(nextValue) => onChange(nextValue || null)}
         options={options.map(toLookupOption)}
         allowEmptyOption
-        emptyOptionLabel="-"
+        emptyOptionLabel={placeholder}
         placeholder={`Search ${label.toLowerCase()}`}
         createOption={moduleKey ? async (labelValue) => {
           const { item, option } = await createCommonLookupOption(moduleKey, labelValue)
@@ -286,6 +328,24 @@ function toFormValues(product: Product): ProductFormValues {
     stockItems: product.stockItems.map((item) => ({ variantClientKey: item.variantId ? variantClientKeyById.get(item.variantId) ?? null : null, warehouseId: item.warehouseId, quantity: item.quantity, reservedQuantity: item.reservedQuantity })),
     stockMovements: product.stockMovements.map((movement) => ({ variantClientKey: movement.variantId ? variantClientKeyById.get(movement.variantId) ?? null : null, warehouseId: movement.warehouseId, movementType: movement.movementType, quantity: movement.quantity, referenceType: movement.referenceType, referenceId: movement.referenceId, movementAt: movement.movementAt.slice(0, 16) })),
     seo: product.seo ? { metaTitle: product.seo.metaTitle, metaDescription: product.seo.metaDescription, metaKeywords: product.seo.metaKeywords } : { metaTitle: null, metaDescription: null, metaKeywords: null },
+    storefront: product.storefront ? {
+      department: product.storefront.department,
+      homeSliderEnabled: product.storefront.homeSliderEnabled,
+      homeSliderOrder: product.storefront.homeSliderOrder,
+      promoSliderEnabled: product.storefront.promoSliderEnabled,
+      promoSliderOrder: product.storefront.promoSliderOrder,
+      featureSectionEnabled: product.storefront.featureSectionEnabled,
+      featureSectionOrder: product.storefront.featureSectionOrder,
+      isNewArrival: product.storefront.isNewArrival,
+      isBestSeller: product.storefront.isBestSeller,
+      isFeaturedLabel: product.storefront.isFeaturedLabel,
+      catalogBadge: product.storefront.catalogBadge,
+      fabric: product.storefront.fabric,
+      fit: product.storefront.fit,
+      sleeve: product.storefront.sleeve,
+      occasion: product.storefront.occasion,
+      shippingNote: product.storefront.shippingNote,
+    } : createDefaultStorefront(),
     tags: product.tags.map((tag) => ({ name: tag.name })),
     reviews: product.reviews.map((review) => ({ userId: review.userId, rating: review.rating, review: review.review, reviewDate: review.reviewDate.slice(0, 16) })),
   }
@@ -380,17 +440,33 @@ export function ProductFormPage() {
     setFieldErrors(nextFieldErrors)
     if (Object.keys(nextFieldErrors).length > 0) {
       setErrorMessage('Validation failed.')
+      showValidationToast('product')
       return
     }
     setSaving(true)
     setErrorMessage(null)
 
     try {
-      if (productId) await updateProduct(productId, values)
-      else await createProduct(values)
-      navigate('/dashboard/products')
+      const savedProduct = productId
+        ? await updateProduct(productId, values)
+        : await createProduct(values)
+
+      showSavedToast({
+        entityLabel: 'product',
+        recordName: savedProduct.name,
+        referenceId: savedProduct.id,
+        mode: productId ? 'update' : 'create',
+      })
+
+      void navigate('/dashboard/products')
     } catch (error) {
-      setErrorMessage(toErrorMessage(error))
+      const message = toErrorMessage(error)
+      setErrorMessage(message)
+      showFailedActionToast({
+        entityLabel: 'product',
+        action: productId ? 'update' : 'save',
+        detail: message,
+      })
     } finally {
       setSaving(false)
     }
@@ -401,7 +477,7 @@ export function ProductFormPage() {
     value: 'overview',
     content: (
       <>
-        <Section title="Product Basics" description="Primary catalog identity, master references, and product status.">
+        <Section className="rounded-md" contentClassName="grid gap-4 pt-5">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="grid min-h-[4.75rem] gap-2"><Label className={fieldErrors.name ? 'text-destructive' : undefined}>Name</Label><Input className={inputErrorClassName(Boolean(fieldErrors.name))} value={values.name} onChange={(event) => setValues((current) => ({ ...current, name: event.target.value }))} /><FieldError message={fieldErrors.name} /></div>
             <div className="grid gap-2"><Label>Slug</Label><Input value={values.slug} onChange={(event) => setValues((current) => ({ ...current, slug: event.target.value }))} /></div>
@@ -427,7 +503,17 @@ export function ProductFormPage() {
           {values.images.map((image, index) => (
             <Row key={`image-${index}`} onRemove={() => setValues((current) => ({ ...current, images: current.images.filter((_, rowIndex) => rowIndex !== index) }))}>
               <div className="grid gap-4 md:grid-cols-3">
-                <div className="grid gap-2 md:col-span-2"><Label>Image URL</Label><Input value={image.imageUrl} onChange={(event) => setValues((current) => ({ ...current, images: current.images.map((entry, rowIndex) => rowIndex === index ? { ...entry, imageUrl: event.target.value } : entry) }))} /></div>
+                <div className="md:col-span-2">
+                  <MediaImageField
+                    label="Image"
+                    value={image.imageUrl}
+                    onChange={(value) => setValues((current) => ({
+                      ...current,
+                      images: current.images.map((entry, rowIndex) => rowIndex === index ? { ...entry, imageUrl: value } : entry),
+                    }))}
+                    description="Choose a public media asset or upload a new catalog image."
+                  />
+                </div>
                 <div className="grid gap-2"><Label>Sort Order</Label><Input type="number" value={image.sortOrder} onChange={(event) => setValues((current) => ({ ...current, images: current.images.map((entry, rowIndex) => rowIndex === index ? { ...entry, sortOrder: Number(event.target.value || 0) } : entry) }))} /></div>
                 <label className="flex items-center gap-3 md:col-span-3"><Checkbox checked={image.isPrimary} onCheckedChange={(checked) => setValues((current) => ({ ...current, images: current.images.map((entry, rowIndex) => rowIndex === index ? { ...entry, isPrimary: Boolean(checked) } : entry) }))} /><span className="text-sm font-medium">Primary image</span></label>
               </div>
@@ -518,7 +604,17 @@ export function ProductFormPage() {
                 </div>
                 {variant.images.map((image, imageIndex) => (
                   <div key={`${variant.clientKey}-image-${imageIndex}`} className="grid gap-3 md:grid-cols-[1fr_auto_auto]">
-                    <Input placeholder="Image URL" value={image.imageUrl} onChange={(event) => setValues((current) => ({ ...current, variants: current.variants.map((entry, rowIndex) => rowIndex === index ? { ...entry, images: entry.images.map((imageEntry, nestedIndex) => nestedIndex === imageIndex ? { ...imageEntry, imageUrl: event.target.value } : imageEntry) } : entry) }))} />
+                    <MediaImageField
+                      label="Variant Image"
+                      value={image.imageUrl}
+                      onChange={(value) => setValues((current) => ({
+                        ...current,
+                        variants: current.variants.map((entry, rowIndex) => rowIndex === index ? {
+                          ...entry,
+                          images: entry.images.map((imageEntry, nestedIndex) => nestedIndex === imageIndex ? { ...imageEntry, imageUrl: value } : imageEntry),
+                        } : entry),
+                      }))}
+                    />
                     <label className="flex items-center gap-3"><Checkbox checked={image.isPrimary} onCheckedChange={(checked) => setValues((current) => ({ ...current, variants: current.variants.map((entry, rowIndex) => rowIndex === index ? { ...entry, images: entry.images.map((imageEntry, nestedIndex) => nestedIndex === imageIndex ? { ...imageEntry, isPrimary: Boolean(checked) } : imageEntry) } : entry) }))} /><span className="text-sm">Primary</span></label>
                     <Button type="button" variant="ghost" size="sm" onClick={() => setValues((current) => ({ ...current, variants: current.variants.map((entry, rowIndex) => rowIndex === index ? { ...entry, images: entry.images.filter((_, nestedIndex) => nestedIndex !== imageIndex) } : entry) }))}>
                       <Trash2 className="size-4" />
@@ -608,6 +704,115 @@ export function ProductFormPage() {
     value: 'publishing',
     content: (
       <>
+        <Section title="Storefront Publishing" description="Backend merchandising, home placements, and storefront filter metadata.">
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-2">
+              <Label>Department</Label>
+              <select
+                value={values.storefront?.department ?? 'women'}
+                onChange={(event) => setValues((current) => ({
+                  ...current,
+                  storefront: {
+                    ...(current.storefront ?? createDefaultStorefront()),
+                    department: event.target.value as NonNullable<ProductFormValues['storefront']>['department'],
+                  },
+                }))}
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
+              >
+                {storefrontDepartmentOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="grid gap-2">
+              <Label>Catalog Badge</Label>
+              <Input value={values.storefront?.catalogBadge ?? ''} onChange={(event) => setValues((current) => ({
+                ...current,
+                storefront: { ...(current.storefront ?? createDefaultStorefront()), catalogBadge: event.target.value || null },
+              }))} />
+            </div>
+            <div className="grid gap-2">
+              <Label>Shipping Note</Label>
+              <Input value={values.storefront?.shippingNote ?? ''} onChange={(event) => setValues((current) => ({
+                ...current,
+                storefront: { ...(current.storefront ?? createDefaultStorefront()), shippingNote: event.target.value || null },
+              }))} />
+            </div>
+            <div className="grid gap-2">
+              <Label>Fabric</Label>
+              <Input value={values.storefront?.fabric ?? ''} onChange={(event) => setValues((current) => ({
+                ...current,
+                storefront: { ...(current.storefront ?? createDefaultStorefront()), fabric: event.target.value || null },
+              }))} />
+            </div>
+            <div className="grid gap-2">
+              <Label>Fit</Label>
+              <Input value={values.storefront?.fit ?? ''} onChange={(event) => setValues((current) => ({
+                ...current,
+                storefront: { ...(current.storefront ?? createDefaultStorefront()), fit: event.target.value || null },
+              }))} />
+            </div>
+            <div className="grid gap-2">
+              <Label>Sleeve</Label>
+              <Input value={values.storefront?.sleeve ?? ''} onChange={(event) => setValues((current) => ({
+                ...current,
+                storefront: { ...(current.storefront ?? createDefaultStorefront()), sleeve: event.target.value || null },
+              }))} />
+            </div>
+            <div className="grid gap-2">
+              <Label>Occasion</Label>
+              <Input value={values.storefront?.occasion ?? ''} onChange={(event) => setValues((current) => ({
+                ...current,
+                storefront: { ...(current.storefront ?? createDefaultStorefront()), occasion: event.target.value || null },
+              }))} />
+            </div>
+            <div className="grid gap-2">
+              <Label>Home Slider Order</Label>
+              <Input type="number" value={values.storefront?.homeSliderOrder ?? 0} onChange={(event) => setValues((current) => ({
+                ...current,
+                storefront: { ...(current.storefront ?? createDefaultStorefront()), homeSliderOrder: Number(event.target.value || 0) },
+              }))} />
+            </div>
+            <div className="grid gap-2">
+              <Label>Promo Slider Order</Label>
+              <Input type="number" value={values.storefront?.promoSliderOrder ?? 0} onChange={(event) => setValues((current) => ({
+                ...current,
+                storefront: { ...(current.storefront ?? createDefaultStorefront()), promoSliderOrder: Number(event.target.value || 0) },
+              }))} />
+            </div>
+            <div className="grid gap-2">
+              <Label>Feature Section Order</Label>
+              <Input type="number" value={values.storefront?.featureSectionOrder ?? 0} onChange={(event) => setValues((current) => ({
+                ...current,
+                storefront: { ...(current.storefront ?? createDefaultStorefront()), featureSectionOrder: Number(event.target.value || 0) },
+              }))} />
+            </div>
+            <label className="flex items-center gap-3"><Checkbox checked={values.storefront?.homeSliderEnabled ?? false} onCheckedChange={(checked) => setValues((current) => ({
+              ...current,
+              storefront: { ...(current.storefront ?? createDefaultStorefront()), homeSliderEnabled: Boolean(checked) },
+            }))} /><span className="text-sm font-medium">Home slider</span></label>
+            <label className="flex items-center gap-3"><Checkbox checked={values.storefront?.promoSliderEnabled ?? false} onCheckedChange={(checked) => setValues((current) => ({
+              ...current,
+              storefront: { ...(current.storefront ?? createDefaultStorefront()), promoSliderEnabled: Boolean(checked) },
+            }))} /><span className="text-sm font-medium">Promo slider</span></label>
+            <label className="flex items-center gap-3"><Checkbox checked={values.storefront?.featureSectionEnabled ?? false} onCheckedChange={(checked) => setValues((current) => ({
+              ...current,
+              storefront: { ...(current.storefront ?? createDefaultStorefront()), featureSectionEnabled: Boolean(checked) },
+            }))} /><span className="text-sm font-medium">Feature section</span></label>
+            <label className="flex items-center gap-3"><Checkbox checked={values.storefront?.isNewArrival ?? false} onCheckedChange={(checked) => setValues((current) => ({
+              ...current,
+              storefront: { ...(current.storefront ?? createDefaultStorefront()), isNewArrival: Boolean(checked) },
+            }))} /><span className="text-sm font-medium">New arrival</span></label>
+            <label className="flex items-center gap-3"><Checkbox checked={values.storefront?.isBestSeller ?? false} onCheckedChange={(checked) => setValues((current) => ({
+              ...current,
+              storefront: { ...(current.storefront ?? createDefaultStorefront()), isBestSeller: Boolean(checked) },
+            }))} /><span className="text-sm font-medium">Best seller</span></label>
+            <label className="flex items-center gap-3"><Checkbox checked={values.storefront?.isFeaturedLabel ?? false} onCheckedChange={(checked) => setValues((current) => ({
+              ...current,
+              storefront: { ...(current.storefront ?? createDefaultStorefront()), isFeaturedLabel: Boolean(checked) },
+            }))} /><span className="text-sm font-medium">Featured label</span></label>
+          </div>
+        </Section>
         <Section title="Offers" description="Promotional offers attached to the product." addLabel="Add Offer" onAdd={() => setValues((current) => ({ ...current, offers: [...current.offers, emptyOffer()] }))}>
           {values.offers.map((offer, index) => (
             <Row key={`offer-${index}`} onRemove={() => setValues((current) => ({ ...current, offers: current.offers.filter((_, rowIndex) => rowIndex !== index) }))}>
@@ -656,7 +861,7 @@ export function ProductFormPage() {
   }
 
   return (
-    <form className="space-y-6" onSubmit={handleSubmit}>
+    <form className="space-y-6 pt-2" onSubmit={(event) => { void handleSubmit(event) }}>
       <div className="flex items-center justify-between gap-4">
         <div>
           <Button variant="ghost" size="sm" asChild className="-ml-3 mb-2">
@@ -665,11 +870,10 @@ export function ProductFormPage() {
               Back to products
             </Link>
           </Button>
-          <h1 className="text-3xl font-semibold text-foreground">{isEditMode ? 'Edit Product' : 'New Product'}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Capture product identity, variants, pricing, stock, SEO, and catalog presentation.</p>
+          <p className="text-sm text-muted-foreground">Capture product identity, variants, pricing, stock, SEO, and catalog presentation.</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button type="button" variant="outline" onClick={() => navigate('/dashboard/products')}>Cancel</Button>
+          <Button type="button" variant="outline" onClick={() => { void navigate('/dashboard/products') }}>Cancel</Button>
           <Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save Product'}</Button>
         </div>
       </div>

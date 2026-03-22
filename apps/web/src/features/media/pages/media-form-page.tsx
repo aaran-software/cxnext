@@ -9,6 +9,7 @@ import type {
 import { useEffect, useState, type FormEvent, type PropsWithChildren } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
+import { MediaAssetManagerDialog } from '@/components/forms/media-asset-manager-dialog'
 import { AnimatedTabs, type AnimatedContentTab } from '@/components/ui/animated-tabs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -23,6 +24,7 @@ import {
   listMediaFolders,
   updateMedia,
 } from '@/shared/api/client'
+import { showFailedActionToast, showSavedToast } from '@/shared/notifications/toast'
 
 type MediaFormValues = MediaUpsertPayload
 
@@ -131,6 +133,7 @@ export function MediaFormPage() {
   const [loading, setLoading] = useState(isEditMode)
   const [saving, setSaving] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -177,11 +180,26 @@ export function MediaFormPage() {
     setErrorMessage(null)
 
     try {
-      if (mediaId) await updateMedia(mediaId, values)
-      else await createMedia(values)
-      navigate('/dashboard/media')
+      const savedAsset = mediaId
+        ? await updateMedia(mediaId, values)
+        : await createMedia(values)
+
+      showSavedToast({
+        entityLabel: 'media asset',
+        recordName: savedAsset.title ?? savedAsset.fileName,
+        referenceId: savedAsset.id,
+        mode: mediaId ? 'update' : 'create',
+      })
+
+      void navigate('/dashboard/media')
     } catch (error) {
-      setErrorMessage(toErrorMessage(error))
+      const message = toErrorMessage(error)
+      setErrorMessage(message)
+      showFailedActionToast({
+        entityLabel: 'media asset',
+        action: mediaId ? 'update' : 'save',
+        detail: message,
+      })
     } finally {
       setSaving(false)
     }
@@ -192,6 +210,15 @@ export function MediaFormPage() {
     value: 'asset',
     content: (
       <Section title="Asset Details" description="Define the primary media identity, storage scope, and file reference.">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.25rem] border border-border/70 bg-muted/30 px-4 py-3 md:col-span-2">
+          <div>
+            <p className="font-medium text-foreground">Quick Upload</p>
+            <p className="text-sm text-muted-foreground">Upload through the popup media manager, persist the asset immediately, and continue on that saved asset record.</p>
+          </div>
+          <Button type="button" variant="outline" onClick={() => setPickerOpen(true)}>
+            Upload or Choose Asset
+          </Button>
+        </div>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="grid gap-2"><Label>File Name</Label><Input value={values.fileName} onChange={(event) => setValues((current) => ({ ...current, fileName: event.target.value }))} required /></div>
           <div className="grid gap-2"><Label>Original Name</Label><Input value={values.originalName} onChange={(event) => setValues((current) => ({ ...current, originalName: event.target.value }))} required /></div>
@@ -298,7 +325,7 @@ export function MediaFormPage() {
   }
 
   return (
-    <form className="space-y-6" onSubmit={handleSubmit}>
+    <form className="space-y-6" onSubmit={(event) => { void handleSubmit(event) }}>
       <div className="flex items-center justify-between gap-4">
         <div>
           <Button variant="ghost" size="sm" asChild className="-ml-3 mb-2">
@@ -311,7 +338,7 @@ export function MediaFormPage() {
           <p className="mt-2 text-sm text-muted-foreground">Capture media metadata, storage scope, usage references, and derivative versions.</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button type="button" variant="outline" onClick={() => navigate('/dashboard/media')}>Cancel</Button>
+          <Button type="button" variant="outline" onClick={() => { void navigate('/dashboard/media') }}>Cancel</Button>
           <Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save Media Asset'}</Button>
         </div>
       </div>
@@ -319,6 +346,18 @@ export function MediaFormPage() {
       {errorMessage ? <Card><CardContent className="p-4 text-sm text-destructive">{errorMessage}</CardContent></Card> : null}
 
       <AnimatedTabs defaultTabValue="asset" tabs={[overviewTab, metadataTab, usageTab, versionsTab]} />
+
+      <MediaAssetManagerDialog
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        allowPrivateAssets
+        onSelect={(asset) => {
+          setValues(toFormValues(asset))
+          void navigate(`/dashboard/media/${asset.id}/edit`)
+        }}
+        title="Upload or Choose Media Asset"
+        description="Persist a new media asset through the popup workflow or pick an existing one from the media library."
+      />
     </form>
   )
 }

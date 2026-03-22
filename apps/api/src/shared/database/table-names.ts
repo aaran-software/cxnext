@@ -1,7 +1,9 @@
 export const migrationTableName = 'system_migrations'
+export const seederTableName = 'system_seeders'
 
 export const authTableNames = {
   users: 'auth_users',
+  contactVerifications: 'auth_contact_verifications',
   roles: 'auth_roles',
   permissions: 'auth_permissions',
   userRoles: 'auth_user_roles',
@@ -32,6 +34,7 @@ export const commonTableNames = {
   warehouses: 'common_warehouses',
   destinations: 'common_destinations',
   paymentTerms: 'common_payment_terms',
+  storefrontTemplates: 'common_storefront_templates',
 } as const
 
 export const companyTableNames = {
@@ -67,6 +70,7 @@ export const productTableNames = {
   attributeValues: 'product_attribute_values',
   variantMap: 'product_variant_map',
   seo: 'product_seo',
+  storefront: 'product_storefront_profiles',
   reviews: 'product_reviews',
   tags: 'product_tags',
   tagMap: 'product_tag_map',
@@ -79,4 +83,9 @@ export const mediaTableNames = {
   tagMap: 'media_tag_map',
   usage: 'media_usage',
   versions: 'media_versions',
+} as const
+
+export const storefrontTableNames = {
+  orders: 'storefront_orders',
+  orderItems: 'storefront_order_items',
 } as const

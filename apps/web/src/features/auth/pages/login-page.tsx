@@ -1,16 +1,19 @@
 import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { ArrowRight } from 'lucide-react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/features/auth/components/auth-provider'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { showErrorToast, showSuccessToast } from '@/shared/notifications/toast'
 
 export function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { login } = useAuth()
+  const redirectTo = typeof location.state?.from === 'string' ? location.state.from : '/dashboard'
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -24,13 +27,22 @@ export function LoginPage() {
 
     try {
       await login({ email, password })
-      void navigate('/dashboard', { replace: true })
+      showSuccessToast({
+        title: 'Signed in',
+        description: redirectTo === '/dashboard'
+          ? 'You are now authenticated and redirected to the dashboard.'
+          : 'You are now authenticated and redirected to checkout.',
+      })
+      void navigate(redirectTo, { replace: true })
     } catch (submissionError) {
-      setError(
-        submissionError instanceof Error
-          ? submissionError.message
-          : 'Unable to login right now.',
-      )
+      const message = submissionError instanceof Error
+        ? submissionError.message
+        : 'Unable to login right now.'
+      setError(message)
+      showErrorToast({
+        title: 'Sign in failed',
+        description: message,
+      })
     } finally {
       setIsSubmitting(false)
     }
@@ -80,7 +92,7 @@ export function LoginPage() {
         </form>
         <p className="text-center text-sm text-muted-foreground">
           Need an account?{' '}
-          <Link to="/register" className="font-medium text-foreground underline underline-offset-4">
+          <Link to="/register" state={location.state} className="font-medium text-foreground underline underline-offset-4">
             Request access
           </Link>
         </p>

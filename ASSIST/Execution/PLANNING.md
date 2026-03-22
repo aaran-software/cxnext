@@ -53,42 +53,39 @@ State the intended result in one paragraph.
 
 ### Task
 
-`Media manager module across backend and frontend`
+`Global media asset manager redesign for form integration`
 
 ### Goal
 
-Deliver the media manager requested in `ASSIST/Execution/IDEAS.md` as a production-oriented vertical slice. The increment should add storage-aware tables for folders, files, tags, usage, and versions, expose transactional CRUD APIs for the media aggregate, add frontend list plus full-page create/edit flows that align with the existing dashboard workspace and return to the media list after save, and establish filesystem directories plus a public-serving path for stored media references.
+Turn the existing popup media picker into a shared form component with a more deliberate upload experience: left-side upload controls, right-side image preview, and a bottom metadata area organized into tabs. The redesign must preserve current library selection and API persistence, while making the component reusable anywhere the dashboard needs image picking.
 
 ### Assumptions
 
-- The first increment should model media metadata and storage paths without yet implementing multipart upload ingestion
-- The media aggregate should be implemented as a dedicated backend feature rather than folded into the generic common-module registry
-- Files can support both `public` and `private` storage scopes, with public assets exposed through the API server and private assets stored without anonymous serving
-- Child collections can follow the existing aggregate-write pattern by deactivating previous rows and inserting fresh active rows on edit
-- The frontend media form can use a dedicated page layout and reuse the shared animated tabs pattern where it improves usability
+- The existing upload API contract is sufficient for this redesign, so the UI should organize current fields better rather than inventing new persisted schema
+- The current admin image-entry surfaces are company logos, product images, variant images, and the media asset quick-upload flow
+- Keeping compatibility re-exports in the old feature paths is useful while shifting the canonical implementation into shared form components
 
 ### Constraints
 
-- Keep shared request and response contracts in `packages/shared`
-- Preserve transactional integrity for multi-table media writes
-- Reuse the dashboard/application workspace rather than creating a separate shell
-- Keep the implementation production-oriented without overstating upload or optimization capabilities that do not yet exist
-- Add the requested filesystem folders and public path handling without using destructive setup steps
+- Keep persistence behavior unchanged: uploads remain temporary in the client until confirmation triggers the API write
+- Stay within the current shared media schema and backend route capabilities
+- Make the upload workspace responsive so it still works on narrower form-page widths
+- Update execution tracking and documentation in the same change set
 
 ### Plan
 
-1. Update execution docs for the media manager task and inspect the current shared, backend, frontend, and storage extension points
-2. Add shared media schemas plus a dedicated backend migration, seed data, and storage configuration for media-specific tables and directories
-3. Implement backend repository, service, static public-media serving, and HTTP routes for media CRUD
-4. Add frontend media list and full-page upsert screens, then connect them into the dashboard routes and navigation
-5. Run `npm run build:api` and `npm run build:web`, then record walkthrough details, residual risks, and storage assumptions
+1. Replace the active execution notes with the media manager redesign scope
+2. Build shared `MediaAssetManagerDialog` and `MediaImageField` components under `apps/web/src/components/forms`
+3. Redesign the upload tab into the requested two-column layout plus bottom metadata tabs while keeping the library tab intact
+4. Rewire the current company, product, and media form consumers to the shared components and keep compatibility re-exports in the previous feature-local paths
+5. Update overview/architecture/changelog docs and validate with focused ESLint plus `npm run build:web`
 
 ### Validation
 
-- `npm run build:api`
+- Focused ESLint on the shared media form components and current consuming pages
 - `npm run build:web`
 
 ### Open Questions
 
-- Whether private media should later be exposed through signed URLs or authenticated streaming endpoints
-- Whether upload ingestion and optimization should be implemented in a later increment as background jobs instead of synchronous request handling
+- Whether future media work should support true multipart uploads for large assets instead of the current data-URL JSON flow
+- Whether a follow-up increment should auto-create `media_usage` rows when specific forms pick an asset

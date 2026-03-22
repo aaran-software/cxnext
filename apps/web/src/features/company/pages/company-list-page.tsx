@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Card, CardContent } from '@/components/ui/card'
 import { deactivateCompany, HttpError, listCompanies, restoreCompany } from '@/shared/api/client'
+import { showFailedActionToast, showStatusChangeToast } from '@/shared/notifications/toast'
 
 function toErrorMessage(error: unknown) {
   if (error instanceof HttpError) {
@@ -101,8 +102,20 @@ export function CompanyListPage() {
       setItems((current) =>
         current.map((entry) => (entry.id === item.id ? { ...entry, isActive: !entry.isActive } : entry)),
       )
+      showStatusChangeToast({
+        entityLabel: 'company',
+        recordName: item.name,
+        referenceId: item.id,
+        action: item.isActive ? 'deactivate' : 'restore',
+      })
     } catch (error) {
-      setErrorMessage(toErrorMessage(error))
+      const message = toErrorMessage(error)
+      setErrorMessage(message)
+      showFailedActionToast({
+        entityLabel: 'company',
+        action: item.isActive ? 'deactivate' : 'restore',
+        detail: message,
+      })
     }
   }
 
@@ -163,7 +176,9 @@ export function CompanyListPage() {
               accessor: (item) => item.name,
               cell: (item) => (
                 <div>
-                  <p className="font-medium text-foreground">{item.name}</p>
+                  <Link to={`/dashboard/companies/${item.id}`} className="font-medium text-foreground underline-offset-4 hover:underline">
+                    {item.name}
+                  </Link>
                   <p className="text-sm text-muted-foreground">{item.legalName ?? 'No legal name'}</p>
                 </div>
               ),

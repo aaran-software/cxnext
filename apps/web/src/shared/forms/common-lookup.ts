@@ -86,6 +86,21 @@ function buildCommonLookupPayload(
       }
     case 'paymentTerms':
       return { code, name: label, due_days: 0, description: '-' }
+    case 'storefrontTemplates':
+      return {
+        code,
+        name: label,
+        sort_order: 0,
+        badge_text: null,
+        title: label,
+        description: '-',
+        cta_primary_label: null,
+        cta_primary_href: null,
+        cta_secondary_label: null,
+        cta_secondary_href: null,
+        icon_key: null,
+        theme_key: null,
+      }
   }
 }
 

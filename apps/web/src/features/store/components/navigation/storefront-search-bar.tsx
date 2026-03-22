@@ -25,7 +25,7 @@ export function StorefrontSearchBar({ initialValue = "" }: { initialValue?: stri
       params.set("department", department)
     }
 
-    navigate(`/search${params.size > 0 ? `?${params.toString()}` : ""}`)
+    void navigate(`/search${params.size > 0 ? `?${params.toString()}` : ""}`)
   }
 
   return (
@@ -37,9 +37,10 @@ export function StorefrontSearchBar({ initialValue = "" }: { initialValue?: stri
         aria-label="Select department"
       >
         <option value="all">All</option>
-        <option value="electronics">Electronics</option>
-        <option value="fashion">Fashion</option>
-        <option value="home">Home</option>
+        <option value="women">Women</option>
+        <option value="men">Men</option>
+        <option value="kids">Kids</option>
+        <option value="accessories">Accessories</option>
       </select>
       <div className="relative flex-1">
         <Input

@@ -1,9 +1,10 @@
 import type { CommonModuleKey } from '@shared/index'
 import { Link, useLocation } from 'react-router-dom'
-import { Building2, ChevronRight, ContactRound, Home, Image, LayoutDashboard, Package } from 'lucide-react'
+import { Building2, ChevronRight, ContactRound, Home, Image, LayoutDashboard, Package, Store } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
+import { frontendTarget } from '@/config/frontend'
 import { useAuth } from '@/features/auth/components/auth-provider'
 import { getCommonModuleMenuItem } from '@/features/common-modules/config/common-module-navigation'
 import { ThemeSwitcher } from '@/shared/theme/theme-switcher'
@@ -44,6 +45,13 @@ function resolveCurrentTitle(pathname: string) {
     }
   }
 
+  if (/^\/dashboard\/companies\/[^/]+$/.test(pathname)) {
+    return {
+      section: 'Organization',
+      title: 'Company Details',
+    }
+  }
+
   if (pathname === '/dashboard/contacts' || pathname === '/dashboard/contacts/') {
     return {
       section: 'CRM',
@@ -62,6 +70,13 @@ function resolveCurrentTitle(pathname: string) {
     return {
       section: 'CRM',
       title: 'Edit Contact',
+    }
+  }
+
+  if (/^\/dashboard\/contacts\/[^/]+$/.test(pathname)) {
+    return {
+      section: 'CRM',
+      title: 'Contact Details',
     }
   }
 
@@ -107,6 +122,41 @@ function resolveCurrentTitle(pathname: string) {
     }
   }
 
+  if (/^\/dashboard\/products\/[^/]+$/.test(pathname)) {
+    return {
+      section: 'Catalog',
+      title: 'Product Details',
+    }
+  }
+
+  if (pathname === '/dashboard/storefront-designer' || pathname === '/dashboard/storefront-designer/') {
+    return {
+      section: 'Storefront',
+      title: 'Storefront Designer',
+    }
+  }
+
+  if (pathname === '/dashboard/storefront-designer/new') {
+    return {
+      section: 'Storefront',
+      title: 'New Storefront Template',
+    }
+  }
+
+  if (/^\/dashboard\/storefront-designer\/[^/]+\/edit$/.test(pathname)) {
+    return {
+      section: 'Storefront',
+      title: 'Edit Storefront Template',
+    }
+  }
+
+  if (/^\/dashboard\/storefront-designer\/[^/]+$/.test(pathname)) {
+    return {
+      section: 'Storefront',
+      title: 'Storefront Template Details',
+    }
+  }
+
   const match = pathname.match(/^\/dashboard\/common\/([^/]+)$/)
   if (match) {
     const moduleItem = getCommonModuleMenuItem(match[1] as CommonModuleKey)
@@ -128,6 +178,10 @@ export function AppHeader() {
   const location = useLocation()
   const { logout } = useAuth()
   const current = resolveCurrentTitle(location.pathname)
+  const storefrontAction = frontendTarget === 'shop'
+    ? { label: 'Shop', href: '/', icon: Store }
+    : { label: 'Home', href: '/', icon: Home }
+  const StorefrontIcon = storefrontAction.icon
 
   return (
     <header className="flex min-h-12 shrink-0 items-center justify-between gap-4 border-b border-border/60 px-4 py-1.5">
@@ -176,6 +230,12 @@ export function AppHeader() {
           <Link to="/dashboard">
             <LayoutDashboard className="size-4" />
             Overview
+          </Link>
+        </Button>
+        <Button variant="outline" size="sm" asChild>
+          <Link to={storefrontAction.href}>
+            <StorefrontIcon className="size-4" />
+            {storefrontAction.label}
           </Link>
         </Button>
         <ThemeSwitcher />

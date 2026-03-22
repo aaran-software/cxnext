@@ -31,3 +31,11 @@
 - Added a dedicated product aggregate feature that reuses the existing common product masters, adds product-specific tables and placeholder seed data, exposes backend product CRUD routes, and provides frontend product list plus full-page create/edit screens
 - Added a shared animated tab component and reorganized the company, contact, and product master forms into grouped tabs for easier data entry
 - Added a dedicated media manager feature with storage-aware media tables, filesystem bootstrap for public and private storage, backend media and folder CRUD routes plus public asset streaming, and frontend dashboard pages for media asset and folder management
+- Added a tracked database seeder flow under `apps/api/src/shared/database/seeders` and a dummy product aggregate bootstrap that runs after schema migrations when enabled
+- Refactored the product foundation migration to stop inserting placeholder product data directly, keeping optional demo aggregate data in seeders instead of schema migrations
+- Added upload-backed media asset creation through the API plus a reusable popup media picker/uploader used by company logo and product image form fields
+- Added temporary upload metadata review in the popup flow so asset name, original name, storage scope, and folder selection are confirmed before the media asset is persisted
+- Redesigned the popup uploader into shared form components with a two-column upload workspace, right-side live preview, and tabbed metadata sections for basic details, SEO content, and file details
+- Adjusted the shared media manager dialog to fit the viewport with internal vertical scrolling and fixed upload/preview panel heights
+- Replaced the storefront `shop` home placeholder with a polished catalog-first merchandising page that keeps the existing store shell intact while adding category storytelling, product-driven collection grids, spotlight content, and explicit empty/error states for live catalog loading
+- Expanded the storefront `shop` target into a full static frontend shopping flow with garment-focused home, catalog filters, product detail, wishlist, cart, and checkout pages while preserving the existing menu and footer shell
