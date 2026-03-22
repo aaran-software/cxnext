@@ -199,6 +199,34 @@ function resolveCurrentTitle(pathname: string) {
     }
   }
 
+  if (pathname === '/admin/dashboard/slider-themes' || pathname === '/admin/dashboard/slider-themes/') {
+    return {
+      section: 'Storefront',
+      title: 'Slider Themes',
+    }
+  }
+
+  if (pathname === '/admin/dashboard/slider-themes/new') {
+    return {
+      section: 'Storefront',
+      title: 'New Slider Theme',
+    }
+  }
+
+  if (/^\/admin\/dashboard\/slider-themes\/[^/]+\/edit$/.test(pathname)) {
+    return {
+      section: 'Storefront',
+      title: 'Edit Slider Theme',
+    }
+  }
+
+  if (/^\/admin\/dashboard\/slider-themes\/[^/]+$/.test(pathname)) {
+    return {
+      section: 'Storefront',
+      title: 'Slider Theme Details',
+    }
+  }
+
   const match = pathname.match(/^\/admin\/dashboard\/common\/([^/]+)$/)
   if (match) {
     const moduleItem = getCommonModuleMenuItem(match[1] as CommonModuleKey)

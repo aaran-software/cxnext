@@ -129,5 +129,9 @@ export function getCommonModuleHref(key: CommonModuleKey) {
     return buildAdminPortalPath('/storefront-designer')
   }
 
+  if (key === 'sliderThemes') {
+    return buildAdminPortalPath('/slider-themes')
+  }
+
   return buildAdminPortalPath(`/common/${key}`)
 }

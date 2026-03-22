@@ -87,6 +87,18 @@ const StorefrontTemplateShowPage = lazyPage(
   () => import('@/features/storefront-designer/pages/storefront-template-show-page'),
   'StorefrontTemplateShowPage',
 )
+const SliderThemeFormPage = lazyPage(
+  () => import('@/features/slider-themes/pages/slider-theme-form-page'),
+  'SliderThemeFormPage',
+)
+const SliderThemeListPage = lazyPage(
+  () => import('@/features/slider-themes/pages/slider-theme-list-page'),
+  'SliderThemeListPage',
+)
+const SliderThemeShowPage = lazyPage(
+  () => import('@/features/slider-themes/pages/slider-theme-show-page'),
+  'SliderThemeShowPage',
+)
 const LoginPage = lazyPage(() => import('@/features/auth/pages/login-page'), 'LoginPage')
 const PortfolioHomePage = lazyPage(
   () => import('@/features/marketing/pages/portfolio-home-page'),
@@ -152,6 +164,10 @@ const adminRoutes = {
         { path: 'storefront-designer/new', element: renderLazy(StorefrontTemplateFormPage) },
         { path: 'storefront-designer/:templateId', element: renderLazy(StorefrontTemplateShowPage) },
         { path: 'storefront-designer/:templateId/edit', element: renderLazy(StorefrontTemplateFormPage) },
+        { path: 'slider-themes', element: renderLazy(SliderThemeListPage) },
+        { path: 'slider-themes/new', element: renderLazy(SliderThemeFormPage) },
+        { path: 'slider-themes/:themeId', element: renderLazy(SliderThemeShowPage) },
+        { path: 'slider-themes/:themeId/edit', element: renderLazy(SliderThemeFormPage) },
         {
           element: <RequireSuperAdmin />,
           children: [

@@ -27,12 +27,18 @@ export function CommonModulePage() {
   const [metadata, setMetadata] = useState<CommonModuleMetadata | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-
-  if (moduleKey === 'storefrontTemplates') {
-    return <Navigate to={buildAdminPortalPath('/storefront-designer')} replace />
-  }
+  const redirectTarget =
+    moduleKey === 'storefrontTemplates'
+      ? buildAdminPortalPath('/storefront-designer')
+      : moduleKey === 'sliderThemes'
+        ? buildAdminPortalPath('/slider-themes')
+        : null
 
   useEffect(() => {
+    if (redirectTarget) {
+      return
+    }
+
     let cancelled = false
 
     async function loadMetadata() {
@@ -66,7 +72,11 @@ export function CommonModulePage() {
     return () => {
       cancelled = true
     }
-  }, [moduleKey])
+  }, [moduleKey, redirectTarget])
+
+  if (redirectTarget) {
+    return <Navigate to={redirectTarget} replace />
+  }
 
   if (loading) {
     return (

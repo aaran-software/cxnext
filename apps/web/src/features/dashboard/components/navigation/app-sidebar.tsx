@@ -42,6 +42,8 @@ import { useBranding } from "@/shared/branding/branding-provider"
 function getActiveGroupKey(pathname: string) {
   const moduleKey = pathname.startsWith(buildAdminPortalPath('/storefront-designer'))
     ? 'storefrontTemplates'
+    : pathname.startsWith(buildAdminPortalPath('/slider-themes'))
+      ? 'sliderThemes'
     : pathname.match(/^\/admin\/dashboard\/common\/([^/]+)$/)?.[1]
 
   if (!moduleKey) return null
@@ -222,6 +224,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                 asChild
                                 isActive={item.key === 'storefrontTemplates'
                                   ? location.pathname.startsWith(buildAdminPortalPath('/storefront-designer'))
+                                  : item.key === 'sliderThemes'
+                                    ? location.pathname.startsWith(buildAdminPortalPath('/slider-themes'))
                                   : location.pathname === buildAdminPortalPath(`/common/${item.key}`)}
                               >
                                 <NavLink to={getCommonModuleHref(item.key)}>
