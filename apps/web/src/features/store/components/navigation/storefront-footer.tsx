@@ -24,6 +24,9 @@ export function StorefrontFooter() {
               <BrandMark />
             </Link>
             <p className="text-sm leading-relaxed text-muted-foreground">{branding.summary}</p>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Direct-from-factory knitwear, hosiery basics, and export-style garment programs built for Tiruppur textile selling.
+            </p>
             <div className="space-y-3 pt-2 text-sm text-muted-foreground">
               <div className="flex items-start gap-3">
                 <MapPinIcon className="mt-0.5 size-4 shrink-0" />
@@ -53,45 +56,45 @@ export function StorefrontFooter() {
           <div className="space-y-5">
             <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Top Categories</h3>
             <ul className="grid gap-3 text-sm text-muted-foreground">
-              <li><Link to="/category/electronics" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Electronics & Gadgets</Link></li>
-              <li><Link to="/category/fashion" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Fashion & Apparel</Link></li>
-              <li><Link to="/category/home-decor" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Home & Furniture</Link></li>
-              <li><Link to="/category/beauty" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Beauty & Personal Care</Link></li>
-              <li><Link to="/category/sports" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Sports & Outdoors</Link></li>
+              <li><Link to="/search" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Men's Knitwear</Link></li>
+              <li><Link to="/search" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Women's Knitwear</Link></li>
+              <li><Link to="/search" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Kids and Infantwear</Link></li>
+              <li><Link to="/search" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Inner Wears</Link></li>
+              <li><Link to="/search" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Corporate and Festival Tees</Link></li>
               <li><Link to="/search" className="inline-block font-medium text-foreground transition-transform hover:-translate-y-0.5 hover:text-primary">View All Categories {"->"}</Link></li>
             </ul>
           </div>
 
           <div className="space-y-5">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Help & Support</h3>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Order Support</h3>
             <ul className="grid gap-3 text-sm text-muted-foreground">
-              <li><Link to="/help" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Help Center / FAQ</Link></li>
-              <li><Link to="/account/orders" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Track Your Order</Link></li>
-              <li><Link to="/returns" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Returns & Exchanges</Link></li>
-              <li><Link to="/shipping" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Shipping Information</Link></li>
-              <li><Link to="/contact" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Contact Us</Link></li>
+              <li><Link to="/account/orders" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Track Factory Dispatch</Link></li>
+              <li><Link to="/contact" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Bulk Order Enquiry</Link></li>
+              <li><Link to="/contact" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Sampling and Sourcing</Link></li>
+              <li><Link to="/contact" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Size and Fit Assistance</Link></li>
+              <li><Link to="/contact" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Contact Textile Desk</Link></li>
             </ul>
           </div>
 
           <div className="space-y-5">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">About Us</h3>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">About The Brand</h3>
             <ul className="grid gap-3 text-sm text-muted-foreground">
-              <li><Link to="/about" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Our Story</Link></li>
-              <li><Link to="/careers" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Careers</Link></li>
-              <li><Link to="/vendor" className="inline-block font-medium text-primary transition-transform hover:-translate-y-0.5 hover:text-primary/80">Become a Seller</Link></li>
-              <li><Link to="/press" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Press & News</Link></li>
-              <li><Link to="/investors" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Investor Relations</Link></li>
+              <li><Link to="/about" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Tiruppur Story</Link></li>
+              <li><Link to="/about" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Factory-Direct Promise</Link></li>
+              <li><Link to="/services" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Private Label Support</Link></li>
+              <li><Link to="/services" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Retail and Wholesale Supply</Link></li>
+              <li><Link to="/contact" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Join as Buying Partner</Link></li>
             </ul>
           </div>
 
           <div className="space-y-5">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Legal & Policies</h3>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Trade Information</h3>
             <ul className="grid gap-3 text-sm text-muted-foreground">
               <li><Link to="/terms" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Terms & Conditions</Link></li>
               <li><Link to="/privacy" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Privacy Policy</Link></li>
-              <li><Link to="/cookie-policy" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Cookie Policy</Link></li>
-              <li><Link to="/accessibility" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Accessibility</Link></li>
-              <li><Link to="/shipping-carriers" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Shipping Carriers</Link></li>
+              <li><Link to="/shipping" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Shipping Information</Link></li>
+              <li><Link to="/returns" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Returns & Exchanges</Link></li>
+              <li><Link to="/contact" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Compliance and Documentation</Link></li>
             </ul>
           </div>
         </div>

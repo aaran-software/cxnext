@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 
-import type { CompanySummary } from '@shared/index'
+import type { Company, CompanySummary } from '@shared/index'
 import {
   createContext,
   type PropsWithChildren,
@@ -8,7 +8,7 @@ import {
   useEffect,
   useState,
 } from 'react'
-import { listCompanies } from '@/shared/api/client'
+import { getCompany, listCompanies } from '@/shared/api/client'
 import { useSetup } from '@/features/setup/components/setup-provider'
 
 type BrandingSnapshot = {
@@ -56,7 +56,27 @@ function normalizeText(value: string | null | undefined) {
   return normalized
 }
 
-function createBrandingSnapshot(company: CompanySummary | null): BrandingSnapshot {
+function formatCompanyLocation(company: Company | CompanySummary | null) {
+  if (!company || !('addresses' in company) || !Array.isArray(company.addresses)) {
+    return defaultBrandingSnapshot.location
+  }
+
+  const primaryAddress =
+    company.addresses.find((address) => address.isDefault && address.isActive)
+    ?? company.addresses.find((address) => address.isActive)
+    ?? null
+
+  if (!primaryAddress) {
+    return defaultBrandingSnapshot.location
+  }
+
+  return [primaryAddress.addressLine1, primaryAddress.addressLine2]
+    .map((value) => normalizeText(value))
+    .filter((value): value is string => Boolean(value))
+    .join(', ')
+}
+
+function createBrandingSnapshot(company: Company | CompanySummary | null): BrandingSnapshot {
   const brandName = normalizeText(company?.name) ?? defaultBrandingSnapshot.brandName
   const legalName = normalizeText(company?.legalName) ?? null
   const description = normalizeText(company?.description)
@@ -70,7 +90,7 @@ function createBrandingSnapshot(company: CompanySummary | null): BrandingSnapsho
     email: normalizeText(company?.primaryEmail) ?? defaultBrandingSnapshot.email,
     phone: normalizeText(company?.primaryPhone) ?? defaultBrandingSnapshot.phone,
     website,
-    location: defaultBrandingSnapshot.location,
+    location: formatCompanyLocation(company),
   }
 }
 
@@ -132,9 +152,10 @@ export function BrandingProvider({ children }: PropsWithChildren) {
         }
 
         const activeCompany = companies.find((item) => item.isActive) ?? companies[0] ?? null
-        const nextSnapshot = createBrandingSnapshot(activeCompany)
+        const detailedCompany = activeCompany ? await getCompany(activeCompany.id) : null
+        const nextSnapshot = createBrandingSnapshot(detailedCompany ?? activeCompany)
 
-        setCompany(activeCompany)
+        setCompany(detailedCompany ?? activeCompany)
         setSnapshot(nextSnapshot)
         setIsLoaded(true)
         writeStoredBranding(nextSnapshot)
