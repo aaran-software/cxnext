@@ -27,11 +27,35 @@ export function SetupProvider({ children }: PropsWithChildren) {
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  function createUnreachableStatus(detail: string): SetupStatus {
+    return {
+      status: 'error',
+      checkedAt: new Date().toISOString(),
+      detail,
+      database: {
+        configured: false,
+        source: 'none',
+        host: null,
+        port: null,
+        user: null,
+        name: null,
+      },
+    }
+  }
+
   const refresh = useCallback(async () => {
     setIsLoading(true)
 
     try {
       const nextStatus = await fetchSetupStatus()
+      startTransition(() => {
+        setStatus(nextStatus)
+      })
+      return nextStatus
+    } catch (error) {
+      const nextStatus = createUnreachableStatus(
+        error instanceof Error ? error.message : 'Unable to reach the CXNext API.',
+      )
       startTransition(() => {
         setStatus(nextStatus)
       })

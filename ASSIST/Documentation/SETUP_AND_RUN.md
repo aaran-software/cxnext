@@ -98,21 +98,29 @@ npm run build
 Build and run the bundled stack:
 
 ```bash
-docker compose up -d --build
+docker network create codexion-network
+docker compose -f .container/docker-compose.yml --env-file .container/compose.env up -d --build
 ```
 
-The compose stack includes:
+The default container stack includes:
 
 - `app`: one Node container serving both the API and the built web app on port `4000`
-- `db`: a MariaDB container for the application database
 
-After the containers start, open `http://YOUR_SERVER:4000` and complete the database setup form. For the default Compose database service, use:
+This deployment path assumes your VPS already has access to an existing MariaDB server. The app stack joins the external Docker network `codexion-network`, so the MariaDB container/service should also be attached to that network and resolve as `mariadb`.
 
-- Host: `db`
+If you want to run the uploaded local MariaDB stack from this repository:
+
+```bash
+docker compose -f .container/mariadb.yml up -d
+```
+
+Default database values in `.container/compose.env`:
+
+- Host: `mariadb`
 - Port: `3306`
-- User: `cxnext`
-- Password: `cxnext`
-- Database: `cxnext`
+- User: `root`
+- Password: `DbPass1@@`
+- Database: `cxnext_db`
 
 Persistent runtime data is stored in the `cxnext_runtime` Docker volume, including:
 
@@ -123,11 +131,13 @@ Persistent runtime data is stored in the `cxnext_runtime` Docker volume, includi
 
 The container entrypoint under `.container/entrypoint.sh` supports pulling from Git and rebuilding inside the container. Enable it with environment variables such as:
 
-- `GIT_SYNC_ENABLED=true`
-- `GIT_REPOSITORY_URL=https://github.com/your-org/your-repo.git`
-- `GIT_BRANCH=main`
+- `CXNEXT_GIT_SYNC_ENABLED=true`
+- `CXNEXT_GIT_REPOSITORY_URL=https://github.com/aaran-software/cxnext.git`
+- `CXNEXT_GIT_BRANCH=main`
 
 Optional related flags:
 
-- `BUILD_ON_START=true`
-- `INSTALL_DEPS_ON_START=true`
+- `CXNEXT_BUILD_ON_START=true`
+- `CXNEXT_INSTALL_DEPS_ON_START=true`
+
+Detailed app-only deployment instructions for an existing MariaDB data server are in `.container/USAGE.md`.

@@ -44,7 +44,19 @@ import type {
   SetupStatusResponse,
 } from '@shared/index'
 
-const apiBaseUrl = String(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000')
+const configuredApiBaseUrl = String(import.meta.env.VITE_API_BASE_URL ?? '').trim()
+
+function resolveApiBaseUrl() {
+  if (configuredApiBaseUrl) {
+    return configuredApiBaseUrl.replace(/\/$/, '')
+  }
+
+  if (typeof window !== 'undefined') {
+    return window.location.origin
+  }
+
+  return 'http://localhost:4000'
+}
 
 export class HttpError extends Error {
   constructor(
@@ -58,7 +70,7 @@ export class HttpError extends Error {
 }
 
 export async function request<T>(path: string, init?: RequestInit) {
-  const response = await fetch(`${apiBaseUrl}${path}`, {
+  const response = await fetch(`${resolveApiBaseUrl()}${path}`, {
     ...init,
     headers: {
       ...(init?.body ? { 'content-type': 'application/json' } : {}),

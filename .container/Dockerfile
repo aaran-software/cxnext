@@ -3,7 +3,7 @@ FROM node:22-bookworm-slim
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends git ca-certificates openssh-client \
+  && apt-get install -y --no-install-recommends git nano sudo ca-certificates openssh-client \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/cxnext/app
@@ -28,6 +28,7 @@ COPY tsconfig.node.json ./
 COPY vite.config.ts ./
 COPY .env.example ./
 
+RUN rm -rf ./apps/web/public/storage && mkdir -p ./apps/web/public/storage
 RUN chmod +x ./.container/entrypoint.sh
 RUN npm run build:server
 

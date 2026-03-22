@@ -61,7 +61,9 @@ Added a production-oriented deployment path that can run CXNext as a single cont
 - `apps/api/src/shared/config/environment.ts`, `apps/api/src/shared/config/runtime-settings.ts`, `apps/api/src/shared/database/database-config.ts`, `apps/api/src/shared/database/database.ts`, and `apps/api/src/shared/database/orm.ts` to support runtime DB config persistence, setup-state tracking, DB auto-create-if-missing, and non-fatal startup when DB setup is incomplete
 - `apps/api/src/app/http/router.ts`, `apps/api/src/server.ts`, and `apps/api/src/shared/http/static-web.ts` to expose setup endpoints, include setup state in health responses, and serve the built React app from the API in production
 - `apps/web/src/features/setup/components/setup-provider.tsx`, `apps/web/src/features/setup/pages/initial-setup-page.tsx`, `apps/web/src/App.tsx`, `apps/web/src/main.tsx`, and `apps/web/src/shared/api/client.ts` to gate the application on setup status and provide the first-run database configuration screen
-- `Dockerfile`, `docker-compose.yml`, `.dockerignore`, and `.container/*` to add the VPS container/runtime flow including optional Git sync and build-on-start behavior
+- `.container/Dockerfile`, `.container/docker-compose.yml`, `.container/compose.env.example`, `.container/USAGE.md`, `.dockerignore`, and `.container/*` to keep the Docker assets together and document app-only deployment against an existing MariaDB server
+- `.container/mariadb.yml` and `.container/50-server.cnf` were reviewed and the app compose was aligned to the same `codexion-network` and `mariadb` hostname
+- `.container/compose.env`, `.container/docker-compose.yml`, and `.container/mariadb.yml` were finalized with the concrete defaults `mariadb` / `root` / `DbPass1@@` / `cxnext_db` and the Git source `https://github.com/aaran-software/cxnext.git` on `main`
 - `.env.example`, `ASSIST/Documentation/PROJECT_OVERVIEW.md`, `ASSIST/Documentation/ARCHITECTURE.md`, `ASSIST/Documentation/SETUP_AND_RUN.md`, and `ASSIST/Documentation/CHANGELOG.md` to document the new setup/deployment architecture
 - `ASSIST/Execution/TASK.md`, `ASSIST/Execution/PLANNING.md`, and `ASSIST/Execution/WALKTHROUGH.md` to keep the active-work records aligned with this change set
 
@@ -69,7 +71,16 @@ Added a production-oriented deployment path that can run CXNext as a single cont
 
 - `npx eslint apps/api/src/server.ts apps/api/src/app/http/router.ts apps/api/src/shared/config/environment.ts apps/api/src/shared/config/runtime-settings.ts apps/api/src/shared/database/database-config.ts apps/api/src/shared/database/database.ts apps/api/src/shared/database/orm.ts apps/api/src/shared/http/static-web.ts apps/web/src/App.tsx apps/web/src/main.tsx apps/web/src/shared/api/client.ts apps/web/src/features/setup/components/setup-provider.tsx apps/web/src/features/setup/pages/initial-setup-page.tsx packages/shared/src/schemas/setup.ts` succeeded
 - `npm run build:server` succeeded
-- `docker compose config` succeeded
+- `docker compose -f .container/mariadb.yml config` succeeded
+- `docker compose -f .container/docker-compose.yml --env-file .container/compose.env.example config` succeeded
+- `docker compose -f .container/docker-compose.yml --env-file .container/compose.env config` succeeded
+- `docker network create codexion-network` reported the network already exists
+- `docker compose -f .container/mariadb.yml up -d --force-recreate` succeeded after removing the unnecessary host `3306` mapping from the MariaDB stack
+- `docker compose -f .container/docker-compose.yml --env-file .container/compose.env up -d --build` built successfully; local port `4000` was already in use, so the runtime validation used `CXNEXT_APP_PORT=4400`
+- `docker ps -a` confirmed `cxnext-app` and `mariadb` are running
+- `docker logs cxnext-app` showed `CXNext API listening on http://localhost:4000`
+- `Invoke-WebRequest http://localhost:4400/health` returned `status: ok` with MariaDB `status: ok`
+- `Invoke-WebRequest http://localhost:4400/setup/status` returned `status: ready`
 - `npm run typecheck` failed because the repository already has a large baseline of unrelated TypeScript errors in existing API, storefront, state, and notification modules
 - `npm run lint` failed because the repository already has a large baseline of unrelated ESLint violations outside the files changed for this task
 
