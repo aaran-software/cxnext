@@ -88,6 +88,10 @@ function normalizeAddresses(addresses: CustomerProfileUpdatePayload['addresses']
 
 export class CustomerProfileRepository {
   async getByUser(user: AuthUser) {
+    return this.getByUserId(user.id)
+  }
+
+  async getByUserId(userId: string) {
     await ensureDatabaseSchema()
 
     const userRow = await db.first<CustomerUserRow>(
@@ -97,7 +101,7 @@ export class CustomerProfileRepository {
         WHERE id = ?
         LIMIT 1
       `,
-      [user.id],
+      [userId],
     )
 
     if (!userRow) {
@@ -132,7 +136,7 @@ export class CustomerProfileRepository {
           AND address.is_active = 1
         ORDER BY address.is_default DESC, address.created_at ASC
       `,
-      [user.id],
+      [userId],
     )
 
     return {
@@ -205,6 +209,6 @@ export class CustomerProfileRepository {
       }
     })
 
-    return this.getByUser(user)
+    return this.getByUserId(user.id)
   }
 }

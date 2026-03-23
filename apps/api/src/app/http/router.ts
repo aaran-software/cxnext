@@ -21,6 +21,8 @@ import { CustomerProfileService } from '../../features/customer-profile/applicat
 import { CustomerProfileRepository } from '../../features/customer-profile/data/customer-profile-repository'
 import { CommerceOrderWorkflowService } from '../../features/commerce/application/commerce-order-workflow-service'
 import { CommerceOrderWorkflowRepository } from '../../features/commerce/data/commerce-order-workflow-repository'
+import { CustomerHelpdeskService } from '../../features/customer-helpdesk/application/customer-helpdesk-service'
+import { CustomerHelpdeskRepository } from '../../features/customer-helpdesk/data/customer-helpdesk-repository'
 import {
   readSystemSettings,
   runManualUpdate,
@@ -50,8 +52,14 @@ const contactService = new ContactService(new ContactRepository())
 const productService = new ProductService(new ProductRepository())
 const mediaService = new MediaService(new MediaRepository())
 const storefrontOrderService = new StorefrontOrderService(new StorefrontOrderRepository())
-const customerProfileService = new CustomerProfileService(new CustomerProfileRepository())
+const customerProfileRepository = new CustomerProfileRepository()
+const customerProfileService = new CustomerProfileService(customerProfileRepository)
 const commerceOrderWorkflowService = new CommerceOrderWorkflowService(new CommerceOrderWorkflowRepository())
+const customerHelpdeskService = new CustomerHelpdeskService(
+  new CustomerHelpdeskRepository(),
+  customerProfileRepository,
+  authService,
+)
 
 function parseBooleanFlag(value: string | null) {
   if (!value) {
@@ -259,6 +267,11 @@ export async function routeRequest(
 
     if (method === 'GET' && url.pathname === '/admin/commerce/orders') {
       writeJson(response, 200, await commerceOrderWorkflowService.listOrders(await requireBackofficeUser(request)))
+      return
+    }
+
+    if (method === 'GET' && url.pathname === '/admin/customers/helpdesk') {
+      writeJson(response, 200, await customerHelpdeskService.listCustomers(await requireBackofficeUser(request)))
       return
     }
 
@@ -477,6 +490,36 @@ export async function routeRequest(
       return
     }
 
+    const customerHelpdeskRecordMatch = url.pathname.match(/^\/admin\/customers\/helpdesk\/([^/]+)$/)
+    if (customerHelpdeskRecordMatch && method === 'GET') {
+      writeJson(
+        response,
+        200,
+        await customerHelpdeskService.getCustomer(await requireBackofficeUser(request), customerHelpdeskRecordMatch[1]),
+      )
+      return
+    }
+
+    const customerHelpdeskPasswordResetMatch = url.pathname.match(/^\/admin\/customers\/helpdesk\/([^/]+)\/password-reset\/request$/)
+    if (customerHelpdeskPasswordResetMatch && method === 'POST') {
+      writeJson(
+        response,
+        200,
+        await customerHelpdeskService.sendPasswordReset(await requireBackofficeUser(request), customerHelpdeskPasswordResetMatch[1]),
+      )
+      return
+    }
+
+    const customerHelpdeskRecoveryMatch = url.pathname.match(/^\/admin\/customers\/helpdesk\/([^/]+)\/account-recovery\/request$/)
+    if (customerHelpdeskRecoveryMatch && method === 'POST') {
+      writeJson(
+        response,
+        200,
+        await customerHelpdeskService.sendRecoveryEmail(await requireBackofficeUser(request), customerHelpdeskRecoveryMatch[1]),
+      )
+      return
+    }
+
     if (method === 'POST' && url.pathname === '/companies') {
       writeJson(response, 201, await companyService.create(await readJsonBody(request)))
       return
@@ -603,6 +646,16 @@ export async function routeRequest(
 
     if (method === 'POST' && url.pathname === '/auth/account-recovery/request-otp') {
       writeJson(response, 200, await authService.requestAccountRecoveryOtp(await readJsonBody(request)))
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/auth/password-reset/request-otp') {
+      writeJson(response, 200, await authService.requestPasswordResetOtp(await readJsonBody(request)))
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/auth/password-reset/confirm') {
+      writeJson(response, 200, await authService.confirmPasswordReset(await readJsonBody(request)))
       return
     }
 

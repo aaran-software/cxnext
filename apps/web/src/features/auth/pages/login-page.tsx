@@ -2,7 +2,10 @@ import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { requestAccountRecoveryOtp, restoreAccount } from '@/shared/api/client'
+import {
+  requestAccountRecoveryOtp,
+  restoreAccount,
+} from '@/shared/api/client'
 import { useAuth } from '@/features/auth/components/auth-provider'
 import { resolveAuthorizedPath } from '@/features/auth/lib/portal-routing'
 import { Button } from '@/components/ui/button'
@@ -146,7 +149,12 @@ export function LoginPage() {
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="password">Password</Label>
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="password">Password</Label>
+              <Link to="/forgot-password" state={location.state} className="text-xs font-medium text-foreground underline underline-offset-4">
+                Forgot password?
+              </Link>
+            </div>
             <Input
               id="password"
               type="password"

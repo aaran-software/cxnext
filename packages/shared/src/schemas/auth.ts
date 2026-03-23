@@ -129,6 +129,27 @@ export const authAccountRecoveryRequestResponseSchema = z.object({
   debugOtp: z.string().length(6).nullable(),
 })
 
+export const authPasswordResetRequestPayloadSchema = z.object({
+  email: z.email(),
+})
+
+export const authPasswordResetRequestResponseSchema = z.object({
+  verificationId: z.string().min(1),
+  expiresAt: z.string().min(1),
+  debugOtp: z.string().length(6).nullable(),
+})
+
+export const authPasswordResetConfirmPayloadSchema = z.object({
+  email: z.email(),
+  verificationId: z.string().min(1),
+  otp: z.string().trim().length(6),
+  newPassword: z.string().min(8),
+})
+
+export const authPasswordResetConfirmResponseSchema = z.object({
+  updated: z.literal(true),
+})
+
 export const authAccountRecoveryRestorePayloadSchema = z.object({
   email: z.email(),
   verificationId: z.string().min(1),
@@ -166,6 +187,10 @@ export type AuthDeleteAccountPayload = z.infer<typeof authDeleteAccountPayloadSc
 export type AuthDeleteAccountResponse = z.infer<typeof authDeleteAccountResponseSchema>
 export type AuthAccountRecoveryRequestPayload = z.infer<typeof authAccountRecoveryRequestPayloadSchema>
 export type AuthAccountRecoveryRequestResponse = z.infer<typeof authAccountRecoveryRequestResponseSchema>
+export type AuthPasswordResetRequestPayload = z.infer<typeof authPasswordResetRequestPayloadSchema>
+export type AuthPasswordResetRequestResponse = z.infer<typeof authPasswordResetRequestResponseSchema>
+export type AuthPasswordResetConfirmPayload = z.infer<typeof authPasswordResetConfirmPayloadSchema>
+export type AuthPasswordResetConfirmResponse = z.infer<typeof authPasswordResetConfirmResponseSchema>
 export type AuthAccountRecoveryRestorePayload = z.infer<typeof authAccountRecoveryRestorePayloadSchema>
 export type AuthAccountRecoveryRestoreResponse = z.infer<typeof authAccountRecoveryRestoreResponseSchema>
 export type DatabaseHealth = z.infer<typeof databaseHealthSchema>

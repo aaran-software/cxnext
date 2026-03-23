@@ -8,40 +8,40 @@ This file captures the execution plan for the current task before implementation
 
 ### Task
 
-`Customer portal live commerce pages and test payment bypass`
+`Admin helpdesk and order operations list/show refinement`
 
 ### Goal
 
-Finish the customer portal’s core commerce pages with live current data and make checkout testable without Razorpay by introducing an explicit environment switch that bypasses online payment capture during testing.
+Create cleaner admin browse/detail flows by keeping customer helpdesk in a master list plus dedicated customer show page, converting order operations into a dedicated order list plus order show page, and preserving the safe OTP password-reset support flow.
 
 ### Assumptions
 
-- Existing storefront catalog, cart, wishlist, and checkout UI should stay structurally the same
-- The quickest safe customer order ownership path is to scope order history to the authenticated customer identity already captured at checkout
-- Notifications can be derived from current order/payment/shipment state instead of requiring a new notification backend in this batch
+- The existing customer account email remains the only safe destination for support-triggered password reset in this batch
+- Existing contact verification storage can be reused for password-reset OTP sessions instead of adding a separate reset token table
+- Support and operations users need dedicated product-style detail pages instead of embedded split panes under list tables
 
 ### Constraints
 
-- Keep business rules and payment bypass logic in backend services, not only in React
-- Preserve current customer portal navigation, layout shell, and storefront UX tone
-- Keep the payment bypass explicit and environment-driven so it cannot be mistaken for a normal production flow
+- Keep reset and verification business rules in backend auth services, not only in React
+- Do not let admin users set a new customer password directly without customer OTP completion
+- Keep the helpdesk and order operations UI inside the existing admin dashboard navigation, using CommonList for browse flow and the existing entity detail tone for the show pages
 - Update execution tracking, walkthrough, and changelog in the same change set
 
 ### Plan
 
-1. Add shared contracts plus backend customer order list support for authenticated customer users
-2. Add frontend customer portal pages for overview, orders, wishlist, cart, and notifications using live backend/storefront state
-3. Route the customer portal pages into the existing customer portal shell without changing overall navigation structure
-4. Add an `.env` payment bypass mode that auto-completes online checkout during testing while preserving the current checkout UX
-5. Validate with `typecheck` and `build`, then record the completed implementation and remaining risks
+1. Add shared auth/helpdesk contracts plus backend password-reset OTP support and admin customer helpdesk data queries
+2. Add admin helpdesk routes and service actions for customer list/detail, support-triggered password reset, and disabled-account recovery email initiation
+3. Add an admin dashboard customer helpdesk list page plus a dedicated customer show page for overview, orders, addresses, and verification history
+4. Convert order operations into a full-width order list plus a dedicated order show page with organized workflow actions, shipment, invoice, and accounts tabs
+5. Validate with `typecheck` and `build`, then record the implementation and remaining support/workflow risks
 
 ### Validation
 
 - `npm run typecheck`
 - `npm run build`
-- Completed in this batch: `npm run typecheck` and `npm run build`
+- Pending for this batch: `npm run typecheck` and `npm run build`
 
 ### Open Questions
 
-- Whether customer order ownership should later move from email-based scoping to an explicit customer user foreign key
-- Whether a future increment should add dedicated notification persistence instead of deriving notifications from order state
+- Whether support workflows later need persistent notes, ticket ownership, and audit entries beyond current derived customer/account context
+- Whether customer identity should later store durable verified-contact flags instead of inferring support verification context from challenge history

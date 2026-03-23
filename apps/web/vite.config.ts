@@ -15,6 +15,35 @@ export default defineConfig(({ mode }) => {
   return {
     root: path.resolve(import.meta.dirname),
     plugins: [react(), babel({ presets: [reactCompilerPreset()] }), tailwindcss()],
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes('node_modules')) {
+              return undefined
+            }
+
+            if (id.includes('react-dom') || id.includes('react-router') || id.includes(`${path.sep}react${path.sep}`)) {
+              return 'react-vendor'
+            }
+
+            if (id.includes('@radix-ui') || id.includes('radix-ui')) {
+              return 'radix-vendor'
+            }
+
+            if (id.includes('motion')) {
+              return 'motion-vendor'
+            }
+
+            if (id.includes('@tanstack')) {
+              return 'query-vendor'
+            }
+
+            return 'vendor'
+          },
+        },
+      },
+    },
     define: {
       __FRONTEND_TARGET__: JSON.stringify(frontendTarget),
       __APP_MODE__: JSON.stringify(frontendTarget),

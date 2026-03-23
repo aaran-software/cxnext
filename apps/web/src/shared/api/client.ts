@@ -8,6 +8,10 @@ import type {
   AuthChangePasswordResponse,
   AuthDeleteAccountPayload,
   AuthDeleteAccountResponse,
+  AuthPasswordResetConfirmPayload,
+  AuthPasswordResetConfirmResponse,
+  AuthPasswordResetRequestPayload,
+  AuthPasswordResetRequestResponse,
   AuthRegisterPayload,
   AuthRegisterOtpRequestPayload,
   AuthRegisterOtpRequestResponse,
@@ -17,6 +21,8 @@ import type {
   AuthUser,
   CustomerProfileResponse,
   CustomerProfileUpdatePayload,
+  CustomerHelpdeskDetailResponse,
+  CustomerHelpdeskListResponse,
   CompanyListResponse,
   CompanyResponse,
   CompanyUpsertPayload,
@@ -199,6 +205,20 @@ export function verifyRegisterOtp(payload: AuthRegisterOtpVerifyPayload) {
 
 export function requestAccountRecoveryOtp(payload: AuthAccountRecoveryRequestPayload) {
   return request<AuthAccountRecoveryRequestResponse>('/auth/account-recovery/request-otp', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function requestPasswordResetOtp(payload: AuthPasswordResetRequestPayload) {
+  return request<AuthPasswordResetRequestResponse>('/auth/password-reset/request-otp', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function confirmPasswordReset(payload: AuthPasswordResetConfirmPayload) {
+  return request<AuthPasswordResetConfirmResponse>('/auth/password-reset/confirm', {
     method: 'POST',
     body: JSON.stringify(payload),
   })
@@ -544,6 +564,34 @@ export async function listCommerceOrders(token: string) {
     headers: createAuthorizationHeaders(token),
   })
   return response.items
+}
+
+export async function listCustomerHelpdeskCustomers(token: string) {
+  const response = await request<CustomerHelpdeskListResponse>('/admin/customers/helpdesk', {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.items
+}
+
+export async function getCustomerHelpdeskCustomer(token: string, customerId: string) {
+  const response = await request<CustomerHelpdeskDetailResponse>(`/admin/customers/helpdesk/${customerId}`, {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.item
+}
+
+export function sendCustomerHelpdeskPasswordReset(token: string, customerId: string) {
+  return request<AuthPasswordResetRequestResponse>(`/admin/customers/helpdesk/${customerId}/password-reset/request`, {
+    method: 'POST',
+    headers: createAuthorizationHeaders(token),
+  })
+}
+
+export function sendCustomerHelpdeskRecoveryEmail(token: string, customerId: string) {
+  return request<AuthAccountRecoveryRequestResponse>(`/admin/customers/helpdesk/${customerId}/account-recovery/request`, {
+    method: 'POST',
+    headers: createAuthorizationHeaders(token),
+  })
 }
 
 export async function getCommerceOrderWorkflow(token: string, orderId: string) {

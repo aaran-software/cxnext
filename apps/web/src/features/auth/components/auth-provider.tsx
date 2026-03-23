@@ -30,6 +30,12 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+function clearStoredSession() {
+  if (typeof window !== 'undefined') {
+    window.localStorage.removeItem(STORAGE_KEY)
+  }
+}
+
 function getStoredSession(): AuthSession | null {
   if (typeof window === 'undefined') {
     return null
@@ -64,6 +70,11 @@ function getStoredSession(): AuthSession | null {
 export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<AuthSession | null>(() => getStoredSession())
 
+  function resetSession() {
+    clearStoredSession()
+    setSession(null)
+  }
+
   useEffect(() => {
     if (!session?.accessToken || !session.user || typeof session.user !== 'object') {
       return
@@ -89,7 +100,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession))
         setSession(nextSession)
       })
-      .catch(() => {})
+      .catch(() => {
+        if (!cancelled) {
+          resetSession()
+        }
+      })
 
     return () => {
       cancelled = true
@@ -127,19 +142,23 @@ export function AuthProvider({ children }: PropsWithChildren) {
       return
     }
 
-    const user = await getCurrentUser(session.accessToken)
-    const nextSession = {
-      ...session,
-      user,
-    } satisfies AuthSession
+    try {
+      const user = await getCurrentUser(session.accessToken)
+      const nextSession = {
+        ...session,
+        user,
+      } satisfies AuthSession
 
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession))
-    setSession(nextSession)
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession))
+      setSession(nextSession)
+    } catch (error) {
+      resetSession()
+      throw error
+    }
   }
 
   function logout() {
-    window.localStorage.removeItem(STORAGE_KEY)
-    setSession(null)
+    resetSession()
   }
 
   const value = useMemo(

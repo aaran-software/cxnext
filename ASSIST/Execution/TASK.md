@@ -8,40 +8,46 @@ This file tracks the current active task so contributors and AI agents stay alig
 
 ### Title
 
-`Customer portal live commerce pages and test payment bypass`
+`Admin helpdesk and order operations list/show refinement`
 
 ### Status
 
-validated
+in_progress
 
 ### Objective
 
-Complete the customer-facing portal surfaces for overview, orders, wishlist, cart, and notifications using live current data, and add an `.env`-controlled checkout payment bypass so online-order testing can finish without Razorpay during test runs.
+Refine admin support and operations surfaces into cleaner list/show flows by keeping customer helpdesk in a master-list plus customer show pattern, and converting order operations into a separate order list and product-tone order show page with organized workflow actions.
 
 ### In Scope
 
-- Replace customer portal placeholder pages with live customer-facing commerce pages
-- Add a customer-safe storefront order list API using existing authenticated user context
-- Reuse existing storefront cart and wishlist state instead of redesigning those flows
-- Add an environment-controlled online payment bypass path for storefront checkout testing
+- Add backend admin customer helpdesk list/detail APIs using existing customer, order, address, and verification data
+- Add an admin dashboard customer helpdesk list page in the existing master-list tone and a dedicated customer show page in the product-detail tone
+- Convert order operations into a full-width master-list page plus a dedicated order show page in the product-detail tone
+- Show customer support pain-point context including order summary, saved delivery addresses, verification history, and mismatch indicators
+- Show order workflow context including actions, shipment history, invoice detail, and accounting postings in an organized tabbed show page
+- Add OTP-based customer password-reset request and confirmation flows that do not require the current password
+- Let staff trigger password-reset help to the customer's existing email and recovery mail for disabled accounts
+- Add customer-facing login-page support for self-service password reset with OTP
 - Keep execution notes and changelog aligned with the change set
 
 ### Out Of Scope
 
-- Redesigning customer portal navigation or layout
-- Adding webhook reconciliation or production-grade payment fallback logic
-- Reworking cart and wishlist persistence architecture beyond the current live-state scope
+- Building a full CRM or ticketing subsystem with persistent support cases
+- Adding SMS password reset delivery in this batch
+- Redesigning the overall admin shell or customer portal shell beyond the required route additions
 
 ### Dependencies
 
 - `ASSIST/AI_RULES.md`
+- `apps/api/src/features/auth/*`
+- `apps/api/src/features/customer-profile/*`
 - `apps/api/src/features/storefront/*`
-- `apps/web/src/features/customer-portal/*`
-- `apps/web/src/features/store/context/storefront-context.tsx`
-- `.env` and `.env.example` payment settings
+- `apps/web/src/features/auth/*`
+- `apps/web/src/features/commerce/*`
+- `apps/web/src/components/forms/CommonList.tsx`
 
 ### Risks
 
-- Storefront orders are currently associated by captured checkout identity rather than a dedicated customer-order ownership table
-- Payment bypass is for test flow only and must stay explicit in environment config
-- Customer portal notifications will reflect available live order/payment state, not a separate messaging system
+- Customer order linkage still depends on checkout email matching the customer account email
+- Contact verification history is challenge-based and does not yet represent a full long-term verified-contact ledger
+- Support-triggered password reset must remain limited to the customer's existing email destination and must not bypass OTP confirmation

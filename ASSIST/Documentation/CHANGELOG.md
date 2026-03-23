@@ -71,3 +71,7 @@
 - Added a local `nodemailer` module declaration for the current notification path instead of leaving the API compile blocked on missing external typings
 - Replaced customer portal placeholders for overview, orders, wishlist, cart, and notifications with live current commerce data driven by existing storefront state and authenticated customer order history
 - Added an authenticated customer order-history API and an environment-driven `PAYMENT_TEST_BYPASS` checkout mode so online order testing can complete without Razorpay when explicitly enabled
+- Enforced immediate auth revocation for disabled customer accounts by rejecting inactive bearer-token sessions on the API and clearing stale frontend sessions when `/auth/me` refresh fails
+- Split the web production bundle into stable vendor chunks in `apps/web/vite.config.ts` so Vite build output no longer triggers the 500 kB chunk-size warning
+- Added an admin customer helpdesk workspace with a master-list browse page plus product-tone customer show page, and added OTP password-reset flows so staff can send reset assistance to the customer's existing email without requiring the current password
+- Refined admin order operations into a master-list browse page plus product-tone order show page with organized workflow, shipment, invoice, and accounting tabs

@@ -8,27 +8,29 @@ This file records what was actually done for the current task, how it was valida
 
 ### Task
 
-`Customer portal live commerce pages and test payment bypass`
+`Admin helpdesk and order operations list/show refinement`
 
 ### Summary
 
-Completed the customer-facing commerce portal surfaces for overview, orders, wishlist, cart, and notifications using live current data. Added a customer-safe order-history API keyed to the authenticated customer identity already present at checkout, and introduced an explicit `.env` payment bypass switch so online checkout can complete end to end during testing without Razorpay.
+Added an internal customer helpdesk workspace for admin and staff users using a master list plus dedicated customer show-page flow, then aligned order operations to the same pattern by replacing the split queue/workboard screen with a full-width order list and a dedicated order show page. The helpdesk surfaces customer account status, order summary, saved delivery addresses, recent verification history, and derived mismatch flags in a product-detail style layout. The new order show page exposes workflow actions, timeline, shipment detail, invoice rows, and accounting postings in cleaner tabs. OTP password-reset request and confirmation flows remain available so support can send reset help to the customer's existing email without asking for the current password, while disabled accounts can still receive recovery OTP help. The customer-facing reset flow lives on its own forgot-password page linked from login.
 
 ### Files Changed
 
-- `apps/api/src/features/storefront/data/storefront-order-repository.ts` to add customer order listing and a test-bypass payment order path
-- `apps/api/src/features/storefront/application/storefront-order-service.ts` to expose customer order listing and support env-driven online payment bypass
-- `apps/api/src/app/http/router.ts` to add authenticated customer order routes
-- `apps/api/src/shared/config/environment.ts`, `.env.example`, and `.env` to introduce and enable `PAYMENT_TEST_BYPASS` for current testing
-- `packages/shared/src/schemas/storefront.ts` and `apps/web/src/shared/api/client.ts` to add shared customer order list contracts and client helpers
-- `apps/web/src/features/customer-portal/lib/customer-orders.ts` to centralize live customer order loading and notification derivation
-- `apps/web/src/features/customer-portal/pages/customer-dashboard-page.tsx` to convert overview metrics and summaries to live order/cart/wishlist data
-- `apps/web/src/features/customer-portal/pages/customer-orders-page.tsx` to add a live customer order history page
-- `apps/web/src/features/customer-portal/pages/customer-wishlist-page.tsx` and `apps/web/src/features/customer-portal/pages/customer-cart-page.tsx` to complete live wishlist and cart portal pages
-- `apps/web/src/features/customer-portal/pages/customer-notifications-page.tsx` to derive current customer notifications from live order/payment activity
-- `apps/web/src/app/router.tsx` to route the new customer portal pages inside the existing customer shell
-- `apps/web/src/features/store/pages/store-checkout-page.tsx` to label test-bypass payments clearly in the existing checkout success state
-- `ASSIST/Documentation/CHANGELOG.md` to record the customer portal and test payment changes
+- `packages/shared/src/schemas/auth.ts` to add password-reset OTP request and confirmation contracts
+- `packages/shared/src/schemas/customer-helpdesk.ts` and `packages/shared/src/index.ts` to add admin helpdesk list/detail contracts
+- `apps/api/src/features/auth/application/auth-service.ts` to support password-reset OTP creation, support-triggered reset initiation, and public password-reset confirmation
+- `apps/api/src/features/customer-profile/data/customer-profile-repository.ts` to load customer profiles by user id for helpdesk lookups
+- `apps/api/src/features/customer-helpdesk/data/customer-helpdesk-repository.ts` to aggregate customer account, order, address, and verification history for support
+- `apps/api/src/features/customer-helpdesk/application/customer-helpdesk-service.ts` to expose support-safe customer detail, issue derivation, reset initiation, and recovery initiation logic
+- `apps/api/src/app/http/router.ts` to add admin helpdesk routes and public password-reset endpoints
+- `apps/web/src/shared/api/client.ts` to add helpdesk and password-reset client helpers
+- `apps/web/src/features/commerce/pages/customer-helpdesk-page.tsx` to build the admin customer helpdesk master list
+- `apps/web/src/features/commerce/pages/customer-helpdesk-show-page.tsx` to build the dedicated customer show page in the product-detail tone
+- `apps/web/src/features/commerce/pages/order-operations-page.tsx` to build the admin order operations master list
+- `apps/web/src/features/commerce/pages/order-show-page.tsx` to build the dedicated order show page in the product-detail tone
+- `apps/web/src/app/router.tsx`, `apps/web/src/features/dashboard/components/navigation/app-sidebar.tsx`, and `apps/web/src/features/dashboard/components/navigation/app-header.tsx` to route and expose the helpdesk inside the admin dashboard shell
+- `apps/web/src/features/auth/pages/login-page.tsx` and `apps/web/src/features/auth/pages/forgot-password-page.tsx` to link and host the self-service password-reset OTP flow
+- `ASSIST/Execution/TASK.md`, `ASSIST/Execution/PLANNING.md`, and `ASSIST/Documentation/CHANGELOG.md` to keep execution tracking aligned with the new task
 
 ### Validation Performed
 
@@ -37,18 +39,20 @@ Completed the customer-facing commerce portal surfaces for overview, orders, wis
 
 ### Decisions
 
-- Keep the customer portal inside the existing layout and navigation shell instead of introducing a separate commerce account design
-- Use existing storefront cart and wishlist state as the live source for customer portal pages in this batch
-- Derive customer notifications from available order/payment state rather than creating a separate notification subsystem
-- Keep payment bypass strictly environment-driven so it is explicit test behavior
+- Keep support-triggered password reset limited to the customer's existing account email and require OTP completion from the customer side
+- Reuse the existing contact-verification store for password-reset OTP challenges instead of introducing a new reset-token table in this batch
+- Derive helpdesk mismatch signals from current account, address, and order data instead of creating a persistent support-case subsystem
+- Place the admin helpdesk inside the existing dashboard workspace using a CommonList browse page plus a separate customer detail page rather than keeping support detail embedded under the table
+- Apply the same list/show pattern to order operations so workflow controls live on a dedicated order page instead of sharing space with the queue
 
 ### Remaining Work
 
-- Customer order ownership should later move from email-based lookup to an explicit customer-user linkage in the storefront order model
-- Customer notifications are currently derived from order state and not persisted as a dedicated notification timeline
-- Production-ready payment resilience, webhook reconciliation, and cart/wishlist persistence hardening remain separate launch-readiness work
+- Add durable support notes, case ownership, and audit events if the helpdesk evolves into a full ticketing workflow
+- Introduce explicit long-term verified-contact flags if support operations need more than the current challenge-history view
+- Move customer order ownership from email matching to an explicit customer-user foreign key for stronger support traceability
 
 ### Risks
 
-- `PAYMENT_TEST_BYPASS=true` is currently enabled in `.env` for testing and must be disabled outside test scenarios
-- Customer order history currently depends on the checkout email matching the authenticated customer account email
+- Customer order and mismatch views still depend on checkout email matching the authenticated customer account email
+- Verification history is challenge-based and does not yet represent a full permanent customer-verification ledger
+- Password reset support currently uses email only; mobile OTP reset is still out of scope for this batch

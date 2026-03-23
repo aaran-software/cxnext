@@ -1,6 +1,6 @@
 import type { CommonModuleKey } from '@shared/index'
 import { Link, useLocation } from 'react-router-dom'
-import { Building2, ChevronRight, ContactRound, Home, Image, LayoutDashboard, Mail, Package, Store, Truck } from 'lucide-react'
+import { Building2, ChevronRight, CircleUserRound, ContactRound, Home, Image, LayoutDashboard, Mail, Package, Store, Truck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
@@ -28,6 +28,27 @@ function resolveCurrentTitle(pathname: string) {
     return {
       section: 'Commerce',
       title: 'Order Operations',
+    }
+  }
+
+  if (/^\/admin\/dashboard\/orders\/[^/]+$/.test(pathname)) {
+    return {
+      section: 'Commerce',
+      title: 'Order Details',
+    }
+  }
+
+  if (pathname === '/admin/dashboard/customers' || pathname === '/admin/dashboard/customers/') {
+    return {
+      section: 'Support',
+      title: 'Customer Helpdesk',
+    }
+  }
+
+  if (/^\/admin\/dashboard\/customers\/[^/]+$/.test(pathname)) {
+    return {
+      section: 'Support',
+      title: 'Customer Details',
     }
   }
 
@@ -283,6 +304,12 @@ export function AppHeader() {
           <Link to="/admin/dashboard/orders">
             <Truck className="size-4" />
             Orders
+          </Link>
+        </Button>
+        <Button variant="outline" size="sm" asChild>
+          <Link to="/admin/dashboard/customers">
+            <CircleUserRound className="size-4" />
+            Customers
           </Link>
         </Button>
         <Button variant="outline" size="sm" asChild>

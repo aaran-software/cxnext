@@ -6,6 +6,7 @@ import {
   Building2,
   ChevronRight,
   ContactRound,
+  CircleUserRound,
   Image,
   Mail,
   LayoutDashboard,
@@ -137,6 +138,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <NavLink to={buildAdminPortalPath('/orders')}>
                       <Truck />
                       <span>Orders</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="Customer helpdesk">
+                    <NavLink to={buildAdminPortalPath('/customers')}>
+                      <CircleUserRound />
+                      <span>Customers</span>
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

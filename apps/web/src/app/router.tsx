@@ -69,6 +69,18 @@ const OrderOperationsPage = lazyPage(
   () => import('@/features/commerce/pages/order-operations-page'),
   'OrderOperationsPage',
 )
+const OrderShowPage = lazyPage(
+  () => import('@/features/commerce/pages/order-show-page'),
+  'OrderShowPage',
+)
+const CustomerHelpdeskPage = lazyPage(
+  () => import('@/features/commerce/pages/customer-helpdesk-page'),
+  'CustomerHelpdeskPage',
+)
+const CustomerHelpdeskShowPage = lazyPage(
+  () => import('@/features/commerce/pages/customer-helpdesk-show-page'),
+  'CustomerHelpdeskShowPage',
+)
 const CommonModulePage = lazyPage(
   () => import('@/features/common-modules/pages/common-module-page'),
   'CommonModulePage',
@@ -130,6 +142,7 @@ const SliderThemeShowPage = lazyPage(
   'SliderThemeShowPage',
 )
 const LoginPage = lazyPage(() => import('@/features/auth/pages/login-page'), 'LoginPage')
+const ForgotPasswordPage = lazyPage(() => import('@/features/auth/pages/forgot-password-page'), 'ForgotPasswordPage')
 const PortfolioHomePage = lazyPage(
   () => import('@/features/marketing/pages/portfolio-home-page'),
   'PortfolioHomePage',
@@ -170,6 +183,9 @@ const adminRoutes = {
       children: [
         { index: true, element: renderLazy(DashboardPage) },
         { path: 'orders', element: renderLazy(OrderOperationsPage) },
+        { path: 'orders/:orderId', element: renderLazy(OrderShowPage) },
+        { path: 'customers', element: renderLazy(CustomerHelpdeskPage) },
+        { path: 'customers/:customerId', element: renderLazy(CustomerHelpdeskShowPage) },
         { path: 'companies', element: renderLazy(CompanyListPage) },
         { path: 'companies/new', element: renderLazy(CompanyFormPage) },
         { path: 'companies/:companyId', element: renderLazy(CompanyShowPage) },
@@ -265,6 +281,7 @@ const authRoutes = {
   element: renderLazy(AuthLayout),
   children: [
     { path: 'login', element: renderLazy(LoginPage) },
+    { path: 'forgot-password', element: renderLazy(ForgotPasswordPage) },
     { path: 'register', element: renderLazy(RegisterPage) },
   ],
 }
