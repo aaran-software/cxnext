@@ -124,23 +124,24 @@ function normalizeRazorpayContact(phone: string, country: string) {
     return undefined
   }
 
-  const normalized = trimmed.startsWith("+")
-    ? `+${trimmed.slice(1).replace(/\D/g, "")}`
-    : trimmed.replace(/\D/g, "")
-
-  if (!normalized || normalized === "+") {
+  const digits = trimmed.replace(/\D/g, "")
+  if (!digits) {
     return undefined
   }
 
-  if (normalized.startsWith("+")) {
-    return normalized
+  if (trimmed.startsWith("+")) {
+    return `+${digits}`
   }
 
-  if (country.trim().toLowerCase() === "india" && normalized.length === 10) {
-    return `+91${normalized}`
+  if (digits.length === 10) {
+    return `+91${digits}`
   }
 
-  return `+${normalized}`
+  if (country.trim().toLowerCase() === "india" && digits.length < 12) {
+    return `+91${digits}`
+  }
+
+  return `+${digits}`
 }
 
 function getRazorpayDisplayConfig(paymentMethod: StorefrontPaymentMethod): RazorpayCheckoutOptions["config"] | undefined {
@@ -228,7 +229,7 @@ async function openRazorpayCheckout(
   }
 
   return new Promise<StorefrontOrder>((resolve, reject) => {
-    const prefillContact = normalizeRazorpayContact(values.phone, values.country)
+    const prefillContact = normalizeRazorpayContact(session.prefillContact ?? values.phone, values.country)
     const razorpay = new window.Razorpay({
       key: session.keyId,
       amount: session.amount,
