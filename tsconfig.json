@@ -13,5 +13,9 @@
     "packages/**/*.tsx",
     "vite.config.ts",
     "eslint.config.js"
+  ],
+  "exclude": [
+    "apps/web/src/state/**/*",
+    "apps/web/src/components/forms/ProtectedRoute.tsx"
   ]
 }

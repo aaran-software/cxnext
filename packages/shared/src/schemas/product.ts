@@ -252,7 +252,6 @@ export const productSchema = productSummarySchema.extend({
 })
 
 const nullableTrimmedString = z.string().trim().nullish().transform((value) => value || null)
-const requiredString = z.string().trim().min(1)
 const dashString = z.string().trim().nullish().transform((value) => value?.trim() || '-')
 const defaultUnknownId = z.string().trim().nullish().transform((value) => value?.trim() || '1')
 const decimalValue = z.number().finite()

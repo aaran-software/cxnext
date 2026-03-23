@@ -76,6 +76,7 @@ const environmentSchema = z.object({
   RAZORPAY_BUSINESS_NAME: z.string().min(1),
   RAZORPAY_CHECKOUT_IMAGE: optionalNonEmptyString,
   RAZORPAY_THEME_COLOR: optionalNonEmptyString,
+  PAYMENT_TEST_BYPASS: requiredBooleanFlag,
   SUPER_ADMIN_EMAILS: z.string(),
   GIT_SYNC_ENABLED: requiredBooleanFlag,
   GIT_AUTO_UPDATE_ON_START: requiredBooleanFlag,
@@ -218,6 +219,7 @@ function resolveEnvironment() {
         checkoutImage: parsedEnvironment.RAZORPAY_CHECKOUT_IMAGE ?? null,
         themeColor: parsedEnvironment.RAZORPAY_THEME_COLOR ?? '',
       },
+      testBypass: parsedEnvironment.PAYMENT_TEST_BYPASS,
     },
     runtime: {
       git: {

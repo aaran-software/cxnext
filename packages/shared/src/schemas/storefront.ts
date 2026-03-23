@@ -188,6 +188,10 @@ export const storefrontCheckoutResponseSchema = z.object({
   order: storefrontOrderSchema,
 })
 
+export const storefrontOrderListResponseSchema = z.object({
+  items: z.array(storefrontOrderSchema),
+})
+
 export const storefrontCheckoutSessionResponseSchema = z.object({
   order: storefrontOrderSchema,
   requiresPayment: z.boolean(),
@@ -209,5 +213,6 @@ export type StorefrontPaymentVerificationPayload = z.infer<typeof storefrontPaym
 export type StorefrontOrderItem = z.infer<typeof storefrontOrderItemSchema>
 export type StorefrontOrder = z.infer<typeof storefrontOrderSchema>
 export type StorefrontCheckoutResponse = z.infer<typeof storefrontCheckoutResponseSchema>
+export type StorefrontOrderListResponse = z.infer<typeof storefrontOrderListResponseSchema>
 export type StorefrontRazorpayCheckoutSession = z.infer<typeof storefrontRazorpayCheckoutSessionSchema>
 export type StorefrontCheckoutSessionResponse = z.infer<typeof storefrontCheckoutSessionResponseSchema>

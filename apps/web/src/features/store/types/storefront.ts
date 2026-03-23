@@ -1,3 +1,5 @@
+import type { StorefrontDepartment } from '@shared/index'
+
 export type {
   StorefrontBrand,
   StorefrontCatalogResponse,
@@ -8,6 +10,7 @@ export type {
   StorefrontOrder,
   StorefrontPaymentMethod,
   StorefrontProduct,
+  StorefrontRazorpayCheckoutSession,
   StorefrontReview,
 } from '@shared/index'
 

@@ -88,6 +88,15 @@ async function requireBackofficeUser(request: IncomingMessage) {
   return user
 }
 
+async function requireCustomerUser(request: IncomingMessage) {
+  const user = await requireAuthenticatedUser(request)
+  if (user.actorType !== 'customer') {
+    throw new ApplicationError('This route is available only to customer users.', { actorType: user.actorType }, 403)
+  }
+
+  return user
+}
+
 export async function routeRequest(
   request: IncomingMessage,
   response: ServerResponse,
@@ -227,6 +236,24 @@ export async function routeRequest(
 
     if (method === 'POST' && url.pathname === '/storefront/checkout/verify-payment') {
       writeJson(response, 200, await storefrontOrderService.verifyPayment(await readJsonBody(request)))
+      return
+    }
+
+    if (method === 'GET' && url.pathname === '/customer/orders') {
+      const customer = await requireCustomerUser(request)
+      writeJson(response, 200, await storefrontOrderService.listCustomerOrders(customer.email))
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/customer/account/change-password') {
+      const customer = await requireCustomerUser(request)
+      writeJson(response, 200, await authService.changePassword(customer, await readJsonBody(request)))
+      return
+    }
+
+    if (method === 'DELETE' && url.pathname === '/customer/account') {
+      const customer = await requireCustomerUser(request)
+      writeJson(response, 200, await authService.deleteAccount(customer, await readJsonBody(request)))
       return
     }
 
@@ -571,6 +598,16 @@ export async function routeRequest(
 
     if (method === 'POST' && url.pathname === '/auth/register/verify-otp') {
       writeJson(response, 200, await authService.verifyRegisterOtp(await readJsonBody(request)))
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/auth/account-recovery/request-otp') {
+      writeJson(response, 200, await authService.requestAccountRecoveryOtp(await readJsonBody(request)))
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/auth/account-recovery/restore') {
+      writeJson(response, 200, await authService.restoreAccount(await readJsonBody(request)))
       return
     }
 

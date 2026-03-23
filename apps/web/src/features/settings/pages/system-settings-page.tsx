@@ -31,6 +31,7 @@ function toErrorMessage(error: unknown) {
 
 export function SystemSettingsPage() {
   const { session } = useAuth()
+  const accessToken = session?.accessToken ?? null
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [runningUpdate, setRunningUpdate] = useState(false)
@@ -48,18 +49,23 @@ export function SystemSettingsPage() {
   const [forceUpdatePending, setForceUpdatePending] = useState(false)
 
   useEffect(() => {
-    if (!session?.accessToken) {
+    const token = accessToken
+    if (typeof token !== 'string') {
       return
     }
 
     let cancelled = false
 
     async function load() {
+      const authToken = accessToken
+      if (!authToken) {
+        return
+      }
       setLoading(true)
       setErrorMessage(null)
 
       try {
-        const settings = await getSystemSettings(session.accessToken)
+        const settings = await getSystemSettings(authToken)
         if (cancelled) {
           return
         }
@@ -91,10 +97,11 @@ export function SystemSettingsPage() {
     return () => {
       cancelled = true
     }
-  }, [session?.accessToken])
+  }, [accessToken])
 
   async function handleSave() {
-    if (!session?.accessToken) {
+    const token = accessToken
+    if (typeof token !== 'string') {
       return
     }
 
@@ -102,7 +109,7 @@ export function SystemSettingsPage() {
     setErrorMessage(null)
 
     try {
-      const settings = await updateSystemSettings(session.accessToken, form)
+      const settings = await updateSystemSettings(token, form)
       setSourceMode(settings.sourceMode)
       setForceUpdatePending(settings.update.forceUpdateOnStart)
       showSuccessToast({
@@ -122,7 +129,8 @@ export function SystemSettingsPage() {
   }
 
   async function handleRunUpdate() {
-    if (!session?.accessToken) {
+    const token = accessToken
+    if (typeof token !== 'string') {
       return
     }
 
@@ -130,7 +138,7 @@ export function SystemSettingsPage() {
     setErrorMessage(null)
 
     try {
-      const result = await runSystemUpdate(session.accessToken, form)
+      const result = await runSystemUpdate(token, form)
       setForceUpdatePending(true)
       showInfoToast({
         title: 'Update scheduled',

@@ -1,5 +1,13 @@
 import type {
+  AuthAccountRecoveryRequestPayload,
+  AuthAccountRecoveryRequestResponse,
+  AuthAccountRecoveryRestorePayload,
+  AuthAccountRecoveryRestoreResponse,
   AuthLoginPayload,
+  AuthChangePasswordPayload,
+  AuthChangePasswordResponse,
+  AuthDeleteAccountPayload,
+  AuthDeleteAccountResponse,
   AuthRegisterPayload,
   AuthRegisterOtpRequestPayload,
   AuthRegisterOtpRequestResponse,
@@ -39,6 +47,7 @@ import type {
   StorefrontCheckoutPayload,
   StorefrontCheckoutResponse,
   StorefrontCheckoutSessionResponse,
+  StorefrontOrderListResponse,
   StorefrontPaymentVerificationPayload,
   CommonModuleKey,
   CommonModuleListResponse,
@@ -188,9 +197,39 @@ export function verifyRegisterOtp(payload: AuthRegisterOtpVerifyPayload) {
   })
 }
 
+export function requestAccountRecoveryOtp(payload: AuthAccountRecoveryRequestPayload) {
+  return request<AuthAccountRecoveryRequestResponse>('/auth/account-recovery/request-otp', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function restoreAccount(payload: AuthAccountRecoveryRestorePayload) {
+  return request<AuthAccountRecoveryRestoreResponse>('/auth/account-recovery/restore', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
 export function getCurrentUser(token: string) {
   return request<AuthUser>('/auth/me', {
     headers: createAuthorizationHeaders(token),
+  })
+}
+
+export function changeCustomerPassword(token: string, payload: AuthChangePasswordPayload) {
+  return request<AuthChangePasswordResponse>('/customer/account/change-password', {
+    method: 'POST',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
+  })
+}
+
+export function deleteCustomerAccount(token: string, payload: AuthDeleteAccountPayload) {
+  return request<AuthDeleteAccountResponse>('/customer/account', {
+    method: 'DELETE',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
   })
 }
 
@@ -491,6 +530,13 @@ export async function verifyStorefrontPayment(payload: StorefrontPaymentVerifica
     body: JSON.stringify(payload),
   })
   return response.order
+}
+
+export async function listCustomerOrders(token: string) {
+  const response = await request<StorefrontOrderListResponse>('/customer/orders', {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.items
 }
 
 export async function listCommerceOrders(token: string) {

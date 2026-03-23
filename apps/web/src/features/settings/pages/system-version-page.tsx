@@ -34,6 +34,7 @@ function formatCommit(value: string | null) {
 
 export function SystemVersionPage() {
   const { session } = useAuth()
+  const accessToken = session?.accessToken ?? null
   const [loading, setLoading] = useState(true)
   const [checking, setChecking] = useState(false)
   const [updating, setUpdating] = useState(false)
@@ -43,20 +44,25 @@ export function SystemVersionPage() {
   const [updateCheck, setUpdateCheck] = useState<SystemUpdateCheck | null>(null)
 
   useEffect(() => {
-    if (!session?.accessToken) {
+    const token = accessToken
+    if (typeof token !== 'string') {
       return
     }
 
     let cancelled = false
 
     async function load() {
+      const authToken = accessToken
+      if (!authToken) {
+        return
+      }
       setLoading(true)
       setErrorMessage(null)
 
       try {
         const [versionResult, settingsResult] = await Promise.all([
           getSystemVersion(),
-          getSystemSettings(session.accessToken),
+          getSystemSettings(authToken),
         ])
 
         if (cancelled) {
@@ -89,10 +95,11 @@ export function SystemVersionPage() {
     return () => {
       cancelled = true
     }
-  }, [session?.accessToken])
+  }, [accessToken])
 
   async function handleCheckUpdate() {
-    if (!session?.accessToken) {
+    const token = accessToken
+    if (typeof token !== 'string') {
       return
     }
 
@@ -100,7 +107,7 @@ export function SystemVersionPage() {
     setErrorMessage(null)
 
     try {
-      const result = await getSystemUpdateCheck(session.accessToken)
+      const result = await getSystemUpdateCheck(token)
       setUpdateCheck(result)
       showInfoToast({
         title: result.updateAvailable ? 'Update available' : 'No update found',
@@ -119,7 +126,8 @@ export function SystemVersionPage() {
   }
 
   async function handleRunUpdate() {
-    if (!session?.accessToken || !savedSettings) {
+    const token = accessToken
+    if (typeof token !== 'string' || !savedSettings) {
       return
     }
 
@@ -127,7 +135,7 @@ export function SystemVersionPage() {
     setErrorMessage(null)
 
     try {
-      const result = await runSystemUpdate(session.accessToken, savedSettings)
+      const result = await runSystemUpdate(token, savedSettings)
       showInfoToast({
         title: 'Update scheduled',
         description: result.message,

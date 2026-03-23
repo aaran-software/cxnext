@@ -1,5 +1,4 @@
 import type { FormEvent } from 'react'
-import type { MailboxTemplate } from '@shared/index'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, SaveIcon } from 'lucide-react'
@@ -31,7 +30,6 @@ export function MailboxTemplateFormPage() {
   const [loading, setLoading] = useState(isEditing)
   const [saving, setSaving] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [item, setItem] = useState<MailboxTemplate | null>(null)
   const [code, setCode] = useState('')
   const [name, setName] = useState('')
   const [category, setCategory] = useState('Transactional')
@@ -53,7 +51,6 @@ export function MailboxTemplateFormPage() {
       try {
         const template = await getMailboxTemplate(templateId)
         if (!cancelled) {
-          setItem(template)
           setCode(template.code)
           setName(template.name)
           setCategory(template.category)

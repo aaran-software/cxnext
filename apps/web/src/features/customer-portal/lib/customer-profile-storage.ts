@@ -74,7 +74,7 @@ function normalizeAddresses(addresses: CustomerAddress[]) {
       ...normalized,
       isDefault: false,
     }
-  }).map((address, index, items) => {
+  }).map((address, index) => {
     if (!hasDefault && index === 0) {
       return {
         ...address,

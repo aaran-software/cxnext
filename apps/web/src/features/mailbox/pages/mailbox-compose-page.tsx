@@ -1,5 +1,5 @@
 import type { FormEvent } from 'react'
-import type { MailboxTemplate, MailboxTemplateSummary } from '@shared/index'
+import type { MailboxSendPayload, MailboxTemplate, MailboxTemplateSummary } from '@shared/index'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, SendIcon } from 'lucide-react'
@@ -116,16 +116,22 @@ export function MailboxComposePage() {
 
     setSending(true)
     try {
-      const sent = await sendMailboxMessage({
+      const payload: MailboxSendPayload = {
         to,
         cc,
         bcc,
         templateId: selectedTemplate?.id,
+        templateCode: undefined,
         templateData: parsedTemplateData,
+        referenceType: null,
+        referenceId: null,
+        replyTo: null,
+        fromName: null,
         subject: selectedTemplate ? undefined : subject.trim(),
         htmlBody: selectedTemplate ? null : htmlBody.trim() || null,
         textBody: selectedTemplate ? null : textBody.trim() || null,
-      })
+      }
+      const sent = await sendMailboxMessage(payload)
 
       showSuccessToast({
         title: 'Email sent',

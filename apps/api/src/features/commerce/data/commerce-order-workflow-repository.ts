@@ -131,6 +131,10 @@ interface VoucherLineRow extends RowDataPacket {
   narration: string | null
 }
 
+interface IdRow extends RowDataPacket {
+  id: string
+}
+
 function asTimestamp(value: Date | string | null) {
   return value ? new Date(value).toISOString() : null
 }
@@ -267,7 +271,7 @@ function resolveWorkflowState(
   eventType: CommerceWorkflowActionPayload['eventType'],
   currentOrderStatus: CommerceOrderStatus,
   currentShipmentStatus: CommerceShipment['status'],
-) {
+): { orderStatus: CommerceOrderStatus; shipmentStatus: CommerceShipment['status'] } | null {
   switch (eventType) {
     case 'prepare_delivery':
       return { orderStatus: 'preparing_delivery', shipmentStatus: 'preparing' }
@@ -370,7 +374,7 @@ export class CommerceOrderWorkflowRepository {
   async initializeOrder(order: StorefrontOrder) {
     await ensureDatabaseSchema()
 
-    const hasShipment = await db.first<{ id: string }>(
+    const hasShipment = await db.first<IdRow>(
       `SELECT id FROM ${commerceTableNames.shipments} WHERE order_id = ? LIMIT 1`,
       [order.id],
     )
@@ -687,7 +691,7 @@ export class CommerceOrderWorkflowRepository {
       return
     }
 
-    const existing = await db.first<{ id: string }>(
+    const existing = await db.first<IdRow>(
       `SELECT id FROM ${commerceTableNames.vouchers} WHERE source_type = 'storefront_order' AND source_id = ? LIMIT 1`,
       [orderId],
     )

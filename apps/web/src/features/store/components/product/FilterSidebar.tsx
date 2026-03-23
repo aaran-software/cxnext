@@ -59,7 +59,7 @@ function FilterSection({
           </h3>
           {subtitle ? <p className="text-xs leading-5 text-muted-foreground">{subtitle}</p> : null}
         </div>
-        {count && count > 0 ? (
+        {typeof count === "number" && count > 0 ? (
           <Badge variant="outline" className="shrink-0 px-2.5 py-1 normal-case tracking-normal">
             {count}
           </Badge>
@@ -127,7 +127,7 @@ function countActiveFilters(filters: CatalogFilters) {
     filters.availabilityOnly,
     filters.minPrice > 0,
     filters.maxPrice < 10000,
-  ].reduce((total, value) => total + (typeof value === "number" ? Number(value > 0) : Number(Boolean(value))), 0)
+  ].reduce<number>((total, value) => total + Number(Boolean(value)), 0)
 }
 
 export function FilterSidebar({

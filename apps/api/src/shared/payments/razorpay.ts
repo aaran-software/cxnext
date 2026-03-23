@@ -52,7 +52,7 @@ export async function createRazorpayOrder(payload: RazorpayOrderRequest): Promis
       {
         provider: 'razorpay',
         statusCode: response.status,
-        code: body?.error?.code,
+        code: body?.error?.code ?? 'unknown',
       },
       502,
     )
@@ -74,6 +74,10 @@ export function verifyRazorpayPaymentSignature(input: {
 }) {
   if (!environment.payments.razorpay.enabled) {
     throw new ApplicationError('Razorpay is not configured on the server.', {}, 503)
+  }
+
+  if (!environment.payments.razorpay.keySecret) {
+    throw new ApplicationError('Razorpay key secret is missing.', {}, 500)
   }
 
   const expectedSignature = createHmac('sha256', environment.payments.razorpay.keySecret)

@@ -12,7 +12,7 @@ import { randomUUID } from 'node:crypto'
 import { isSuperAdminEmail } from '../../../shared/config/environment'
 import { ensureDatabaseSchema } from '../../../shared/database/database'
 import { db } from '../../../shared/database/orm'
-import { authTableNames } from '../../../shared/database/table-names'
+import { authTableNames, productTableNames } from '../../../shared/database/table-names'
 
 interface UserRow extends RowDataPacket {
   id: string
@@ -24,6 +24,8 @@ interface UserRow extends RowDataPacket {
   password_hash: string
   organization_name: string | null
   is_active: number
+  deletion_requested_at: Date | null
+  purge_after_at: Date | null
   created_at: Date
   updated_at: Date
 }
@@ -57,6 +59,8 @@ interface ContactVerificationRow extends RowDataPacket {
 export interface StoredAuthUser {
   user: AuthUser
   passwordHash: string
+  deletionRequestedAt: string | null
+  purgeAfterAt: string | null
 }
 
 export interface StoredContactVerification {
@@ -91,6 +95,8 @@ export class AuthUserRepository {
           password_hash,
           organization_name,
           is_active,
+          deletion_requested_at,
+          purge_after_at,
           created_at,
           updated_at
         FROM ${authTableNames.users}
@@ -120,6 +126,8 @@ export class AuthUserRepository {
             updatedAt: userRow.updated_at.toISOString(),
           },
           passwordHash: userRow.password_hash,
+          deletionRequestedAt: userRow.deletion_requested_at?.toISOString() ?? null,
+          purgeAfterAt: userRow.purge_after_at?.toISOString() ?? null,
         } satisfies StoredAuthUser
       }),
     )
@@ -140,6 +148,8 @@ export class AuthUserRepository {
           password_hash,
           organization_name,
           is_active,
+          deletion_requested_at,
+          purge_after_at,
           created_at,
           updated_at
         FROM ${authTableNames.users}
@@ -158,6 +168,61 @@ export class AuthUserRepository {
     return storedUser ?? null
   }
 
+  async findById(id: string) {
+    await ensureDatabaseSchema()
+
+    const userRows = await db.query<UserRow>(
+      `
+        SELECT
+          id,
+          email,
+          phone_number,
+          display_name,
+          avatar_url,
+          actor_type,
+          password_hash,
+          organization_name,
+          is_active,
+          deletion_requested_at,
+          purge_after_at,
+          created_at,
+          updated_at
+        FROM ${authTableNames.users}
+        WHERE id = ?
+        LIMIT 1
+      `,
+      [id],
+    )
+
+    const userRow = userRows[0]
+    if (!userRow) {
+      return null
+    }
+
+    const rolesAndPermissions = await this.getUserRolesAndPermissions(userRow.id)
+
+    return {
+      user: {
+        id: userRow.id,
+        email: userRow.email,
+        phoneNumber: userRow.phone_number,
+        displayName: userRow.display_name,
+        isSuperAdmin: isSuperAdminEmail(userRow.email, userRow.actor_type),
+        avatarUrl: userRow.avatar_url,
+        actorType: userRow.actor_type,
+        isActive: Boolean(userRow.is_active),
+        organizationName: userRow.organization_name,
+        roles: rolesAndPermissions.roles,
+        permissions: rolesAndPermissions.permissions,
+        createdAt: userRow.created_at.toISOString(),
+        updatedAt: userRow.updated_at.toISOString(),
+      },
+        passwordHash: userRow.password_hash,
+        deletionRequestedAt: userRow.deletion_requested_at?.toISOString() ?? null,
+        purgeAfterAt: userRow.purge_after_at?.toISOString() ?? null,
+      } satisfies StoredAuthUser
+  }
+
   async findByPhoneNumber(phoneNumber: string) {
     await ensureDatabaseSchema()
 
@@ -173,6 +238,8 @@ export class AuthUserRepository {
           password_hash,
           organization_name,
           is_active,
+          deletion_requested_at,
+          purge_after_at,
           created_at,
           updated_at
         FROM ${authTableNames.users}
@@ -202,6 +269,8 @@ export class AuthUserRepository {
             updatedAt: userRow.updated_at.toISOString(),
           },
           passwordHash: userRow.password_hash,
+          deletionRequestedAt: userRow.deletion_requested_at?.toISOString() ?? null,
+          purgeAfterAt: userRow.purge_after_at?.toISOString() ?? null,
         } satisfies StoredAuthUser
       }),
     )
@@ -411,6 +480,99 @@ export class AuthUserRepository {
       `,
       [id],
     )
+  }
+
+  async updatePasswordHash(userId: string, passwordHash: string) {
+    await ensureDatabaseSchema()
+
+    await db.execute(
+      `
+        UPDATE ${authTableNames.users}
+        SET password_hash = ?
+        WHERE id = ?
+      `,
+      [passwordHash, userId],
+    )
+  }
+
+  async deactivateUser(userId: string) {
+    await ensureDatabaseSchema()
+
+    await db.execute(
+      `
+        UPDATE ${authTableNames.users}
+        SET is_active = 0
+        WHERE id = ?
+      `,
+      [userId],
+    )
+  }
+
+  async scheduleCustomerDeletion(userId: string, purgeAfter: Date) {
+    await ensureDatabaseSchema()
+
+    await db.execute(
+      `
+        UPDATE ${authTableNames.users}
+        SET is_active = 0,
+            deletion_requested_at = CURRENT_TIMESTAMP,
+            purge_after_at = ?
+        WHERE id = ?
+      `,
+      [purgeAfter, userId],
+    )
+  }
+
+  async reactivateUser(userId: string) {
+    await ensureDatabaseSchema()
+
+    await db.execute(
+      `
+        UPDATE ${authTableNames.users}
+        SET is_active = 1,
+            deletion_requested_at = NULL,
+            purge_after_at = NULL
+        WHERE id = ?
+      `,
+      [userId],
+    )
+  }
+
+  async purgeCustomerAccount(userId: string) {
+    await ensureDatabaseSchema()
+
+    const storedUser = await this.findById(userId)
+    if (!storedUser) {
+      return
+    }
+
+    await db.transaction(async (transaction) => {
+      await transaction.execute(
+        `
+          DELETE FROM ${authTableNames.contactVerifications}
+          WHERE actor_type = 'customer'
+            AND destination IN (?, ?)
+        `,
+        [storedUser.user.email, storedUser.user.phoneNumber ?? ''],
+      )
+
+      await transaction.execute(
+        `
+          UPDATE ${productTableNames.reviews}
+          SET user_id = NULL
+          WHERE user_id = ?
+        `,
+        [userId],
+      )
+
+      await transaction.execute(
+        `
+          DELETE FROM ${authTableNames.users}
+          WHERE id = ?
+        `,
+        [userId],
+      )
+    })
   }
 
   private async getUserRolesAndPermissions(userId: string) {

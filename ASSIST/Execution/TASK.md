@@ -8,7 +8,7 @@ This file tracks the current active task so contributors and AI agents stay alig
 
 ### Title
 
-`Admin order operations board with fulfillment workflow actions`
+`Customer portal live commerce pages and test payment bypass`
 
 ### Status
 
@@ -16,32 +16,32 @@ validated
 
 ### Objective
 
-Expose the new backend commerce workflow inside the admin portal so operations users can review order state, shipment progression, invoice details, and accounting postings from one board and push fulfillment events without leaving the dashboard.
+Complete the customer-facing portal surfaces for overview, orders, wishlist, cart, and notifications using live current data, and add an `.env`-controlled checkout payment bypass so online-order testing can finish without Razorpay during test runs.
 
 ### In Scope
 
-- Add an admin `/orders` operations board in the dashboard shell
-- Connect the board to the new commerce workflow APIs
-- Support fulfillment actions such as prepare, pack, courier assignment, pickup, transit, delivery, and delivery confirmation
-- Surface invoice details, linked invoice lines, and accounting voucher lines
+- Replace customer portal placeholder pages with live customer-facing commerce pages
+- Add a customer-safe storefront order list API using existing authenticated user context
+- Reuse existing storefront cart and wishlist state instead of redesigning those flows
+- Add an environment-controlled online payment bypass path for storefront checkout testing
 - Keep execution notes and changelog aligned with the change set
 
 ### Out Of Scope
 
-- Courier API or webhook integrations
-- Customer-facing tracking or delivery-confirmation UI
-- Full finance-ledger management beyond the linked order voucher display
+- Redesigning customer portal navigation or layout
+- Adding webhook reconciliation or production-grade payment fallback logic
+- Reworking cart and wishlist persistence architecture beyond the current live-state scope
 
 ### Dependencies
 
 - `ASSIST/AI_RULES.md`
-- `apps/api/src/features/commerce/data/commerce-order-workflow-repository.ts`
-- `apps/api/src/app/http/router.ts`
-- `apps/web/src/shared/api/client.ts`
-- `apps/web/src/app/router.tsx`
+- `apps/api/src/features/storefront/*`
+- `apps/web/src/features/customer-portal/*`
+- `apps/web/src/features/store/context/storefront-context.tsx`
+- `.env` and `.env.example` payment settings
 
 ### Risks
 
-- The board currently depends on manual operator updates for courier and delivery progression
-- Invoice printing is browser-print HTML, not server-generated PDF
-- Vendor actors can still reach the admin shell broadly, while the order board itself blocks non-backoffice access
+- Storefront orders are currently associated by captured checkout identity rather than a dedicated customer-order ownership table
+- Payment bypass is for test flow only and must stay explicit in environment config
+- Customer portal notifications will reflect available live order/payment state, not a separate messaging system

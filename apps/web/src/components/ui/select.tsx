@@ -2,7 +2,9 @@ import * as React from 'react'
 
 export function Select({
   children,
-}: React.PropsWithChildren) {
+  value: _value,
+  onValueChange: _onValueChange,
+}: React.PropsWithChildren<{ value?: string; onValueChange?: (value: string) => void }>) {
   return <>{children}</>
 }
 
@@ -26,7 +28,7 @@ export function SelectTrigger({
 
 export function SelectContent({
   children,
-}: React.PropsWithChildren) {
+}: React.PropsWithChildren<{ className?: string }>) {
   return <>{children}</>
 }
 
@@ -38,7 +40,7 @@ export function SelectLabel({
 
 export function SelectItem({
   children,
-}: React.PropsWithChildren<{ value: string }>) {
+}: React.PropsWithChildren<{ value: string; className?: string }>) {
   return <>{children}</>
 }
 

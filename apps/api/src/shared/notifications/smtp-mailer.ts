@@ -18,7 +18,7 @@ interface SendSmtpMailInput {
   html?: string | null
 }
 
-let transporter: nodemailer.Transporter | null = null
+let transporter: ReturnType<typeof nodemailer.createTransport> | null = null
 
 function getTransporter() {
   if (transporter) {

@@ -23,7 +23,7 @@ export function parseRecipientList(value: string) {
     .split(',')
     .map((entry) => entry.trim())
     .filter(Boolean)
-    .map((email) => ({ email })) satisfies MailboxRecipientInput[]
+    .map((email) => ({ email, name: null })) satisfies MailboxRecipientInput[]
 }
 
 export function formatRecipientLabel(recipient: { email: string; name?: string | null }) {

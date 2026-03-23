@@ -61,3 +61,13 @@
 - Removed the runtime JSON config path and Compose-based app env injection so container startup now seeds a single `.env` file from `.env.example`, uses that file as the only runtime config source, and fails fast if `.env` is invalid
 - Added backend commerce workflow tables and contracts for order events, shipment events, sales invoices with child rows, and linked accounting vouchers for storefront orders
 - Added an admin `/admin/dashboard/orders` operations board that lets internal users review workflow timelines, apply fulfillment actions, inspect invoice details, print invoice HTML, and review accounting postings from one dashboard surface
+
+### Changed
+
+- Restored a green repo baseline by fixing current TypeScript blocker clusters across API, web, and shared modules without redesigning existing UX flows
+- Excluded unused legacy frontend state files and the unused legacy `ProtectedRoute` wrapper from the active compile graph so stale dead-path imports no longer block repo validation
+- Hardened the shared database ORM transaction typings so repository transaction helpers now return consistent `execute`, `insert`, and `first` types
+- Corrected auth, mailbox, Razorpay, storefront, router, settings, media-picker, and order-board typing defects so `npm run typecheck` and `npm run build` both succeed again
+- Added a local `nodemailer` module declaration for the current notification path instead of leaving the API compile blocked on missing external typings
+- Replaced customer portal placeholders for overview, orders, wishlist, cart, and notifications with live current commerce data driven by existing storefront state and authenticated customer order history
+- Added an authenticated customer order-history API and an environment-driven `PAYMENT_TEST_BYPASS` checkout mode so online order testing can complete without Razorpay when explicitly enabled

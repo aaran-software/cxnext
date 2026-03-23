@@ -1,5 +1,10 @@
 import { authTableNames, commonTableNames, customerTableNames } from '../table-names'
+import type { RowDataPacket } from 'mysql2'
 import type { Migration } from './migration'
+
+interface ConstraintRow extends RowDataPacket {
+  constraint_name: string
+}
 
 export const customerProfileMigration: Migration = {
   id: '015-customer-profile',
@@ -56,7 +61,7 @@ export const customerProfileMigration: Migration = {
     `)
 
     for (const constraint of constraintDefinitions) {
-      const existing = await db.query<{ constraint_name: string }>(
+      const existing = await db.query<ConstraintRow>(
         `
           SELECT CONSTRAINT_NAME AS constraint_name
           FROM information_schema.TABLE_CONSTRAINTS

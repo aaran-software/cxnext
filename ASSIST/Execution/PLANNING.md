@@ -8,40 +8,40 @@ This file captures the execution plan for the current task before implementation
 
 ### Task
 
-`Admin order operations board with fulfillment workflow actions`
+`Customer portal live commerce pages and test payment bypass`
 
 ### Goal
 
-Turn the newly added commerce workflow backend into an operational admin surface by creating a routed order board inside the dashboard shell. The page should let internal users review recent orders, inspect the full workflow timeline, update shipment progression, open the print-ready invoice, and view linked accounting postings from one place.
+Finish the customer portal’s core commerce pages with live current data and make checkout testable without Razorpay by introducing an explicit environment switch that bypasses online payment capture during testing.
 
 ### Assumptions
 
-- The backend commerce repository and routes are the source of truth for workflow, invoice, and voucher data
-- Only `admin` and `staff` actors should be able to operate this board
-- A single master-detail board is the safest first increment, instead of building several disconnected list/detail pages
+- Existing storefront catalog, cart, wishlist, and checkout UI should stay structurally the same
+- The quickest safe customer order ownership path is to scope order history to the authenticated customer identity already captured at checkout
+- Notifications can be derived from current order/payment/shipment state instead of requiring a new notification backend in this batch
 
 ### Constraints
 
-- Keep workflow business rules in the backend, not in React
-- Reuse shared schemas from `packages/shared`
-- Preserve the existing admin dashboard tone and navigation patterns
-- Update execution tracking and changelog in the same change set
+- Keep business rules and payment bypass logic in backend services, not only in React
+- Preserve current customer portal navigation, layout shell, and storefront UX tone
+- Keep the payment bypass explicit and environment-driven so it cannot be mistaken for a normal production flow
+- Update execution tracking, walkthrough, and changelog in the same change set
 
 ### Plan
 
-1. Add frontend API helpers for listing orders, loading workflow detail, posting workflow actions, and opening invoice print HTML
-2. Add a dedicated admin order operations page with queue, control panel, timeline, shipment, invoice, and accounts tabs
-3. Wire the page into the admin router, sidebar, and header
-4. Patch any backend workflow gaps discovered while wiring the UI, especially fulfillment events used by the board
-5. Validate with focused ESLint plus API and web production builds
+1. Add shared contracts plus backend customer order list support for authenticated customer users
+2. Add frontend customer portal pages for overview, orders, wishlist, cart, and notifications using live backend/storefront state
+3. Route the customer portal pages into the existing customer portal shell without changing overall navigation structure
+4. Add an `.env` payment bypass mode that auto-completes online checkout during testing while preserving the current checkout UX
+5. Validate with `typecheck` and `build`, then record the completed implementation and remaining risks
 
 ### Validation
 
-- Focused ESLint on the touched backend and frontend workflow files
-- `npm run build:api`
-- `npm run build:web`
+- `npm run typecheck`
+- `npm run build`
+- Completed in this batch: `npm run typecheck` and `npm run build`
 
 ### Open Questions
 
-- Whether the next increment should add a customer-side order tracking page using the same workflow data
-- Whether invoice print should later move from HTML print-preview to actual PDF generation
+- Whether customer order ownership should later move from email-based scoping to an explicit customer user foreign key
+- Whether a future increment should add dedicated notification persistence instead of deriving notifications from order state

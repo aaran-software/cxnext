@@ -1,8 +1,10 @@
 import type {
+  StorefrontOrderListResponse,
   StorefrontCheckoutResponse,
   StorefrontCheckoutSessionResponse,
 } from '@shared/index'
 import {
+  storefrontOrderListResponseSchema,
   storefrontCheckoutPayloadSchema,
   storefrontCheckoutResponseSchema,
   storefrontCheckoutSessionResponseSchema,
@@ -27,6 +29,17 @@ export class StorefrontOrderService {
       await this.workflowRepository.initializeOrder(order)
       return storefrontCheckoutSessionResponseSchema.parse({
         order,
+        requiresPayment: false,
+        paymentSession: null,
+      } satisfies StorefrontCheckoutSessionResponse)
+    }
+
+    if (environment.payments.testBypass) {
+      const order = await this.repository.createBypassedPaymentOrder(parsedPayload)
+      await this.workflowRepository.initializeOrder(order)
+      await this.workflowRepository.markPaymentCaptured(order.id)
+      return storefrontCheckoutSessionResponseSchema.parse({
+        order: await this.repository.getById(order.id),
         requiresPayment: false,
         paymentSession: null,
       } satisfies StorefrontCheckoutSessionResponse)
@@ -84,5 +97,10 @@ export class StorefrontOrderService {
     const order = await this.repository.markOrderPaid(parsedPayload)
     await this.workflowRepository.markPaymentCaptured(order.id)
     return storefrontCheckoutResponseSchema.parse({ order } satisfies StorefrontCheckoutResponse)
+  }
+
+  async listCustomerOrders(email: string) {
+    const items = await this.repository.listByCustomerEmail(email)
+    return storefrontOrderListResponseSchema.parse({ items } satisfies StorefrontOrderListResponse)
   }
 }

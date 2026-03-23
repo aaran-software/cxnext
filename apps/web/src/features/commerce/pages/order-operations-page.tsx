@@ -184,6 +184,7 @@ function TimelineList({
 
 export function OrderOperationsPage() {
   const { session } = useAuth()
+  const accessToken = session?.accessToken ?? null
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [workingAction, setWorkingAction] = useState<CommerceOrderEventType | null>(null)
@@ -199,18 +200,23 @@ export function OrderOperationsPage() {
   )
 
   useEffect(() => {
-    if (!session?.accessToken) {
+    const token = accessToken
+    if (typeof token !== 'string') {
       return
     }
 
     let cancelled = false
 
     async function loadInitialBoard() {
+      const authToken = accessToken
+      if (!authToken) {
+        return
+      }
       setLoading(true)
       setErrorMessage(null)
 
       try {
-        const items = await listCommerceOrders(session.accessToken)
+        const items = await listCommerceOrders(authToken)
         if (cancelled) {
           return
         }
@@ -222,7 +228,7 @@ export function OrderOperationsPage() {
         setSelectedOrderId(nextOrderId)
 
         if (nextOrderId) {
-          const nextWorkflow = await getCommerceOrderWorkflow(session.accessToken, nextOrderId)
+          const nextWorkflow = await getCommerceOrderWorkflow(authToken, nextOrderId)
           if (!cancelled) {
             setWorkflow(nextWorkflow)
           }
@@ -245,18 +251,20 @@ export function OrderOperationsPage() {
     return () => {
       cancelled = true
     }
-  }, [selectedOrderId, session?.accessToken])
+  }, [accessToken, selectedOrderId])
 
   async function refreshBoard(targetOrderId = selectedOrderId) {
-    if (!session?.accessToken) {
+    const token = accessToken
+    if (typeof token !== 'string') {
       return
     }
+    const authToken: string = token
 
     setRefreshing(true)
     setErrorMessage(null)
 
     try {
-      const items = await listCommerceOrders(session.accessToken)
+      const items = await listCommerceOrders(authToken)
       setOrders(items)
 
       const resolvedOrderId = targetOrderId && items.some((item) => item.orderId === targetOrderId)
@@ -266,7 +274,7 @@ export function OrderOperationsPage() {
       setSelectedOrderId(resolvedOrderId)
 
       if (resolvedOrderId) {
-        setWorkflow(await getCommerceOrderWorkflow(session.accessToken, resolvedOrderId))
+        setWorkflow(await getCommerceOrderWorkflow(authToken, resolvedOrderId))
       } else {
         setWorkflow(null)
       }
@@ -278,7 +286,8 @@ export function OrderOperationsPage() {
   }
 
   async function runAction(eventType: CommerceOrderEventType) {
-    if (!session?.accessToken || !selectedOrderId) {
+    const token = accessToken
+    if (typeof token !== 'string' || !selectedOrderId) {
       return
     }
 
@@ -287,7 +296,7 @@ export function OrderOperationsPage() {
 
     try {
       const nextWorkflow = await applyCommerceWorkflowAction(
-        session.accessToken,
+        token,
         selectedOrderId,
         buildPayload(eventType, actionValues),
       )
@@ -310,12 +319,13 @@ export function OrderOperationsPage() {
   }
 
   async function handlePrintInvoice() {
-    if (!session?.accessToken || !selectedOrderId) {
+    const token = accessToken
+    if (typeof token !== 'string' || !selectedOrderId) {
       return
     }
 
     try {
-      const document = await getCommerceInvoicePrint(session.accessToken, selectedOrderId)
+      const document = await getCommerceInvoicePrint(token, selectedOrderId)
       const popup = window.open('', '_blank', 'noopener,noreferrer')
       if (!popup) {
         showInfoToast({
@@ -667,42 +677,45 @@ export function OrderOperationsPage() {
                       </CardHeader>
                       <CardContent className="space-y-4">
                         {workflow.invoice ? (
-                          <>
+                          (() => {
+                            const invoice = workflow.invoice
+                            return <>
                             <div className="grid gap-3 md:grid-cols-4">
                               <div className="rounded-[1.25rem] border border-border/70 bg-background/60 p-4">
                                 <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Invoice</p>
-                                <p className="mt-2 font-semibold text-foreground">{workflow.invoice.invoiceNumber}</p>
+                                <p className="mt-2 font-semibold text-foreground">{invoice.invoiceNumber}</p>
                               </div>
                               <div className="rounded-[1.25rem] border border-border/70 bg-background/60 p-4">
                                 <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Status</p>
                                 <div className="mt-2">
-                                  <Badge variant="outline" className={statusTone(workflow.invoice.status)}>
-                                    {eventLabel(workflow.invoice.status)}
+                                  <Badge variant="outline" className={statusTone(invoice.status)}>
+                                    {eventLabel(invoice.status)}
                                   </Badge>
                                 </div>
                               </div>
                               <div className="rounded-[1.25rem] border border-border/70 bg-background/60 p-4">
                                 <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Payment</p>
-                                <p className="mt-2 font-semibold text-foreground">{eventLabel(workflow.invoice.paymentStatus)}</p>
+                                <p className="mt-2 font-semibold text-foreground">{eventLabel(invoice.paymentStatus)}</p>
                               </div>
                               <div className="rounded-[1.25rem] border border-border/70 bg-background/60 p-4">
                                 <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Total</p>
-                                <p className="mt-2 font-semibold text-foreground">{formatCurrency(workflow.invoice.totalAmount, workflow.invoice.currency)}</p>
+                                <p className="mt-2 font-semibold text-foreground">{formatCurrency(invoice.totalAmount, invoice.currency)}</p>
                               </div>
                             </div>
 
                             <div className="space-y-3">
-                              {workflow.invoice.items.map((item) => (
+                              {invoice.items.map((item) => (
                                 <div key={item.id} className="flex flex-wrap items-center justify-between gap-4 rounded-[1.25rem] border border-border/70 bg-background/60 p-4">
                                   <div>
                                     <p className="font-medium text-foreground">{item.description}</p>
-                                    <p className="text-sm text-muted-foreground">Qty {item.quantity} x {formatCurrency(item.unitPrice, workflow.invoice!.currency)}</p>
+                                    <p className="text-sm text-muted-foreground">Qty {item.quantity} x {formatCurrency(item.unitPrice, invoice.currency)}</p>
                                   </div>
-                                  <p className="font-semibold text-foreground">{formatCurrency(item.lineTotal, workflow.invoice.currency)}</p>
+                                  <p className="font-semibold text-foreground">{formatCurrency(item.lineTotal, invoice.currency)}</p>
                                 </div>
                               ))}
                             </div>
                           </>
+                          })()
                         ) : (
                           <div className="rounded-[1.25rem] border border-dashed border-border/70 bg-background/55 px-4 py-5 text-sm text-muted-foreground">
                             Invoice has not been created for this order.

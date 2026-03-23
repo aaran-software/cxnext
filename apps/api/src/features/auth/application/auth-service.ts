@@ -1,10 +1,22 @@
 import type {
+  AuthAccountRecoveryRequestResponse,
+  AuthAccountRecoveryRestoreResponse,
+  AuthChangePasswordResponse,
+  AuthDeleteAccountResponse,
   AuthRegisterOtpRequestResponse,
   AuthRegisterOtpVerifyResponse,
   AuthTokenResponse,
   AuthUser,
 } from '@shared/index'
 import {
+  authAccountRecoveryRequestPayloadSchema,
+  authAccountRecoveryRequestResponseSchema,
+  authAccountRecoveryRestorePayloadSchema,
+  authAccountRecoveryRestoreResponseSchema,
+  authChangePasswordPayloadSchema,
+  authChangePasswordResponseSchema,
+  authDeleteAccountPayloadSchema,
+  authDeleteAccountResponseSchema,
   authLoginPayloadSchema,
   authRegisterPayloadSchema,
   authRegisterOtpRequestPayloadSchema,
@@ -143,6 +155,10 @@ export class AuthService {
       throw new ApplicationError('The OTP has expired. Request a new code.', { verificationId: verification.id }, 410)
     }
 
+    if (typeof verification.otpHash !== 'string' || verification.otpHash.length === 0) {
+      throw new ApplicationError('Verification session is missing a stored OTP hash.', { verificationId: verification.id }, 500)
+    }
+
     let otpMatches = false
 
     if (verification.channel === 'mobile' && environment.notifications.msg91.enabled) {
@@ -163,7 +179,8 @@ export class AuthService {
         )
       }
     } else {
-      otpMatches = await bcrypt.compare(parsedPayload.otp, verification.otpHash)
+      const comparePassword = bcrypt.compare as (password: string, hash: string) => Promise<boolean>
+      otpMatches = await comparePassword(String(parsedPayload.otp ?? ''), String(verification.otpHash ?? ''))
     }
     if (!otpMatches) {
       await this.repository.incrementContactVerificationAttempts(verification.id)
@@ -276,7 +293,19 @@ export class AuthService {
     }
 
     if (!storedUser.user.isActive) {
-      throw new ApplicationError('The account is disabled.', { id: storedUser.user.id }, 403)
+      if (storedUser.purgeAfterAt && new Date(storedUser.purgeAfterAt).getTime() <= Date.now()) {
+        await this.repository.purgeCustomerAccount(storedUser.user.id)
+        throw new ApplicationError('This account was permanently deleted after the recovery window expired.', { id: storedUser.user.id }, 403)
+      }
+
+      const recoveryDeadline = storedUser.purgeAfterAt
+        ? new Date(storedUser.purgeAfterAt).toLocaleString()
+        : null
+      const message = recoveryDeadline
+        ? `The account is disabled. Recovery is available until ${recoveryDeadline}.`
+        : 'The account is disabled.'
+
+      throw new ApplicationError(message, { id: storedUser.user.id, purgeAfterAt: storedUser.purgeAfterAt ?? '' }, 403)
     }
 
     return this.createAuthResponse(storedUser.user)
@@ -295,6 +324,165 @@ export class AuthService {
     }
 
     return storedUser.user
+  }
+
+  async changePassword(user: AuthUser, payload: unknown): Promise<AuthChangePasswordResponse> {
+    this.assertDatabaseEnabled()
+
+    if (user.actorType !== 'customer') {
+      throw new ApplicationError('Password change is available only for customer accounts here.', {}, 403)
+    }
+
+    const parsedPayload = authChangePasswordPayloadSchema.parse(payload)
+    const storedUser = await this.repository.findById(user.id)
+
+    if (!storedUser || !storedUser.user.isActive) {
+      throw new ApplicationError('Authenticated user no longer exists.', { userId: user.id }, 404)
+    }
+
+    const currentPasswordMatches = await bcrypt.compare(parsedPayload.currentPassword, storedUser.passwordHash)
+    if (!currentPasswordMatches) {
+      throw new ApplicationError('Current password is incorrect.', { userId: user.id }, 400)
+    }
+
+    if (parsedPayload.currentPassword === parsedPayload.newPassword) {
+      throw new ApplicationError('Choose a new password different from the current one.', { userId: user.id }, 400)
+    }
+
+    const nextPasswordHash = await bcrypt.hash(parsedPayload.newPassword, 10)
+    await this.repository.updatePasswordHash(user.id, nextPasswordHash)
+
+    return authChangePasswordResponseSchema.parse({
+      updated: true,
+    } satisfies AuthChangePasswordResponse)
+  }
+
+  async deleteAccount(user: AuthUser, payload: unknown): Promise<AuthDeleteAccountResponse> {
+    this.assertDatabaseEnabled()
+
+    if (user.actorType !== 'customer') {
+      throw new ApplicationError('Account deletion is available only for customer accounts here.', {}, 403)
+    }
+
+    const parsedPayload = authDeleteAccountPayloadSchema.parse(payload)
+    if (parsedPayload.confirmation.trim().toLowerCase() !== user.email.trim().toLowerCase()) {
+      throw new ApplicationError('Enter the exact account email to confirm deletion.', { userId: user.id }, 400)
+    }
+
+    const purgeAfter = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
+    await this.repository.scheduleCustomerDeletion(user.id, purgeAfter)
+
+    return authDeleteAccountResponseSchema.parse({
+      deleted: true,
+    } satisfies AuthDeleteAccountResponse)
+  }
+
+  async requestAccountRecoveryOtp(payload: unknown): Promise<AuthAccountRecoveryRequestResponse> {
+    this.assertDatabaseEnabled()
+
+    const parsedPayload = authAccountRecoveryRequestPayloadSchema.parse(payload)
+    const normalizedEmail = parsedPayload.email.trim().toLowerCase()
+    const storedUser = await this.repository.findByEmailAndActorType(normalizedEmail, 'customer')
+
+    if (!storedUser) {
+      throw new ApplicationError('No customer account exists for this email.', { email: normalizedEmail }, 404)
+    }
+
+    if (storedUser.user.isActive) {
+      throw new ApplicationError('This customer account is already active.', { email: normalizedEmail }, 409)
+    }
+
+    if (storedUser.purgeAfterAt && new Date(storedUser.purgeAfterAt).getTime() <= Date.now()) {
+      await this.repository.purgeCustomerAccount(storedUser.user.id)
+      throw new ApplicationError('This account was permanently deleted after the recovery window expired.', { email: normalizedEmail }, 410)
+    }
+
+    const otp = String(randomInt(100000, 1000000))
+    const otpHash = await bcrypt.hash(otp, 10)
+    const expiresAt = new Date(Date.now() + environment.auth.otp.expiryMinutes * 60_000)
+
+    await this.repository.deactivatePendingContactVerifications({
+      purpose: 'customer_account_recovery',
+      actorType: 'customer',
+      channel: 'email',
+      destination: normalizedEmail,
+    })
+
+    const verification = await this.repository.createContactVerification({
+      purpose: 'customer_account_recovery',
+      actorType: 'customer',
+      channel: 'email',
+      destination: normalizedEmail,
+      otpHash,
+      expiresAt,
+    })
+
+    await this.mailboxService.sendTemplatedEmail({
+      to: [{ email: normalizedEmail, name: storedUser.user.displayName }],
+      subject: '',
+      templateCode: 'customer_registration_otp',
+      templateData: {
+        brandName: environment.notifications.email.fromName || 'CXNext',
+        otp,
+        expiryMinutes: environment.auth.otp.expiryMinutes,
+      },
+      referenceType: 'customer_account_recovery_otp',
+      referenceId: verification.id,
+    }, { allowDebugFallback: true })
+
+    return authAccountRecoveryRequestResponseSchema.parse({
+      verificationId: verification.id,
+      expiresAt: verification.expiresAt,
+      debugOtp: environment.auth.otp.debug ? otp : null,
+    } satisfies AuthAccountRecoveryRequestResponse)
+  }
+
+  async restoreAccount(payload: unknown): Promise<AuthAccountRecoveryRestoreResponse> {
+    this.assertDatabaseEnabled()
+
+    const parsedPayload = authAccountRecoveryRestorePayloadSchema.parse(payload)
+    const normalizedEmail = parsedPayload.email.trim().toLowerCase()
+    const verification = await this.repository.getContactVerification(parsedPayload.verificationId)
+
+    if (!verification || !verification.isActive || verification.purpose !== 'customer_account_recovery') {
+      throw new ApplicationError('Recovery session could not be found.', { verificationId: parsedPayload.verificationId }, 404)
+    }
+
+    if (verification.destination !== normalizedEmail || verification.channel !== 'email') {
+      throw new ApplicationError('Recovery verification does not match this email.', { email: normalizedEmail }, 400)
+    }
+
+    if (verification.consumedAt) {
+      throw new ApplicationError('This recovery session has already been used.', { verificationId: verification.id }, 409)
+    }
+
+    if (new Date(verification.expiresAt).getTime() < Date.now()) {
+      throw new ApplicationError('The recovery OTP has expired. Request a new code.', { verificationId: verification.id }, 410)
+    }
+
+    const storedUser = await this.repository.findByEmailAndActorType(normalizedEmail, 'customer')
+    if (!storedUser) {
+      throw new ApplicationError('No customer account exists for this email.', { email: normalizedEmail }, 404)
+    }
+
+    if (storedUser.purgeAfterAt && new Date(storedUser.purgeAfterAt).getTime() <= Date.now()) {
+      await this.repository.purgeCustomerAccount(storedUser.user.id)
+      throw new ApplicationError('This account was permanently deleted after the recovery window expired.', { email: normalizedEmail }, 410)
+    }
+
+    const otpMatches = await bcrypt.compare(parsedPayload.otp, verification.otpHash)
+    if (!otpMatches) {
+      await this.repository.incrementContactVerificationAttempts(verification.id)
+      throw new ApplicationError('Invalid OTP. Check the code and try again.', { verificationId: verification.id }, 400)
+    }
+
+    await this.repository.markContactVerificationVerified(verification.id)
+    await this.repository.consumeContactVerification(verification.id)
+    await this.repository.reactivateUser(storedUser.user.id)
+
+    return authAccountRecoveryRestoreResponseSchema.parse({
+      restored: true,
+    } satisfies AuthAccountRecoveryRestoreResponse)
   }
 
   private createAuthResponse(user: AuthUser): AuthTokenResponse {
@@ -397,7 +585,8 @@ export class AuthService {
   }) {
     if (input.channel === 'email') {
       await this.mailboxService.sendTemplatedEmail({
-        to: [{ email: input.destination }],
+        to: [{ email: input.destination, name: null }],
+        subject: '',
         templateCode: 'customer_registration_otp',
         templateData: {
           brandName: environment.notifications.email.fromName || 'CXNext',

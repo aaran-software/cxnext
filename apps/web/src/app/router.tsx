@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ComponentType } from 'react'
+import { lazy, Suspense, type ComponentType, type LazyExoticComponent } from 'react'
 import { createBrowserRouter, Navigate, RouterProvider, useLocation } from 'react-router-dom'
 import { GlobalLoader } from '@/components/ui/global-loader'
 import { RequireAuth } from '@/features/auth/components/require-auth'
@@ -6,15 +6,17 @@ import { RequireSuperAdmin } from '@/features/auth/components/require-super-admi
 import { frontendTarget } from '@/config/frontend'
 import { buildAdminPortalPath, buildCustomerPortalPath, customerPortalRoot } from '@/features/auth/lib/portal-routing'
 import { useAuth } from '@/features/auth/components/auth-provider'
-import { CustomerSectionPage } from '@/features/customer-portal/pages/customer-section-page'
 import { NotFoundPage } from '@/features/marketing/pages/not-found-page'
 import { PlaceholderPage } from '@/features/store/pages/placeholder-page'
 
-function lazyPage<T extends Record<string, unknown>>(loader: () => Promise<T>, key: keyof T) {
-  return lazy(async () => ({ default: (await loader())[key] as never }))
+function lazyPage<TModule extends Record<string, ComponentType<any>>>(
+  loader: () => Promise<TModule>,
+  key: keyof TModule,
+): LazyExoticComponent<TModule[keyof TModule]> {
+  return lazy(async () => ({ default: (await loader())[key] }))
 }
 
-function renderLazy(Component: ComponentType) {
+function renderLazy(Component: ComponentType<any>) {
   return (
     <Suspense
       fallback={<GlobalLoader fullScreen={false} size="sm" />}
@@ -38,9 +40,29 @@ const CustomerDashboardPage = lazyPage(
   () => import('@/features/customer-portal/pages/customer-dashboard-page'),
   'CustomerDashboardPage',
 )
+const CustomerOrdersPage = lazyPage(
+  () => import('@/features/customer-portal/pages/customer-orders-page'),
+  'CustomerOrdersPage',
+)
 const CustomerProfilePage = lazyPage(
   () => import('@/features/customer-portal/pages/customer-profile-page'),
   'CustomerProfilePage',
+)
+const CustomerWishlistPage = lazyPage(
+  () => import('@/features/customer-portal/pages/customer-wishlist-page'),
+  'CustomerWishlistPage',
+)
+const CustomerCartPage = lazyPage(
+  () => import('@/features/customer-portal/pages/customer-cart-page'),
+  'CustomerCartPage',
+)
+const CustomerNotificationsPage = lazyPage(
+  () => import('@/features/customer-portal/pages/customer-notifications-page'),
+  'CustomerNotificationsPage',
+)
+const CustomerSupportPage = lazyPage(
+  () => import('@/features/customer-portal/pages/customer-support-page'),
+  'CustomerSupportPage',
 )
 const DashboardPage = lazyPage(() => import('@/features/dashboard/pages/dashboard-page'), 'DashboardPage')
 const OrderOperationsPage = lazyPage(
@@ -202,7 +224,7 @@ const customerPortalRoutes = {
         { index: true, element: renderLazy(CustomerDashboardPage) },
         {
           path: 'orders',
-          element: <CustomerSectionPage title="Orders" description="Review order progress, payment confirmations, and delivery history in one place." />,
+          element: renderLazy(CustomerOrdersPage),
         },
         {
           path: 'profile',
@@ -210,19 +232,19 @@ const customerPortalRoutes = {
         },
         {
           path: 'wishlist',
-          element: <CustomerSectionPage title="Wishlist" description="Keep saved products separate from the cart and return to them whenever you are ready." storeHref="/wishlist" storeLabel="Open wishlist" />,
+          element: renderLazy(CustomerWishlistPage),
         },
         {
           path: 'cart',
-          element: <CustomerSectionPage title="Cart" description="Review items queued for checkout before moving back into the storefront purchase flow." storeHref="/cart" storeLabel="Open cart" />,
+          element: renderLazy(CustomerCartPage),
         },
         {
           path: 'notifications',
-          element: <CustomerSectionPage title="Notifications" description="A dedicated customer notification center is reserved here without exposing admin communication tools." />,
+          element: renderLazy(CustomerNotificationsPage),
         },
         {
           path: 'support',
-          element: <CustomerSectionPage title="Support" description="Customer support requests and help touchpoints live in this portal, separate from operator mailboxes." storeHref="/contact" storeLabel="Contact support" />,
+          element: renderLazy(CustomerSupportPage),
         },
       ],
     },
@@ -240,7 +262,7 @@ const legacyAdminRoutes = {
 }
 
 const authRoutes = {
-  element: <AuthLayout />,
+  element: renderLazy(AuthLayout),
   children: [
     { path: 'login', element: renderLazy(LoginPage) },
     { path: 'register', element: renderLazy(RegisterPage) },
@@ -303,7 +325,7 @@ const shopRoutes = [
       { path: 'cookie-policy', element: <PlaceholderPage /> },
       { path: 'accessibility', element: <PlaceholderPage /> },
       { path: 'shipping-carriers', element: <PlaceholderPage /> },
-      { path: 'category/:slug', element: <StoreCatalogPage /> },
+      { path: 'category/:slug', element: renderLazy(StoreCatalogPage) },
     ],
   },
   customerPortalRoutes,

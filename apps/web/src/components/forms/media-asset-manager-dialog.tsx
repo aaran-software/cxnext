@@ -1,4 +1,4 @@
-import type { Media, MediaFolder, MediaImageUploadPayload, MediaStorageScope } from '@shared/index'
+import type { Media, MediaFolder, MediaImageUploadPayload, MediaStorageScope, MediaSummary } from '@shared/index'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ImagePlus, LoaderCircle, Search, Upload, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
-import { HttpError, listMedia, listMediaFolders, uploadMediaImage } from '@/shared/api/client'
+import { getMedia, HttpError, listMedia, listMediaFolders, uploadMediaImage } from '@/shared/api/client'
 
 type ManagerTab = 'library' | 'upload'
 type UploadDetailsTab = 'basic' | 'seo' | 'details'
@@ -110,7 +110,7 @@ export function MediaAssetManagerDialog({
 }: MediaAssetManagerDialogProps) {
   const [activeTab, setActiveTab] = useState<ManagerTab>('library')
   const [detailsTab, setDetailsTab] = useState<UploadDetailsTab>('basic')
-  const [items, setItems] = useState<Media[]>([])
+  const [items, setItems] = useState<MediaSummary[]>([])
   const [folders, setFolders] = useState<MediaFolder[]>([])
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -220,7 +220,7 @@ export function MediaAssetManagerDialog({
         return
       }
 
-      onSelect(selectedAsset)
+      onSelect(await getMedia(selectedAsset.id))
       onOpenChange(false)
       return
     }

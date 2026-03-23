@@ -1,4 +1,3 @@
-import { useEffect, useMemo, useState } from 'react'
 import { Bell, Headphones, Heart, ShoppingBag, ShoppingCart, UserCircle2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
@@ -6,53 +5,22 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAuth } from '@/features/auth/components/auth-provider'
 import { buildCustomerPortalPath } from '@/features/auth/lib/portal-routing'
-import type { StorefrontCartItem } from '@/features/store/types/storefront'
+import { useStorefront } from '@/features/store/context/storefront-context'
+import { formatCurrency } from '@/features/store/lib/storefront-utils'
+import { useCustomerOrders } from '../lib/customer-orders'
 
 const quickActions = [
   { title: 'Orders', href: buildCustomerPortalPath('/orders'), icon: ShoppingBag, summary: 'Track placed orders and payment status.' },
-  { title: 'Profile', href: buildCustomerPortalPath('/profile'), icon: UserCircle2, summary: 'Review your account details and contact information.' },
+  { title: 'Profile', href: buildCustomerPortalPath('/profile'), icon: UserCircle2, summary: 'Review your account details and delivery information.' },
   { title: 'Wishlist', href: buildCustomerPortalPath('/wishlist'), icon: Heart, summary: 'Keep products saved for later.' },
   { title: 'Support', href: buildCustomerPortalPath('/support'), icon: Headphones, summary: 'Reach help when you need order assistance.' },
 ] as const
 
-const cartStorageKey = 'cxnext-storefront-cart'
-const wishlistStorageKey = 'cxnext-storefront-wishlist'
-
-function readStoredJson<T>(key: string, fallback: T) {
-  if (typeof window === 'undefined') {
-    return fallback
-  }
-
-  try {
-    const value = window.localStorage.getItem(key)
-    return value ? (JSON.parse(value) as T) : fallback
-  } catch {
-    return fallback
-  }
-}
-
 export function CustomerDashboardPage() {
   const { session } = useAuth()
-  const [cartItems, setCartItems] = useState<StorefrontCartItem[]>([])
-  const [wishlistProductIds, setWishlistProductIds] = useState<string[]>([])
-
-  useEffect(() => {
-    const syncFromStorage = () => {
-      setCartItems(readStoredJson<StorefrontCartItem[]>(cartStorageKey, []))
-      setWishlistProductIds(readStoredJson<string[]>(wishlistStorageKey, []))
-    }
-
-    syncFromStorage()
-    window.addEventListener('storage', syncFromStorage)
-    return () => {
-      window.removeEventListener('storage', syncFromStorage)
-    }
-  }, [])
-
-  const cartCount = useMemo(
-    () => cartItems.reduce((total, item) => total + item.quantity, 0),
-    [cartItems],
-  )
+  const { cartItems, cartCount, cartSubtotal, wishlistProductIds } = useStorefront()
+  const { orders, notifications, isLoading, errorMessage } = useCustomerOrders()
+  const latestOrder = orders[0] ?? null
 
   return (
     <div className="space-y-4">
@@ -60,18 +28,21 @@ export function CustomerDashboardPage() {
         <CardHeader className="gap-4 border-b border-border/60 p-8">
           <Badge className="w-fit">Customer portal</Badge>
           <div className="space-y-3">
-            <CardTitle className="text-4xl tracking-tight sm:text-5xl">
-              Your Tirupur Direct account.
-            </CardTitle>
+            <CardTitle className="text-4xl tracking-tight sm:text-5xl">Your Tirupur Direct account.</CardTitle>
             <CardDescription className="max-w-3xl text-base leading-7">
-              Track orders, save favourites, and manage delivery details in one simple place.
+              Track current orders, keep saved styles close, and move back into checkout without leaving your portal.
             </CardDescription>
             <p className="text-sm uppercase tracking-[0.18em] text-muted-foreground">
               Signed in as {session?.user.displayName ?? 'Customer'}
             </p>
           </div>
         </CardHeader>
-        <CardContent className="grid gap-4 p-8 md:grid-cols-3">
+        <CardContent className="grid gap-4 p-8 md:grid-cols-4">
+          <div className="rounded-[1.5rem] border border-border/70 bg-card/80 p-5">
+            <p className="text-sm uppercase tracking-[0.18em] text-muted-foreground">Orders</p>
+            <p className="mt-3 text-3xl font-semibold text-foreground">{orders.length}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Placed orders currently linked to your account.</p>
+          </div>
           <div className="rounded-[1.5rem] border border-border/70 bg-card/80 p-5">
             <p className="text-sm uppercase tracking-[0.18em] text-muted-foreground">Wishlist</p>
             <p className="mt-3 text-3xl font-semibold text-foreground">{wishlistProductIds.length}</p>
@@ -80,12 +51,12 @@ export function CustomerDashboardPage() {
           <div className="rounded-[1.5rem] border border-border/70 bg-card/80 p-5">
             <p className="text-sm uppercase tracking-[0.18em] text-muted-foreground">Cart</p>
             <p className="mt-3 text-3xl font-semibold text-foreground">{cartCount}</p>
-            <p className="mt-2 text-sm text-muted-foreground">Items ready for checkout.</p>
+            <p className="mt-2 text-sm text-muted-foreground">{cartItems.length > 0 ? `${formatCurrency(cartSubtotal)} ready for checkout.` : 'No items queued right now.'}</p>
           </div>
           <div className="rounded-[1.5rem] border border-border/70 bg-card/80 p-5">
             <p className="text-sm uppercase tracking-[0.18em] text-muted-foreground">Notifications</p>
-            <p className="mt-3 text-3xl font-semibold text-foreground">0</p>
-            <p className="mt-2 text-sm text-muted-foreground">Updates will appear here when enabled.</p>
+            <p className="mt-3 text-3xl font-semibold text-foreground">{notifications.length}</p>
+            <p className="mt-2 text-sm text-muted-foreground">Recent order and payment activity.</p>
           </div>
         </CardContent>
       </Card>
@@ -94,9 +65,7 @@ export function CustomerDashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle>Account actions</CardTitle>
-            <CardDescription>
-              Fast access to the customer routes that matter most.
-            </CardDescription>
+            <CardDescription>Fast access to the customer routes that matter most.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             {quickActions.map((action) => (
@@ -113,10 +82,8 @@ export function CustomerDashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Continue shopping</CardTitle>
-            <CardDescription>
-              Jump back into the storefront without opening the admin workspace.
-            </CardDescription>
+            <CardTitle>Current account state</CardTitle>
+            <CardDescription>Live current data from your checkout and storefront activity.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-[1.5rem] border border-border/70 p-5">
@@ -124,9 +91,16 @@ export function CustomerDashboardPage() {
               <p className="mt-2 text-sm text-muted-foreground">{session?.user.email ?? 'No email on file'}</p>
             </div>
             <div className="rounded-[1.5rem] border border-border/70 p-5">
-              <p className="font-semibold text-foreground">Mobile number</p>
-              <p className="mt-2 text-sm text-muted-foreground">{session?.user.phoneNumber ?? 'Not set'}</p>
+              <p className="font-semibold text-foreground">Latest order</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {isLoading ? 'Loading current orders...' : latestOrder ? `${latestOrder.orderNumber} • ${latestOrder.status}` : 'No order has been placed yet.'}
+              </p>
             </div>
+            {errorMessage ? (
+              <div className="rounded-[1.25rem] border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                {errorMessage}
+              </div>
+            ) : null}
             <div className="flex flex-wrap gap-3">
               <Button asChild>
                 <Link to="/search">
@@ -135,7 +109,7 @@ export function CustomerDashboardPage() {
                 </Link>
               </Button>
               <Button variant="outline" asChild>
-                <Link to="/cart">
+                <Link to={buildCustomerPortalPath('/cart')}>
                   <ShoppingCart className="size-4" />
                   Open cart
                 </Link>

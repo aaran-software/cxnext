@@ -66,10 +66,10 @@ export function filterProducts(products: StorefrontProduct[], filters: CatalogFi
     if (filters.categories.length > 0 && !filters.categories.includes(product.categorySlug)) return false
     if (filters.sizes.length > 0 && !product.sizes.some((size) => filters.sizes.includes(size))) return false
     if (filters.colors.length > 0 && !product.colors.some((color) => filters.colors.includes(color.name))) return false
-    if (filters.fabrics.length > 0 && !filters.fabrics.includes(product.fabric)) return false
-    if (filters.fits.length > 0 && !filters.fits.includes(product.fit)) return false
-    if (filters.sleeves.length > 0 && !filters.sleeves.includes(product.sleeve)) return false
-    if (filters.occasions.length > 0 && !filters.occasions.includes(product.occasion)) return false
+    if (filters.fabrics.length > 0 && (!product.fabric || !filters.fabrics.includes(product.fabric))) return false
+    if (filters.fits.length > 0 && (!product.fit || !filters.fits.includes(product.fit))) return false
+    if (filters.sleeves.length > 0 && (!product.sleeve || !filters.sleeves.includes(product.sleeve))) return false
+    if (filters.occasions.length > 0 && (!product.occasion || !filters.occasions.includes(product.occasion))) return false
     if (product.price < filters.minPrice || product.price > filters.maxPrice) return false
     if (product.rating < filters.rating) return false
     if (filters.availabilityOnly && product.inventory <= 0) return false

@@ -102,6 +102,43 @@ export const authTokenResponseSchema = z.object({
   user: authUserSchema,
 })
 
+export const authChangePasswordPayloadSchema = z.object({
+  currentPassword: z.string().min(8),
+  newPassword: z.string().min(8),
+})
+
+export const authChangePasswordResponseSchema = z.object({
+  updated: z.literal(true),
+})
+
+export const authDeleteAccountPayloadSchema = z.object({
+  confirmation: z.string().trim().min(1),
+})
+
+export const authDeleteAccountResponseSchema = z.object({
+  deleted: z.literal(true),
+})
+
+export const authAccountRecoveryRequestPayloadSchema = z.object({
+  email: z.email(),
+})
+
+export const authAccountRecoveryRequestResponseSchema = z.object({
+  verificationId: z.string().min(1),
+  expiresAt: z.string().min(1),
+  debugOtp: z.string().length(6).nullable(),
+})
+
+export const authAccountRecoveryRestorePayloadSchema = z.object({
+  email: z.email(),
+  verificationId: z.string().min(1),
+  otp: z.string().trim().length(6),
+})
+
+export const authAccountRecoveryRestoreResponseSchema = z.object({
+  restored: z.literal(true),
+})
+
 export const databaseHealthSchema = z.object({
   status: z.enum(['ok', 'disabled', 'error']),
   engine: z.literal('mariadb'),
@@ -123,4 +160,12 @@ export type AuthRegisterOtpVerifyResponse = z.infer<typeof authRegisterOtpVerify
 export type AuthRegisterPayload = z.infer<typeof authRegisterPayloadSchema>
 export type AuthLoginPayload = z.infer<typeof authLoginPayloadSchema>
 export type AuthTokenResponse = z.infer<typeof authTokenResponseSchema>
+export type AuthChangePasswordPayload = z.infer<typeof authChangePasswordPayloadSchema>
+export type AuthChangePasswordResponse = z.infer<typeof authChangePasswordResponseSchema>
+export type AuthDeleteAccountPayload = z.infer<typeof authDeleteAccountPayloadSchema>
+export type AuthDeleteAccountResponse = z.infer<typeof authDeleteAccountResponseSchema>
+export type AuthAccountRecoveryRequestPayload = z.infer<typeof authAccountRecoveryRequestPayloadSchema>
+export type AuthAccountRecoveryRequestResponse = z.infer<typeof authAccountRecoveryRequestResponseSchema>
+export type AuthAccountRecoveryRestorePayload = z.infer<typeof authAccountRecoveryRestorePayloadSchema>
+export type AuthAccountRecoveryRestoreResponse = z.infer<typeof authAccountRecoveryRestoreResponseSchema>
 export type DatabaseHealth = z.infer<typeof databaseHealthSchema>

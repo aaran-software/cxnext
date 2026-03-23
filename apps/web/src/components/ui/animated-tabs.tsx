@@ -47,7 +47,7 @@ function Tabs({
   setSelectedTab,
   onChange,
 }: {
-  tabs: AnimatedContentTab[]
+  tabs: Tab[]
   selectedTabIndex: number
   setSelectedTab: (input: [number, number]) => void
   onChange?: (id: string) => void
@@ -147,7 +147,7 @@ export function AnimatedTabs({ tabs, defaultTabValue }: AnimatedTabsProps) {
   return (
     <div className="w-full">
       <div className="relative flex w-full items-center justify-between overflow-x-auto overflow-y-hidden border-b border-border">
-        <Tabs tabs={tabs} {...framer.tabProps} />
+        <Tabs {...framer.tabProps} />
       </div>
       <AnimatePresence mode="wait">
         <TabContent key={selectedTab.value} tab={selectedTab} />

@@ -2,6 +2,7 @@ import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { requestAccountRecoveryOtp, restoreAccount } from '@/shared/api/client'
 import { useAuth } from '@/features/auth/components/auth-provider'
 import { resolveAuthorizedPath } from '@/features/auth/lib/portal-routing'
 import { Button } from '@/components/ui/button'
@@ -20,6 +21,13 @@ export function LoginPage() {
   const [password, setPassword] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [recoveryOtp, setRecoveryOtp] = useState('')
+  const [recoveryVerificationId, setRecoveryVerificationId] = useState<string | null>(null)
+  const [recoveryDebugOtp, setRecoveryDebugOtp] = useState<string | null>(null)
+  const [isRequestingRecoveryOtp, setIsRequestingRecoveryOtp] = useState(false)
+  const [isRestoringAccount, setIsRestoringAccount] = useState(false)
+
+  const canRecoverDisabledAccount = error?.startsWith('The account is disabled.') ?? false
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -47,6 +55,72 @@ export function LoginPage() {
       })
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  async function handleRequestRecoveryOtp() {
+    if (!email.trim()) {
+      setError('Enter the account email before requesting recovery.')
+      return
+    }
+
+    setIsRequestingRecoveryOtp(true)
+
+    try {
+      const recovery = await requestAccountRecoveryOtp({
+        email: email.trim().toLowerCase(),
+      })
+
+      setRecoveryVerificationId(recovery.verificationId)
+      setRecoveryDebugOtp(recovery.debugOtp)
+      showSuccessToast({
+        title: 'Recovery OTP sent',
+        description: 'Check the account email for the recovery code.',
+      })
+    } catch (recoveryError) {
+      const message = recoveryError instanceof Error ? recoveryError.message : 'Unable to request recovery OTP right now.'
+      setError(message)
+      showErrorToast({
+        title: 'Recovery unavailable',
+        description: message,
+      })
+    } finally {
+      setIsRequestingRecoveryOtp(false)
+    }
+  }
+
+  async function handleRestoreAccount() {
+    if (!recoveryVerificationId || recoveryOtp.trim().length !== 6) {
+      setError('Enter the 6-digit recovery OTP before restoring the account.')
+      return
+    }
+
+    setIsRestoringAccount(true)
+
+    try {
+      await restoreAccount({
+        email: email.trim().toLowerCase(),
+        verificationId: recoveryVerificationId,
+        otp: recoveryOtp.trim(),
+      })
+
+      showSuccessToast({
+        title: 'Account restored',
+        description: 'Your customer account is active again. Sign in continues now.',
+      })
+
+      const session = await login({ email, password })
+      const redirectTo = resolveAuthorizedPath(session.user.actorType, requestedPath)
+      void navigate(redirectTo, { replace: true })
+    } catch (restoreError) {
+      const message = restoreError instanceof Error ? restoreError.message : 'Unable to restore the account right now.'
+      setError(message)
+      showErrorToast({
+        title: 'Recovery failed',
+        description: message,
+      })
+    } finally {
+      setIsRestoringAccount(false)
     }
   }
 
@@ -98,6 +172,54 @@ export function LoginPage() {
             Request access
           </Link>
         </p>
+
+        {canRecoverDisabledAccount ? (
+          <div className="space-y-4 rounded-[1.5rem] border border-amber-300/70 bg-amber-50/80 p-5">
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-foreground">Recover disabled account</p>
+              <p className="text-sm text-muted-foreground">
+                Confirm the email with OTP to re-enable the account while the 15-day recovery window is still open.
+              </p>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="recovery-email">Recovery email</Label>
+              <Input
+                id="recovery-email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <Button type="button" variant="outline" onClick={() => void handleRequestRecoveryOtp()} disabled={isRequestingRecoveryOtp}>
+                {isRequestingRecoveryOtp ? 'Sending OTP...' : 'Send recovery OTP'}
+              </Button>
+            </div>
+
+            {recoveryVerificationId ? (
+              <div className="grid gap-3">
+                <div className="grid gap-2">
+                  <Label htmlFor="recovery-otp">Recovery OTP</Label>
+                  <Input
+                    id="recovery-otp"
+                    inputMode="numeric"
+                    value={recoveryOtp}
+                    onChange={(event) => setRecoveryOtp(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="Enter 6-digit OTP"
+                  />
+                </div>
+                {recoveryDebugOtp ? (
+                  <p className="text-xs text-muted-foreground">Debug OTP: {recoveryDebugOtp}</p>
+                ) : null}
+                <Button type="button" onClick={() => void handleRestoreAccount()} disabled={isRestoringAccount}>
+                  {isRestoringAccount ? 'Restoring account...' : 'Restore account'}
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   )

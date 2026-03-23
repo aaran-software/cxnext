@@ -1,6 +1,5 @@
 import { z } from 'zod'
 
-const requiredString = z.string().trim().min(1)
 const dashString = z.string().trim().nullish().transform((value) => value?.trim() || '-')
 const defaultUnknownId = z.string().trim().nullish().transform((value) => value?.trim() || '1')
 

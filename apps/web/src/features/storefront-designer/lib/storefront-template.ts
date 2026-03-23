@@ -134,7 +134,7 @@ function normalizeNumber(value: unknown, fallback = 0) {
 }
 
 export function getStorefrontTemplateSlotMeta(code: string) {
-  return slotByCode.get(code) ?? {
+  return slotByCode.get(code as (typeof storefrontTemplateSlots)[number]['value']) ?? {
     value: code,
     label: code || 'Custom template',
     kind: 'Custom slot',

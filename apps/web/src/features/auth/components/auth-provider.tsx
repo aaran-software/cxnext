@@ -24,6 +24,7 @@ interface AuthContextValue {
   isAuthenticated: boolean
   login: (payload: AuthLoginPayload) => Promise<AuthSession>
   register: (payload: AuthRegisterPayload) => Promise<AuthSession>
+  refreshUser: () => Promise<void>
   logout: () => void
 }
 
@@ -121,6 +122,21 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return nextSession
   }
 
+  async function refreshUser() {
+    if (!session?.accessToken) {
+      return
+    }
+
+    const user = await getCurrentUser(session.accessToken)
+    const nextSession = {
+      ...session,
+      user,
+    } satisfies AuthSession
+
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession))
+    setSession(nextSession)
+  }
+
   function logout() {
     window.localStorage.removeItem(STORAGE_KEY)
     setSession(null)
@@ -132,6 +148,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       isAuthenticated: Boolean(session),
       login: handleLogin,
       register: handleRegister,
+      refreshUser,
       logout,
     }),
     [session],

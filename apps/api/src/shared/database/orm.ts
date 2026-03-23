@@ -5,6 +5,13 @@ import { environment } from '../config/environment'
 type SqlPrimitive = string | number | boolean | Date | null
 type SqlRecord = Record<string, SqlPrimitive>
 
+export type TransactionClient = {
+  execute: (sql: string, params?: SqlPrimitive[]) => Promise<ResultSetHeader>
+  query: <T extends RowDataPacket = RowDataPacket>(sql: string, params?: SqlPrimitive[]) => Promise<T[]>
+  first: <T extends RowDataPacket = RowDataPacket>(sql: string, params?: SqlPrimitive[]) => Promise<T | null>
+  insert: (table: string, values: SqlRecord) => Promise<ResultSetHeader>
+}
+
 let pool: mysql.Pool | null = null
 
 function createPool() {
@@ -19,25 +26,28 @@ function createPool() {
   })
 }
 
-function createTransactionClient(connection: PoolConnection) {
+function createTransactionClient(connection: PoolConnection): TransactionClient {
   return {
-    execute(sql: string, params: SqlPrimitive[] = []) {
-      return connection.execute<ResultSetHeader>(sql, params)
+    async execute(sql: string, params: SqlPrimitive[] = []) {
+      const [result] = await connection.execute<ResultSetHeader>(sql, params)
+      return result
     },
     query<T extends RowDataPacket = RowDataPacket>(sql: string, params: SqlPrimitive[] = []) {
       return connection.query<T[]>(sql, params).then(([rows]) => rows)
     },
-    first<T extends RowDataPacket = RowDataPacket>(sql: string, params: SqlPrimitive[] = []) {
-      return connection.query<T[]>(sql, params).then(([rows]) => rows[0] ?? null)
+    async first<T extends RowDataPacket = RowDataPacket>(sql: string, params: SqlPrimitive[] = []): Promise<T | null> {
+      const [rows] = await connection.query<T[]>(sql, params)
+      return (rows[0] ?? null) as T | null
     },
-    insert(table: string, values: SqlRecord) {
+    async insert(table: string, values: SqlRecord) {
       const columns = Object.keys(values)
       const placeholders = columns.map(() => '?').join(', ')
       const params = columns.map((column) => values[column] ?? null)
-      return connection.execute<ResultSetHeader>(
+      const [result] = await connection.execute<ResultSetHeader>(
         `INSERT INTO ${table} (${columns.join(', ')}) VALUES (${placeholders})`,
         params,
       )
+      return result
     },
   }
 }
@@ -94,7 +104,7 @@ export class DatabaseOrm {
     )
   }
 
-  async transaction<T>(callback: (transaction: ReturnType<typeof createTransactionClient>) => Promise<T>) {
+  async transaction<T>(callback: (transaction: TransactionClient) => Promise<T>) {
     const connection = await this.getPool().getConnection()
 
     try {

@@ -290,6 +290,19 @@ export class StorefrontOrderRepository {
     })
   }
 
+  async createBypassedPaymentOrder(payload: StorefrontCheckoutPayload) {
+    const prepared = await this.prepareCheckout(payload)
+    return this.persistOrder(prepared, {
+      status: 'paid',
+      paymentStatus: 'captured',
+      paymentGateway: 'test_bypass',
+      paymentGatewayOrderId: null,
+      paymentGatewayPaymentId: `test-payment-${prepared.orderId.slice(0, 8)}`,
+      paymentGatewaySignature: null,
+      paymentCapturedAt: new Date(),
+    })
+  }
+
   async createPendingPaymentOrder(prepared: PreparedCheckout, gatewayOrderId: string) {
     return this.persistOrder(prepared, {
       status: 'pending_payment',
@@ -374,6 +387,88 @@ export class StorefrontOrderRepository {
     )
 
     return mapOrderRow(order, itemRows.map(mapOrderItemRow))
+  }
+
+  async listByCustomerEmail(email: string) {
+    await ensureDatabaseSchema()
+
+    const normalizedEmail = email.trim().toLowerCase()
+    const rows = await db.query<StorefrontOrderRow>(
+      `
+        SELECT
+          id,
+          order_number,
+          status,
+          first_name,
+          last_name,
+          email,
+          phone,
+          address_line1,
+          address_line2,
+          city,
+          state_name,
+          country_name,
+          postal_code,
+          customer_note,
+          delivery_method,
+          payment_method,
+          payment_status,
+          payment_gateway,
+          payment_gateway_order_id,
+          payment_gateway_payment_id,
+          payment_gateway_signature,
+          payment_captured_at,
+          subtotal,
+          shipping_amount,
+          handling_amount,
+          total_amount,
+          currency_code,
+          created_at,
+          updated_at
+        FROM ${storefrontTableNames.orders}
+        WHERE LOWER(email) = ?
+        ORDER BY created_at DESC
+      `,
+      [normalizedEmail],
+    )
+
+    if (rows.length === 0) {
+      return []
+    }
+
+    const orderIds = rows.map((row) => row.id)
+    const placeholders = orderIds.map(() => '?').join(', ')
+    const itemRows = await db.query<StorefrontOrderItemRow>(
+      `
+        SELECT
+          id,
+          order_id,
+          product_id,
+          product_name,
+          product_slug,
+          sku,
+          size_value,
+          color_value,
+          quantity,
+          unit_price,
+          line_total,
+          created_at,
+          updated_at
+        FROM ${storefrontTableNames.orderItems}
+        WHERE order_id IN (${placeholders})
+        ORDER BY created_at ASC
+      `,
+      orderIds,
+    )
+
+    const itemsByOrderId = new Map<string, StorefrontOrderItem[]>()
+    for (const itemRow of itemRows) {
+      const current = itemsByOrderId.get(itemRow.order_id) ?? []
+      current.push(mapOrderItemRow(itemRow))
+      itemsByOrderId.set(itemRow.order_id, current)
+    }
+
+    return rows.map((row) => mapOrderRow(row, itemsByOrderId.get(row.id) ?? []))
   }
 
   private async persistOrder(prepared: PreparedCheckout, paymentState: PersistedPaymentState) {

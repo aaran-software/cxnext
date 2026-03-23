@@ -246,8 +246,13 @@ async function openRazorpayCheckout(
   }
 
   return new Promise<StorefrontOrder>((resolve, reject) => {
+    const Razorpay = window.Razorpay
+    if (!Razorpay) {
+      reject(new Error("Razorpay Checkout is unavailable in this browser session."))
+      return
+    }
     const prefillContact = normalizeRazorpayContact(session.prefillContact ?? values.phone, values.country)
-    const razorpay = new window.Razorpay({
+    const razorpay = new Razorpay({
       key: session.keyId,
       amount: session.amount,
       currency: session.currency,
@@ -379,10 +384,10 @@ const deliveryOptions: Array<{ value: StorefrontDeliveryMethod; label: string; d
   { value: "signature", label: "Signature packaging", detail: "Occasion-ready packaging with premium handoff." },
 ]
 
-const paymentOptions: Array<{ value: StorefrontPaymentMethod; label: string; detail: string }> = [
+const paymentOptions: Array<{ value: StorefrontPaymentMethod; label: string; detail: string; disabled?: boolean }> = [
   { value: "upi", label: "UPI / Wallet", detail: "Opens Razorpay Checkout with UPI and wallet payment methods." },
   { value: "card", label: "Credit or debit card", detail: "Opens Razorpay Checkout and completes payment before confirmation." },
-  { value: "cod", label: "Cash on delivery", detail: "Skip online payment and place the order directly where supported." },
+  { value: "cod", label: "Cash on delivery", detail: "Available later. Keep online payment enabled for now.", disabled: true },
 ]
 
 function toErrorMessage(error: unknown) {
@@ -409,6 +414,18 @@ function toErrorMessage(error: unknown) {
 
 function isBlank(value: string) {
   return value.trim().length === 0
+}
+
+function getPaymentSummaryLabel(order: StorefrontOrder) {
+  if (order.paymentGateway === "razorpay") {
+    return "Razorpay"
+  }
+
+  if (order.paymentGateway === "test_bypass") {
+    return "Test bypass"
+  }
+
+  return "Cash on delivery"
 }
 
 function hasUsableAddress(address: CustomerAddress) {
@@ -910,13 +927,19 @@ export function StoreCheckoutPage() {
             <div className="space-y-2">
               <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700">
                 <CheckCircle2Icon className="size-4" />
-                {placedOrder.paymentGateway === "razorpay" ? "Payment verified" : "Order confirmed"}
+                {placedOrder.paymentGateway === "razorpay"
+                  ? "Payment verified"
+                  : placedOrder.paymentGateway === "test_bypass"
+                    ? "Test payment bypassed"
+                    : "Order confirmed"}
               </div>
               <h2 className="text-3xl font-semibold tracking-tight text-emerald-950">Order {placedOrder.orderNumber} has been placed.</h2>
               <p className="max-w-2xl text-sm leading-6 text-emerald-900/80">
                 {placedOrder.paymentGateway === "razorpay"
                   ? "Razorpay payment was verified on the backend and the cart has been cleared."
-                  : "Cash-on-delivery checkout was stored in the backend order tables and the cart has been cleared."}
+                  : placedOrder.paymentGateway === "test_bypass"
+                    ? "Test mode bypassed Razorpay so you can validate the rest of the checkout flow end to end."
+                    : "Cash-on-delivery checkout was stored in the backend order tables and the cart has been cleared."}
               </p>
             </div>
             <Button asChild className="rounded-full">
@@ -959,7 +982,7 @@ export function StoreCheckoutPage() {
               <div className="flex items-center justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(placedOrder.subtotal)}</span></div>
               <div className="flex items-center justify-between"><span className="text-muted-foreground">Shipping</span><span>{placedOrder.shippingAmount === 0 ? "Free" : formatCurrency(placedOrder.shippingAmount)}</span></div>
               <div className="flex items-center justify-between"><span className="text-muted-foreground">Handling</span><span>{formatCurrency(placedOrder.handlingAmount)}</span></div>
-              <div className="flex items-center justify-between"><span className="text-muted-foreground">Payment</span><span>{placedOrder.paymentGateway === "razorpay" ? "Razorpay" : "Cash on delivery"}</span></div>
+              <div className="flex items-center justify-between"><span className="text-muted-foreground">Payment</span><span>{getPaymentSummaryLabel(placedOrder)}</span></div>
               <div className="flex items-center justify-between border-t border-border pt-3 text-base font-semibold"><span>Total</span><span>{formatCurrency(placedOrder.totalAmount)}</span></div>
             </div>
           </aside>
@@ -1137,15 +1160,32 @@ export function StoreCheckoutPage() {
             </div>
             <div className="grid gap-3">
               {paymentOptions.map((option) => (
-                <label key={option.value} className="flex items-start gap-3 rounded-[1.4rem] border border-border bg-background/70 px-4 py-3 text-sm">
+                <label
+                  key={option.value}
+                  className={`flex items-start gap-3 rounded-[1.4rem] border px-4 py-3 text-sm ${
+                    option.disabled
+                      ? "cursor-not-allowed border-border/60 bg-background/40 opacity-60"
+                      : "border-border bg-background/70"
+                  }`}
+                >
                   <input
                     type="radio"
                     name="payment"
                     checked={values.paymentMethod === option.value}
-                    onChange={() => setValues((current) => ({ ...current, paymentMethod: option.value }))}
+                    disabled={option.disabled}
+                    onChange={() => {
+                      if (option.disabled) {
+                        return
+                      }
+
+                      setValues((current) => ({ ...current, paymentMethod: option.value }))
+                    }}
                   />
                   <span>
-                    <span className="block font-medium text-foreground">{option.label}</span>
+                    <span className="block font-medium text-foreground">
+                      {option.label}
+                      {option.disabled ? " (Coming soon)" : ""}
+                    </span>
                     <span className="text-muted-foreground">{option.detail}</span>
                   </span>
                 </label>

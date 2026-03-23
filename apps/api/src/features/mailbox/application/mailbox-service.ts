@@ -3,7 +3,6 @@ import type {
   MailboxMessageResponse,
   MailboxRecipientInput,
   MailboxRecipientType,
-  MailboxSendPayload,
   MailboxTemplateListResponse,
   MailboxTemplateResponse,
 } from '@shared/index'
@@ -25,7 +24,7 @@ interface EmailDispatchInput {
   to: MailboxRecipientInput[]
   cc?: MailboxRecipientInput[]
   bcc?: MailboxRecipientInput[]
-  subject: string
+  subject?: string
   htmlBody?: string | null
   textBody?: string | null
   templateId?: string | null
@@ -200,11 +199,11 @@ export class MailboxService {
         : null
 
     if ((input.templateId || input.templateCode) && !template) {
-      throw new ApplicationError('Mailbox template not found.', { templateId: input.templateId, templateCode: input.templateCode }, 404)
+      throw new ApplicationError('Mailbox template not found.', { templateId: input.templateId ?? '', templateCode: input.templateCode ?? '' }, 404)
     }
 
     if (template && !template.isActive) {
-      throw new ApplicationError('Mailbox template is inactive.', { templateId: template.id, templateCode: template.code }, 409)
+      throw new ApplicationError('Mailbox template is inactive.', { templateId: template.id, templateCode: template.code ?? '' }, 409)
     }
 
     const templateData = input.templateData ?? template?.sampleData ?? {}
@@ -232,7 +231,7 @@ export class MailboxService {
       subject: subject.trim(),
       htmlBody: htmlBody?.trim() ? htmlBody : null,
       textBody: textBody?.trim() ? textBody : null,
-      templateData,
+      templateData: templateData as Record<string, string | number | boolean | null>,
     }
   }
 }

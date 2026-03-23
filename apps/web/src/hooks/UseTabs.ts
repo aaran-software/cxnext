@@ -15,9 +15,9 @@ export function useTabs({
   initialTabId: string
   onChange?: (id: string) => void
 }) {
-  const [[selectedTabIndex, direction], setSelectedTab] = useState(() => {
+  const [[selectedTabIndex, direction], setSelectedTab] = useState<[number, number]>(() => {
     const indexOfInitialTab = tabs.findIndex((tab) => tab.value === initialTabId)
-    return [indexOfInitialTab === -1 ? 0 : indexOfInitialTab, 0] as const
+    return [indexOfInitialTab === -1 ? 0 : indexOfInitialTab, 0]
   })
 
   return {
