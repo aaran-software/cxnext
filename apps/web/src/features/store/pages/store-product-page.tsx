@@ -12,12 +12,14 @@ import { ReviewForm } from '@/features/store/components/product/ReviewForm'
 import { ReviewList } from '@/features/store/components/product/ReviewList'
 import { ShareButton } from '@/features/store/components/product/ShareButton'
 import { WishlistButton } from '@/features/store/components/product/WishlistButton'
+import { useAuth } from '@/features/auth/components/auth-provider'
 import { useStorefront } from '@/features/store/context/storefront-context'
 import { formatCurrency, getPrimaryProductImage } from '@/features/store/lib/storefront-utils'
 
 export function StoreProductPage() {
   const navigate = useNavigate()
   const { slug } = useParams()
+  const { session } = useAuth()
   const { products, reviews, addToCart, addReview, isLoading, errorMessage } = useStorefront()
   const product = products.find((entry) => entry.slug === slug) ?? null
   const [quantity, setQuantity] = useState(1)
@@ -54,6 +56,7 @@ export function StoreProductPage() {
     [product],
   )
   const isOutOfStock = product ? product.inventory <= 0 : false
+  const canSubmitReview = session?.user.actorType === 'customer'
 
   useLayoutEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
@@ -163,20 +166,20 @@ export function StoreProductPage() {
             <Button
               className="rounded-full px-6"
               disabled={isOutOfStock}
-              onClick={() => addToCart(product.id, quantity, selectedSize, selectedColor)}
-            >
-              {isOutOfStock ? 'Out of stock' : 'Add to cart'}
-            </Button>
-            <Button
-              variant="outline"
-              className="rounded-full px-6"
-              disabled={isOutOfStock}
               onClick={() => {
                 addToCart(product.id, quantity, selectedSize, selectedColor, { toast: false })
                 void navigate('/checkout')
               }}
             >
-              Buy now
+              {isOutOfStock ? 'Out of stock' : 'Buy now'}
+            </Button>
+            <Button
+              variant="outline"
+              className="rounded-full px-6"
+              disabled={isOutOfStock}
+              onClick={() => addToCart(product.id, quantity, selectedSize, selectedColor)}
+            >
+              Add to cart
             </Button>
             <div className="flex flex-wrap items-center gap-3 sm:gap-2.5">
               <WishlistButton productId={product.id} size="pill" />
@@ -245,8 +248,14 @@ export function StoreProductPage() {
               product.featuredLabel ? 'Contributes to featured brand labels.' : null,
             ]
               .filter(Boolean)
-              .map((item) => (
-                <div key={item} className="rounded-[1.4rem] border border-border/70 bg-background/70 px-4 py-3 text-sm text-muted-foreground">
+              .map((item, index) => (
+                <div
+                  key={item}
+                  className="translate-y-0 rounded-[1.4rem] border border-border/70 bg-background/70 px-4 py-3 text-sm font-medium text-foreground/80 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.16)] transition duration-200 ease-out hover:-translate-y-1 hover:border-foreground/20 hover:bg-background hover:text-foreground hover:shadow-[0_22px_40px_-24px_rgba(15,23,42,0.22)]"
+                  style={{
+                    animation: `fade-in 240ms ease-out ${index * 45}ms both`,
+                  }}
+                >
                   {item}
                 </div>
               ))}
@@ -261,7 +270,21 @@ export function StoreProductPage() {
           </Badge>
           <h2 className="text-2xl font-semibold tracking-tight">Customer impressions from the product review records.</h2>
         </div>
-        <ReviewForm onSubmit={(payload) => addReview(product.id, payload)} />
+        {canSubmitReview ? (
+          <ReviewForm onSubmit={(payload) => addReview(product.id, payload)} />
+        ) : (
+          <div className="rounded-[1.8rem] border border-border/60 bg-card p-5">
+            <h3 className="text-lg font-semibold tracking-tight text-foreground">Sign in to share your review</h3>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              Review submission is available only for signed-in customer accounts so product feedback stays tied to real storefront users.
+            </p>
+            <div className="mt-4">
+              <Button asChild className="rounded-full px-5">
+                <Link to="/login">Login to review</Link>
+              </Button>
+            </div>
+          </div>
+        )}
         <ReviewList reviews={productReviews} />
       </section>
 

@@ -1,3 +1,4 @@
+import { StarIcon } from "lucide-react"
 import { useState } from "react"
 import type { FormEvent } from "react"
 
@@ -5,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { cn } from "@/lib/utils"
 
 export function ReviewForm({
   onSubmit,
@@ -28,13 +30,30 @@ export function ReviewForm({
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <Label>Rating</Label>
-          <Input
-            type="number"
-            min={1}
-            max={5}
-            value={rating}
-            onChange={(event) => setRating(Number(event.target.value))}
-          />
+          <div className="flex items-center gap-2 rounded-[1rem] border border-border/70 bg-background/60 px-3 py-3">
+            {Array.from({ length: 5 }, (_, index) => {
+              const value = index + 1
+              const active = value <= rating
+
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setRating(value)}
+                  className="rounded-full p-1 transition hover:scale-105"
+                  aria-label={`Rate ${value} star${value > 1 ? "s" : ""}`}
+                >
+                  <StarIcon
+                    className={cn(
+                      "size-5 transition",
+                      active ? "fill-amber-400 text-amber-400" : "text-muted-foreground/35",
+                    )}
+                  />
+                </button>
+              )
+            })}
+            <span className="ml-2 text-sm text-muted-foreground">{rating} of 5</span>
+          </div>
         </div>
         <div className="space-y-2">
           <Label>Title</Label>
@@ -56,7 +75,7 @@ export function ReviewForm({
       </div>
       <div className="flex justify-end">
         <Button type="submit" className="rounded-full px-5">
-          Submit Review
+          Submit review
         </Button>
       </div>
     </form>
