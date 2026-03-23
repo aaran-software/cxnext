@@ -38,6 +38,10 @@ const CustomerDashboardPage = lazyPage(
   () => import('@/features/customer-portal/pages/customer-dashboard-page'),
   'CustomerDashboardPage',
 )
+const CustomerProfilePage = lazyPage(
+  () => import('@/features/customer-portal/pages/customer-profile-page'),
+  'CustomerProfilePage',
+)
 const DashboardPage = lazyPage(() => import('@/features/dashboard/pages/dashboard-page'), 'DashboardPage')
 const CommonModulePage = lazyPage(
   () => import('@/features/common-modules/pages/common-module-page'),
@@ -197,7 +201,7 @@ const customerPortalRoutes = {
         },
         {
           path: 'profile',
-          element: <CustomerSectionPage title="Profile" description="Manage the customer profile data used for purchases and account communication." />,
+          element: renderLazy(CustomerProfilePage),
         },
         {
           path: 'wishlist',

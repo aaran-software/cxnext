@@ -7,6 +7,9 @@ import type {
   AuthRegisterOtpVerifyResponse,
   AuthTokenResponse,
   AuthUser,
+  CustomerProfile,
+  CustomerProfileResponse,
+  CustomerProfileUpdatePayload,
   CompanyListResponse,
   CompanyResponse,
   CompanyUpsertPayload,
@@ -169,6 +172,22 @@ export function getCurrentUser(token: string) {
   return request<AuthUser>('/auth/me', {
     headers: createAuthorizationHeaders(token),
   })
+}
+
+export async function getCustomerProfile(token: string) {
+  const response = await request<CustomerProfileResponse>('/customer/profile', {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.profile
+}
+
+export async function updateCustomerProfile(token: string, payload: CustomerProfileUpdatePayload) {
+  const response = await request<CustomerProfileResponse>('/customer/profile', {
+    method: 'PATCH',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
+  })
+  return response.profile
 }
 
 export async function getSystemSettings(token: string) {

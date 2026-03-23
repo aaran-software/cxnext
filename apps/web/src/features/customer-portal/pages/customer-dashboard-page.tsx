@@ -61,10 +61,10 @@ export function CustomerDashboardPage() {
           <Badge className="w-fit">Customer portal</Badge>
           <div className="space-y-3">
             <CardTitle className="text-4xl tracking-tight sm:text-5xl">
-              Keep orders, profile, and saved products in one account workspace.
+              Your Tirupur Direct account.
             </CardTitle>
             <CardDescription className="max-w-3xl text-base leading-7">
-              This portal is isolated from the admin workspace. It is for customers only and keeps order-facing actions separate from internal operations.
+              Track orders, save favourites, and manage delivery details in one simple place.
             </CardDescription>
             <p className="text-sm uppercase tracking-[0.18em] text-muted-foreground">
               Signed in as {session?.user.displayName ?? 'Customer'}

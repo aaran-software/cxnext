@@ -12,6 +12,7 @@ import { storefrontRazorpayPaymentsMigration } from './011-storefront-razorpay-p
 import { authContactVerificationsMigration } from './012-auth-contact-verifications'
 import { mailboxFoundationMigration } from './013-mailbox-foundation'
 import { sliderThemesMigration } from './014-slider-themes'
+import { customerProfileMigration } from './015-customer-profile'
 import type { Migration } from './migration'
 
 export const migrations: Migration[] = [
@@ -29,4 +30,5 @@ export const migrations: Migration[] = [
   authContactVerificationsMigration,
   mailboxFoundationMigration,
   sliderThemesMigration,
+  customerProfileMigration,
 ]

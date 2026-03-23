@@ -1,9 +1,7 @@
 "use client"
 
-import * as React from 'react'
-import { LogOut } from 'lucide-react'
-import { NavLink, useLocation } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
+import * as React from "react"
+import { NavLink, useLocation } from "react-router-dom"
 import {
   Sidebar,
   SidebarContent,
@@ -15,25 +13,47 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from '@/components/ui/sidebar'
-import { useAuth } from '@/features/auth/components/auth-provider'
-import { customerPortalLinks } from '@/features/customer-portal/lib/customer-portal-nav'
-import { BrandMark } from '@/shared/branding/brand-mark'
-import { buildCustomerPortalPath } from '@/features/auth/lib/portal-routing'
+  useSidebar,
+} from "@/components/ui/sidebar"
+import { useAuth } from "@/features/auth/components/auth-provider"
+import { buildCustomerPortalPath } from "@/features/auth/lib/portal-routing"
+import { CustomerNavUser } from "@/features/customer-portal/components/navigation/customer-nav-user"
+import { customerPortalLinks } from "@/features/customer-portal/lib/customer-portal-nav"
+import { BrandGlyph } from "@/shared/branding/brand-mark"
+import { useBranding } from "@/shared/branding/branding-provider"
 
 export function CustomerPortalSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { session, logout } = useAuth()
+  const branding = useBranding()
   const location = useLocation()
+  const { state: sidebarState } = useSidebar()
 
   return (
     <Sidebar variant="inset" collapsible="icon" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
+            <SidebarMenuButton
+              asChild
+              className="h-auto min-h-0 overflow-visible px-2 py-2 group-data-[collapsible=icon]:-ml-1 group-data-[collapsible=icon]:size-10 group-data-[collapsible=icon]:p-0"
+            >
               <NavLink to={buildCustomerPortalPath()}>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <BrandMark compact className="items-start" />
+                <div className="flex min-w-0 items-center gap-3">
+                  <BrandGlyph
+                    shadowless
+                    className="size-10 shrink-0 rounded-xl"
+                    iconClassName="size-5"
+                  />
+                  {sidebarState === "expanded" ? (
+                    <div className="min-w-0 flex-1 text-left leading-tight">
+                      <p className="truncate text-base font-semibold uppercase tracking-[0.2em] text-foreground">
+                        {branding.brandName}
+                      </p>
+                      <p className="truncate text-xs font-medium text-muted-foreground">
+                        Customer portal
+                      </p>
+                    </div>
+                  ) : null}
                 </div>
               </NavLink>
             </SidebarMenuButton>
@@ -60,21 +80,14 @@ export function CustomerPortalSidebar({ ...props }: React.ComponentProps<typeof 
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <div className="rounded-xl border border-sidebar-border/70 p-3">
-          <p className="truncate text-sm font-medium text-sidebar-foreground">
-            {session?.user.displayName ?? 'Customer'}
-          </p>
-          <p className="truncate text-xs text-sidebar-foreground/70">
-            {session?.user.email ?? 'No email'}
-          </p>
-          <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-sidebar-foreground/60">
-            Customer portal
-          </p>
-          <Button variant="outline" size="sm" className="mt-3 w-full" onClick={logout}>
-            <LogOut className="size-4" />
-            Logout
-          </Button>
-        </div>
+        <CustomerNavUser
+          user={{
+            name: session?.user.displayName ?? "Customer",
+            email: session?.user.email ?? "No email",
+            avatar: session?.user.avatarUrl ?? null,
+          }}
+          onLogout={logout}
+        />
       </SidebarFooter>
     </Sidebar>
   )

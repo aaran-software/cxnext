@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Check, ChevronsUpDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { LookupOption } from '@/shared/forms/common-lookup'
@@ -27,11 +28,22 @@ export function AutocompleteLookup({
   onErrorChange,
   createOption,
 }: AutocompleteLookupProps) {
+  const LOOKUP_MENU_HEIGHT = 320
+  const LOOKUP_VIEWPORT_GAP = 12
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [highlightedIndex, setHighlightedIndex] = useState(0)
   const [creating, setCreating] = useState(false)
+  const [menuStyle, setMenuStyle] = useState<{
+    top?: number
+    left?: number
+    width?: number
+    maxHeight: number
+    openUpward: boolean
+    withinDialog: boolean
+  } | null>(null)
   const rootRef = useRef<HTMLDivElement | null>(null)
+  const menuRef = useRef<HTMLDivElement | null>(null)
   const triggerRef = useRef<HTMLButtonElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
 
@@ -58,17 +70,55 @@ export function AutocompleteLookup({
   const createItemIndex = canCreateOption ? totalItems : -1
 
   useEffect(() => {
+    function syncMenuPosition() {
+      const trigger = triggerRef.current
+      if (!trigger) {
+        return
+      }
+
+      const withinDialog = Boolean(trigger.closest('[role="dialog"]'))
+      const rect = trigger.getBoundingClientRect()
+      const spaceBelow = window.innerHeight - rect.bottom - LOOKUP_VIEWPORT_GAP
+      const spaceAbove = rect.top - LOOKUP_VIEWPORT_GAP
+      const shouldOpenUpward = spaceBelow < LOOKUP_MENU_HEIGHT && spaceAbove > spaceBelow
+      const availableHeight = shouldOpenUpward ? Math.max(spaceAbove, 180) : Math.max(spaceBelow, 180)
+      const maxHeight = Math.min(LOOKUP_MENU_HEIGHT, availableHeight)
+      const top = shouldOpenUpward
+        ? Math.max(LOOKUP_VIEWPORT_GAP, rect.top - maxHeight - 8)
+        : rect.bottom + 8
+
+      setMenuStyle({
+        maxHeight,
+        openUpward: shouldOpenUpward,
+        withinDialog,
+        ...(withinDialog ? {} : {
+          top,
+          left: rect.left,
+          width: rect.width,
+        }),
+      })
+    }
+
     if (!open) {
       setQuery('')
       setHighlightedIndex(0)
+      setMenuStyle(null)
       return
     }
 
+    syncMenuPosition()
     setHighlightedIndex(showEmptyOption ? 1 : 0)
     window.requestAnimationFrame(() => {
       inputRef.current?.focus()
       inputRef.current?.select()
     })
+    window.addEventListener('resize', syncMenuPosition)
+    window.addEventListener('scroll', syncMenuPosition, true)
+
+    return () => {
+      window.removeEventListener('resize', syncMenuPosition)
+      window.removeEventListener('scroll', syncMenuPosition, true)
+    }
   }, [open, showEmptyOption])
 
   useEffect(() => {
@@ -78,7 +128,8 @@ export function AutocompleteLookup({
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node
+      if (!rootRef.current?.contains(target) && !menuRef.current?.contains(target)) {
         setOpen(false)
       }
     }
@@ -189,7 +240,7 @@ export function AutocompleteLookup({
   }
 
   return (
-    <div ref={rootRef} className="relative">
+    <div ref={rootRef} className={cn('relative', open ? 'z-[230]' : undefined)}>
       <button
         type="button"
         ref={triggerRef}
@@ -205,8 +256,103 @@ export function AutocompleteLookup({
         <ChevronsUpDown className="ml-2 size-4 shrink-0 text-muted-foreground" />
       </button>
 
-      {open ? (
-        <div className="absolute z-50 mt-2 w-full rounded-md border border-border bg-popover p-2 shadow-md">
+      {open && menuStyle ? (
+        menuStyle.withinDialog ? (
+          <div
+            ref={menuRef}
+            className={cn(
+              'absolute z-[220] w-full rounded-md border border-border bg-popover p-2 shadow-md',
+              menuStyle.openUpward ? 'bottom-full mb-2' : 'top-full mt-2',
+            )}
+          >
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={placeholder ?? 'Search option'}
+              className="mb-2 flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
+            />
+            <div
+              className="overflow-y-auto pr-1 [scrollbar-color:hsl(var(--border))_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border/80 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-1.5"
+              style={{ maxHeight: Math.max(menuStyle.maxHeight - 52, 128) }}
+            >
+              {showEmptyOption ? (
+                <button
+                  type="button"
+                  className={cn(
+                    'flex w-full items-center justify-between rounded-sm px-2 py-2 text-left text-sm transition-colors hover:bg-muted/70',
+                    highlightedIndex === 0 ? 'bg-muted/70' : undefined,
+                  )}
+                  onClick={() => {
+                    selectOption('')
+                  }}
+                >
+                  <span>{emptyOptionLabel}</span>
+                  {resolvedValue === '__empty__' ? <Check className="size-4" /> : null}
+                </button>
+              ) : null}
+              {filteredOptions.map((option, index) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={cn(
+                    'flex w-full items-center justify-between rounded-sm px-2 py-2 text-left text-sm transition-colors hover:bg-muted/70',
+                    highlightedIndex === index + (showEmptyOption ? 1 : 0) ? 'bg-muted/70' : undefined,
+                  )}
+                  onClick={() => {
+                    selectOption(option.value)
+                  }}
+                >
+                  <span>{option.label}</span>
+                  {option.value === value ? <Check className="size-4" /> : null}
+                </button>
+              ))}
+              {filteredOptions.length === 0 ? (
+                <div className="space-y-2 px-2 py-2">
+                  <p className="text-sm text-muted-foreground">No results found.</p>
+                  {canCreateOption ? (
+                    <button
+                      type="button"
+                      className={cn(
+                        'flex w-full items-center justify-between rounded-sm border border-dashed border-border px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-muted/70',
+                        highlightedIndex === createItemIndex ? 'bg-muted/70' : undefined,
+                      )}
+                      onClick={() => void handleCreateOption()}
+                      disabled={creating}
+                    >
+                      <span>{creating ? 'Creating...' : `Create "${query.trim()}"`}</span>
+                      <span className="text-xs text-muted-foreground">Enter</span>
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+              {filteredOptions.length > 0 && canCreateOption ? (
+                <button
+                  type="button"
+                  className={cn(
+                    'mt-2 flex w-full items-center justify-between rounded-sm border border-dashed border-border px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-muted/70',
+                    highlightedIndex === createItemIndex ? 'bg-muted/70' : undefined,
+                  )}
+                  onClick={() => void handleCreateOption()}
+                  disabled={creating}
+                >
+                  <span>{creating ? 'Creating...' : `Create "${query.trim()}"`}</span>
+                  <span className="text-xs text-muted-foreground">Enter</span>
+                </button>
+              ) : null}
+            </div>
+          </div>
+        ) : typeof document !== 'undefined' ? createPortal(
+          <div
+            ref={menuRef}
+            className="fixed z-[200] rounded-md border border-border bg-popover p-2 shadow-md"
+            style={{
+              top: menuStyle.top,
+              left: menuStyle.left,
+              width: menuStyle.width,
+            }}
+          >
           <input
             ref={inputRef}
             value={query}
@@ -215,13 +361,16 @@ export function AutocompleteLookup({
             placeholder={placeholder ?? 'Search option'}
             className="mb-2 flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
           />
-          <div className="max-h-56 overflow-auto">
+          <div
+            className="overflow-y-auto pr-1 [scrollbar-color:hsl(var(--border))_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border/80 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-1.5"
+            style={{ maxHeight: Math.max(menuStyle.maxHeight - 52, 128) }}
+          >
             {showEmptyOption ? (
               <button
                 type="button"
                 className={cn(
-                  'flex w-full items-center justify-between rounded-sm px-2 py-2 text-left text-sm hover:bg-accent',
-                  highlightedIndex === 0 ? 'bg-accent' : undefined,
+                  'flex w-full items-center justify-between rounded-sm px-2 py-2 text-left text-sm transition-colors hover:bg-muted/70',
+                  highlightedIndex === 0 ? 'bg-muted/70' : undefined,
                 )}
                 onClick={() => {
                   selectOption('')
@@ -236,8 +385,8 @@ export function AutocompleteLookup({
                 key={option.value}
                 type="button"
                 className={cn(
-                  'flex w-full items-center justify-between rounded-sm px-2 py-2 text-left text-sm hover:bg-accent',
-                  highlightedIndex === index + (showEmptyOption ? 1 : 0) ? 'bg-accent' : undefined,
+                  'flex w-full items-center justify-between rounded-sm px-2 py-2 text-left text-sm transition-colors hover:bg-muted/70',
+                  highlightedIndex === index + (showEmptyOption ? 1 : 0) ? 'bg-muted/70' : undefined,
                 )}
                 onClick={() => {
                   selectOption(option.value)
@@ -254,8 +403,8 @@ export function AutocompleteLookup({
                   <button
                     type="button"
                     className={cn(
-                      'flex w-full items-center justify-between rounded-sm border border-dashed border-border px-3 py-2 text-left text-sm font-medium hover:bg-accent',
-                      highlightedIndex === createItemIndex ? 'bg-accent' : undefined,
+                      'flex w-full items-center justify-between rounded-sm border border-dashed border-border px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-muted/70',
+                      highlightedIndex === createItemIndex ? 'bg-muted/70' : undefined,
                     )}
                     onClick={() => void handleCreateOption()}
                     disabled={creating}
@@ -270,8 +419,8 @@ export function AutocompleteLookup({
               <button
                 type="button"
                 className={cn(
-                  'mt-2 flex w-full items-center justify-between rounded-sm border border-dashed border-border px-3 py-2 text-left text-sm font-medium hover:bg-accent',
-                  highlightedIndex === createItemIndex ? 'bg-accent' : undefined,
+                  'mt-2 flex w-full items-center justify-between rounded-sm border border-dashed border-border px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-muted/70',
+                  highlightedIndex === createItemIndex ? 'bg-muted/70' : undefined,
                 )}
                 onClick={() => void handleCreateOption()}
                 disabled={creating}
@@ -281,7 +430,9 @@ export function AutocompleteLookup({
               </button>
             ) : null}
           </div>
-        </div>
+          </div>,
+          document.body,
+        ) : null
       ) : null}
     </div>
   )

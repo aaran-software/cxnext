@@ -1,15 +1,30 @@
 import { useEffect, useMemo, useState } from "react"
 import type { CommonModuleItem } from "@shared/index"
-import { CheckCircle2Icon, CreditCardIcon, LoaderCircleIcon, MapPinIcon, TruckIcon } from "lucide-react"
+import { CheckCircle2Icon, CreditCardIcon, LoaderCircleIcon, MapPinIcon, PlusIcon, Trash2Icon, TruckIcon } from "lucide-react"
 import { Link } from "react-router-dom"
 
 import { AutocompleteLookup } from "@/components/lookups/AutocompleteLookup"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/features/auth/components/auth-provider"
+import {
+  createEmptyAddress,
+  getDefaultCustomerAddress,
+  readCustomerProfile,
+  type CustomerAddress,
+  writeCustomerProfile,
+} from "@/features/customer-portal/lib/customer-profile-storage"
 import { useStorefront } from "@/features/store/context/storefront-context"
 import { formatCurrency, getPrimaryProductImage } from "@/features/store/lib/storefront-utils"
 import type {
@@ -20,11 +35,13 @@ import type {
 } from "@/features/store/types/storefront"
 import {
   createStorefrontCheckout,
+  getCustomerProfile,
   HttpError,
   listCommonModuleItems,
+  updateCustomerProfile,
   verifyStorefrontPayment,
 } from "@/shared/api/client"
-import { toLookupOption } from "@/shared/forms/common-lookup"
+import { createCommonLookupOption, toLookupOption } from "@/shared/forms/common-lookup"
 import { showFailedActionToast, showSuccessToast, showWarningToast } from "@/shared/notifications/toast"
 
 type CheckoutFormValues = {
@@ -312,13 +329,17 @@ function CheckoutLookupField({
   value,
   options,
   placeholder,
+  moduleKey,
   onChange,
+  onItemsChange,
 }: {
   label: string
   value: string
   options: CommonModuleItem[]
   placeholder: string
+  moduleKey: "countries" | "states" | "cities" | "pincodes"
   onChange: (value: string) => void
+  onItemsChange: (items: CommonModuleItem[]) => void
 }) {
   return (
     <div className="space-y-2">
@@ -330,6 +351,11 @@ function CheckoutLookupField({
         allowEmptyOption
         emptyOptionLabel="-"
         placeholder={placeholder}
+        createOption={async (labelValue) => {
+          const { item, option } = await createCommonLookupOption(moduleKey, labelValue)
+          onItemsChange([...options, item])
+          return option
+        }}
       />
     </div>
   )
@@ -361,6 +387,16 @@ const paymentOptions: Array<{ value: StorefrontPaymentMethod; label: string; det
 
 function toErrorMessage(error: unknown) {
   if (error instanceof HttpError) {
+    if (
+      error.context &&
+      typeof error.context === "object" &&
+      "detail" in error.context &&
+      typeof error.context.detail === "string" &&
+      error.context.detail.trim().length > 0
+    ) {
+      return error.context.detail
+    }
+
     return error.message
   }
 
@@ -375,10 +411,50 @@ function isBlank(value: string) {
   return value.trim().length === 0
 }
 
+function hasUsableAddress(address: CustomerAddress) {
+  return !isBlank(address.addressLine1) && !isBlank(address.cityId) && !isBlank(address.stateId) && !isBlank(address.countryId) && !isBlank(address.postalCodeId)
+}
+
+function normalizeAddressCollection(addresses: CustomerAddress[]) {
+  if (addresses.length === 0) {
+    return []
+  }
+
+  let hasDefault = false
+
+  return addresses.map((address, index) => {
+    const normalized = {
+      ...address,
+      isDefault: address.isDefault && !hasDefault,
+      label: address.label.trim() || `Address ${index + 1}`,
+    }
+
+    if (normalized.isDefault) {
+      hasDefault = true
+    }
+
+    if (!hasDefault && index === 0) {
+      hasDefault = true
+      return {
+        ...normalized,
+        isDefault: true,
+      }
+    }
+
+    return normalized
+  })
+}
+
 export function StoreCheckoutPage() {
   const auth = useAuth()
   const { cartItems, products, cartSubtotal, clearCart } = useStorefront()
   const [values, setValues] = useState<CheckoutFormValues>(defaultFormValues)
+  const [savedAddresses, setSavedAddresses] = useState<CustomerAddress[]>([])
+  const [selectedDeliveryAddressId, setSelectedDeliveryAddressId] = useState<string | null>(null)
+  const [addressDialogOpen, setAddressDialogOpen] = useState(false)
+  const [addressSaving, setAddressSaving] = useState(false)
+  const [addressDialogError, setAddressDialogError] = useState<string | null>(null)
+  const [draftAddress, setDraftAddress] = useState<CustomerAddress>(() => createEmptyAddress())
   const [countries, setCountries] = useState<CommonModuleItem[]>([])
   const [states, setStates] = useState<CommonModuleItem[]>([])
   const [cities, setCities] = useState<CommonModuleItem[]>([])
@@ -430,25 +506,317 @@ export function StoreCheckoutPage() {
   }, [])
 
   useEffect(() => {
-    const user = auth.session?.user
-    if (!user) {
+    let cancelled = false
+
+    async function loadCustomerAddresses() {
+      const user = auth.session?.user
+      const token = auth.session?.accessToken
+      const { firstName, lastName } = splitDisplayName(user?.displayName ?? "")
+
+      if (token && user?.actorType === "customer") {
+        try {
+          const profile = await getCustomerProfile(token)
+          if (cancelled) {
+            return
+          }
+
+          const availableAddresses = profile.addresses.filter(hasUsableAddress)
+          const defaultAddress = getDefaultCustomerAddress({
+            email: profile.email,
+            addresses: availableAddresses,
+          })
+
+          setSavedAddresses(availableAddresses)
+          setSelectedDeliveryAddressId(availableAddresses.length > 0 ? defaultAddress.id : null)
+          setValues((current) => ({
+            ...current,
+            firstName: defaultAddress.firstName || firstName || current.firstName,
+            lastName: defaultAddress.lastName || lastName || current.lastName,
+            email: profile.email || user?.email || current.email,
+            phone: defaultAddress.phone || profile.phoneNumber || user?.phoneNumber || current.phone,
+            addressLine1: availableAddresses.length > 0 ? defaultAddress.addressLine1 : "",
+            addressLine2: availableAddresses.length > 0 ? defaultAddress.addressLine2 : "",
+            cityId: availableAddresses.length > 0 ? defaultAddress.cityId : "",
+            city: availableAddresses.length > 0 ? defaultAddress.city : "",
+            stateId: availableAddresses.length > 0 ? defaultAddress.stateId : "",
+            state: availableAddresses.length > 0 ? defaultAddress.state : "",
+            countryId: availableAddresses.length > 0 ? defaultAddress.countryId : "",
+            country: availableAddresses.length > 0 ? defaultAddress.country : "",
+            postalCodeId: availableAddresses.length > 0 ? defaultAddress.postalCodeId : "",
+            postalCode: availableAddresses.length > 0 ? defaultAddress.postalCode : "",
+          }))
+          return
+        } catch {
+          // Fall back to local profile if the customer profile endpoint is not ready yet.
+        }
+      }
+
+      const savedProfile = readCustomerProfile()
+      const availableAddresses = savedProfile.addresses.filter(hasUsableAddress)
+      const defaultAddress = getDefaultCustomerAddress({
+        email: savedProfile.email,
+        addresses: availableAddresses,
+      })
+
+      if (cancelled) {
+        return
+      }
+
+      setSavedAddresses(availableAddresses)
+      setSelectedDeliveryAddressId(availableAddresses.length > 0 ? defaultAddress.id : null)
+      setValues((current) => ({
+        ...current,
+        firstName: defaultAddress.firstName || (current.firstName === defaultFormValues.firstName ? firstName || current.firstName : current.firstName),
+        lastName: defaultAddress.lastName || (current.lastName === defaultFormValues.lastName ? (lastName || current.lastName) : current.lastName),
+        email: savedProfile.email || (current.email === defaultFormValues.email ? user?.email ?? current.email : current.email),
+        phone: defaultAddress.phone || (current.phone === defaultFormValues.phone ? user?.phoneNumber ?? current.phone : current.phone),
+        addressLine1: availableAddresses.length > 0 ? defaultAddress.addressLine1 : "",
+        addressLine2: availableAddresses.length > 0 ? defaultAddress.addressLine2 : "",
+        cityId: availableAddresses.length > 0 ? defaultAddress.cityId : "",
+        city: availableAddresses.length > 0 ? defaultAddress.city : "",
+        stateId: availableAddresses.length > 0 ? defaultAddress.stateId : "",
+        state: availableAddresses.length > 0 ? defaultAddress.state : "",
+        countryId: availableAddresses.length > 0 ? defaultAddress.countryId : "",
+        country: availableAddresses.length > 0 ? defaultAddress.country : "",
+        postalCodeId: availableAddresses.length > 0 ? defaultAddress.postalCodeId : "",
+        postalCode: availableAddresses.length > 0 ? defaultAddress.postalCode : "",
+      }))
+    }
+
+    void loadCustomerAddresses()
+
+    return () => {
+      cancelled = true
+    }
+  }, [auth.session?.accessToken, auth.session?.user])
+
+  function applySavedAddress(address: CustomerAddress) {
+    setSelectedDeliveryAddressId(address.id)
+    setValues((current) => ({
+      ...current,
+      firstName: address.firstName || current.firstName,
+      lastName: address.lastName || current.lastName,
+      phone: address.phone || current.phone,
+      addressLine1: address.addressLine1,
+      addressLine2: address.addressLine2,
+      cityId: address.cityId,
+      city: address.city,
+      stateId: address.stateId,
+      state: address.state,
+      countryId: address.countryId,
+      country: address.country,
+      postalCodeId: address.postalCodeId,
+      postalCode: address.postalCode,
+    }))
+  }
+
+  function openAddressDialog() {
+    setAddressDialogError(null)
+    setDraftAddress({
+      ...createEmptyAddress(),
+      label: savedAddresses.length === 0 ? "Home" : `Address ${savedAddresses.length + 1}`,
+      firstName: values.firstName,
+      lastName: values.lastName,
+      phone: values.phone,
+      countryId: values.countryId,
+      country: values.country,
+      stateId: values.stateId,
+      state: values.state,
+      cityId: values.cityId,
+      city: values.city,
+      postalCodeId: values.postalCodeId,
+      postalCode: values.postalCode,
+      isDefault: savedAddresses.length === 0,
+    })
+    setAddressDialogOpen(true)
+  }
+
+  async function persistAddressCollection(nextAddresses: CustomerAddress[], preferredAddressId?: string | null) {
+    const token = auth.session?.accessToken
+    const sessionUser = auth.session?.user
+    const normalizedAddresses = normalizeAddressCollection(nextAddresses)
+
+    setAddressSaving(true)
+    setAddressDialogError(null)
+
+    try {
+      if (token && sessionUser?.actorType === "customer") {
+        const activeAddress = normalizedAddresses.find((address) => address.id === preferredAddressId) ?? normalizedAddresses.find((address) => address.isDefault) ?? normalizedAddresses[0] ?? null
+        const savedProfile = await updateCustomerProfile(token, {
+          displayName: activeAddress ? `${activeAddress.firstName} ${activeAddress.lastName}`.trim() || sessionUser.displayName : sessionUser.displayName,
+          phoneNumber: activeAddress?.phone || sessionUser.phoneNumber,
+          addresses: normalizedAddresses,
+        })
+
+        const availableAddresses = savedProfile.addresses.filter(hasUsableAddress)
+        setSavedAddresses(availableAddresses)
+        const selectedAddress = availableAddresses.find((address) => address.id === preferredAddressId)
+          ?? availableAddresses.find((address) => address.isDefault)
+          ?? availableAddresses[0]
+          ?? null
+
+        if (selectedAddress) {
+          applySavedAddress(selectedAddress)
+        } else {
+          setSelectedDeliveryAddressId(null)
+          setValues((current) => ({
+            ...current,
+            addressLine1: "",
+            addressLine2: "",
+            cityId: "",
+            city: "",
+            stateId: "",
+            state: "",
+            countryId: "",
+            country: "",
+            postalCodeId: "",
+            postalCode: "",
+          }))
+        }
+        return availableAddresses
+      }
+
+      writeCustomerProfile({
+        email: values.email,
+        addresses: normalizedAddresses,
+      })
+
+      const availableAddresses = normalizedAddresses.filter(hasUsableAddress)
+      setSavedAddresses(availableAddresses)
+      const selectedAddress = availableAddresses.find((address) => address.id === preferredAddressId)
+        ?? availableAddresses.find((address) => address.isDefault)
+        ?? availableAddresses[0]
+        ?? null
+
+      if (selectedAddress) {
+        applySavedAddress(selectedAddress)
+      } else {
+        setSelectedDeliveryAddressId(null)
+        setValues((current) => ({
+          ...current,
+          addressLine1: "",
+          addressLine2: "",
+          cityId: "",
+          city: "",
+          stateId: "",
+          state: "",
+          countryId: "",
+          country: "",
+          postalCodeId: "",
+          postalCode: "",
+        }))
+      }
+
+      return availableAddresses
+    } catch (error) {
+      const message = toErrorMessage(error)
+      setAddressDialogError(message)
+      showFailedActionToast({
+        entityLabel: "address",
+        action: "save",
+        detail: message,
+      })
+      throw error
+    } finally {
+      setAddressSaving(false)
+    }
+  }
+
+  async function handleSaveAddress() {
+    if (
+      isBlank(draftAddress.label)
+      || isBlank(draftAddress.firstName)
+      || isBlank(draftAddress.lastName)
+      || isBlank(draftAddress.phone)
+      || isBlank(draftAddress.addressLine1)
+      || isBlank(draftAddress.countryId)
+      || isBlank(draftAddress.stateId)
+      || isBlank(draftAddress.cityId)
+      || isBlank(draftAddress.postalCodeId)
+    ) {
+      setAddressDialogError("Complete all required address fields before saving.")
       return
     }
 
-    const { firstName, lastName } = splitDisplayName(user.displayName)
-    setValues((current) => ({
-      ...current,
-      firstName: current.firstName === defaultFormValues.firstName ? firstName || current.firstName : current.firstName,
-      lastName: current.lastName === defaultFormValues.lastName ? (lastName || current.lastName) : current.lastName,
-      email: current.email === defaultFormValues.email ? user.email : current.email,
+    const normalizedDraft = {
+      ...draftAddress,
+      label: draftAddress.label.trim(),
+      firstName: draftAddress.firstName.trim(),
+      lastName: draftAddress.lastName.trim(),
+      phone: draftAddress.phone.trim(),
+      addressLine1: draftAddress.addressLine1.trim(),
+      addressLine2: draftAddress.addressLine2.trim(),
+    }
+
+    const nextAddresses = [
+      ...savedAddresses.map((address) => ({
+        ...address,
+        isDefault: normalizedDraft.isDefault ? false : address.isDefault,
+      })),
+      normalizedDraft,
+    ]
+
+    try {
+      await persistAddressCollection(nextAddresses, normalizedDraft.id)
+      setAddressDialogOpen(false)
+      showSuccessToast({
+        title: "Address saved",
+        description: "Your delivery address is ready for checkout.",
+      })
+    } catch (error) {
+      setAddressDialogError(toErrorMessage(error))
+    } finally {
+      // handled in persistAddressCollection
+    }
+  }
+
+  const selectedAddress = savedAddresses.find((address) => address.id === selectedDeliveryAddressId) ?? null
+
+  async function handleSetDefaultAddress(addressId: string) {
+    const nextAddresses = savedAddresses.map((address) => ({
+      ...address,
+      isDefault: address.id === addressId,
     }))
-  }, [auth.session?.user])
+
+    try {
+      await persistAddressCollection(nextAddresses, addressId)
+      showSuccessToast({
+        title: "Default address updated",
+        description: "This address will be selected first during checkout.",
+      })
+    } catch {
+      // handled in persistAddressCollection
+    }
+  }
+
+  async function handleRemoveAddress(addressId: string) {
+    const nextAddresses = savedAddresses.filter((address) => address.id !== addressId)
+
+    try {
+      await persistAddressCollection(nextAddresses, selectedDeliveryAddressId === addressId ? null : selectedDeliveryAddressId)
+      showSuccessToast({
+        title: "Address removed",
+        description: "The delivery address has been removed from your account.",
+      })
+    } catch {
+      // handled in persistAddressCollection
+    }
+  }
 
   async function handleSubmit() {
     if (cartItems.length === 0) {
       showWarningToast({
         title: "Checkout not ready",
         description: "Add products to the cart before placing an order.",
+      })
+      return
+    }
+
+    if (!selectedAddress) {
+      setErrorMessage("Add and select a delivery address before placing the order.")
+      showWarningToast({
+        title: "Delivery address required",
+        description: "Add a delivery address to continue checkout.",
       })
       return
     }
@@ -520,7 +888,7 @@ export function StoreCheckoutPage() {
 
   if (cartItems.length === 0 && !placedOrder) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+      <div className="mx-auto max-w-7xl px-4 py-10 pb-24 sm:px-6">
         <div className="rounded-[2rem] border border-dashed border-border/70 bg-white/75 p-10 text-center">
           <h1 className="text-3xl font-semibold tracking-tight">Your checkout is waiting for cart items.</h1>
           <p className="mt-3 text-sm text-muted-foreground">
@@ -536,7 +904,7 @@ export function StoreCheckoutPage() {
 
   if (placedOrder) {
     return (
-      <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 sm:py-10">
+      <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8 pb-24 sm:px-6 sm:py-10">
         <section className="rounded-[2rem] border border-white/70 bg-[linear-gradient(135deg,#eef7ef_0%,#d9eddd_100%)] p-8 shadow-[0_24px_60px_-44px_rgba(32,85,44,0.22)]">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-2">
@@ -601,15 +969,15 @@ export function StoreCheckoutPage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 sm:py-10">
+    <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8 pb-24 sm:px-6 sm:py-10">
       <section className="rounded-[2.2rem] border border-white/70 bg-white/78 p-6 shadow-[0_24px_60px_-44px_rgba(40,28,18,0.25)] sm:p-8">
         <div className="space-y-3">
           <Badge variant="outline" className="w-fit">
             Checkout
           </Badge>
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Backend-connected checkout.</h1>
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Secure factory-direct checkout.</h1>
           <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-            Address, delivery method, payment method, and order items now submit into the storefront order tables. Online payments open Razorpay Checkout without changing this page layout.
+            Review your Tirupur Direct shipment, choose a saved delivery address, and complete payment with a simple final confirmation.
           </p>
         </div>
       </section>
@@ -627,65 +995,122 @@ export function StoreCheckoutPage() {
               <MapPinIcon className="size-4 text-muted-foreground" />
               <h2 className="text-xl font-semibold tracking-tight">Delivery address</h2>
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2"><Label htmlFor="checkout-first-name">First name</Label><Input id="checkout-first-name" value={values.firstName} onChange={(event) => setValues((current) => ({ ...current, firstName: event.target.value }))} /></div>
-              <div className="space-y-2"><Label htmlFor="checkout-last-name">Last name</Label><Input id="checkout-last-name" value={values.lastName} onChange={(event) => setValues((current) => ({ ...current, lastName: event.target.value }))} /></div>
-              <div className="space-y-2"><Label htmlFor="checkout-email">Email</Label><Input id="checkout-email" type="email" value={values.email} onChange={(event) => setValues((current) => ({ ...current, email: event.target.value }))} /></div>
-              <div className="space-y-2"><Label htmlFor="checkout-phone">Phone</Label><Input id="checkout-phone" value={values.phone} onChange={(event) => setValues((current) => ({ ...current, phone: event.target.value }))} /></div>
-              <div className="space-y-2 md:col-span-2"><Label htmlFor="checkout-address-line-1">Address line 1</Label><Textarea id="checkout-address-line-1" value={values.addressLine1} rows={3} onChange={(event) => setValues((current) => ({ ...current, addressLine1: event.target.value }))} /></div>
-              <div className="space-y-2 md:col-span-2"><Label htmlFor="checkout-address-line-2">Address line 2</Label><Input id="checkout-address-line-2" value={values.addressLine2} onChange={(event) => setValues((current) => ({ ...current, addressLine2: event.target.value }))} /></div>
-              <CheckoutLookupField
-                label="Country"
-                value={values.countryId}
-                options={countries}
-                placeholder="Search country"
-                onChange={(value) => setValues((current) => ({
-                  ...current,
-                  countryId: value,
-                  country: value ? resolveLookupLabel(countries, value) : "",
-                }))}
-              />
-              <CheckoutLookupField
-                label="State"
-                value={values.stateId}
-                options={states}
-                placeholder="Search state"
-                onChange={(value) => setValues((current) => ({
-                  ...current,
-                  stateId: value,
-                  state: value ? resolveLookupLabel(states, value) : "",
-                }))}
-              />
-              <CheckoutLookupField
-                label="City"
-                value={values.cityId}
-                options={cities}
-                placeholder="Search city"
-                onChange={(value) => setValues((current) => ({
-                  ...current,
-                  cityId: value,
-                  city: value ? resolveLookupLabel(cities, value) : "",
-                }))}
-              />
-              <CheckoutLookupField
-                label="Postal code"
-                value={values.postalCodeId}
-                options={pincodes}
-                placeholder="Search postal code"
-                onChange={(value) => setValues((current) => ({
-                  ...current,
-                  postalCodeId: value,
-                  postalCode: value ? resolveLookupLabel(pincodes, value) : "",
-                }))}
-              />
-              <div className="space-y-2 md:col-span-2"><Label htmlFor="checkout-note">Order note</Label><Textarea id="checkout-note" value={values.note} rows={3} onChange={(event) => setValues((current) => ({ ...current, note: event.target.value }))} /></div>
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">Saved delivery addresses</p>
+                <p className="text-sm text-muted-foreground">Select the address for this shipment or add a fresh delivery location.</p>
+              </div>
+              <Button type="button" variant="outline" onClick={openAddressDialog}>
+                <PlusIcon className="size-4" />
+                Add new address
+              </Button>
+            </div>
+            {savedAddresses.length > 0 ? (
+              <div className="grid gap-3">
+                {savedAddresses.map((address) => (
+                  <div
+                    key={address.id}
+                    className={`flex cursor-pointer items-start gap-3 rounded-[1.2rem] border px-4 py-3 text-sm transition ${
+                      selectedDeliveryAddressId === address.id
+                        ? "border-primary bg-accent/35"
+                        : "border-border bg-background/70 hover:bg-accent/20"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="saved-delivery-address"
+                      checked={selectedDeliveryAddressId === address.id}
+                      onChange={() => applySavedAddress(address)}
+                      className="mt-1"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <span className="flex items-center gap-2 font-medium text-foreground">
+                            {address.label}
+                            {address.isDefault ? <Badge variant="outline">Default</Badge> : null}
+                          </span>
+                        </div>
+                        <div className="shrink-0">
+                          {address.isDefault ? (
+                            <span className="text-xs font-medium text-muted-foreground">Primary</span>
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 rounded-full px-2 text-xs"
+                              onClick={() => { void handleSetDefaultAddress(address.id) }}
+                              disabled={addressSaving}
+                            >
+                              Set default
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                      <span className="mt-1 block text-muted-foreground">
+                        {address.firstName} {address.lastName}, {address.addressLine1}
+                      </span>
+                      {address.addressLine2 ? (
+                        <span className="block text-muted-foreground">{address.addressLine2}</span>
+                      ) : null}
+                      <span className="block text-muted-foreground">
+                        {address.city}, {address.state} {address.postalCode}, {address.country}
+                      </span>
+                      <span className="block text-muted-foreground">{address.phone}</span>
+                      <div className="mt-3 flex justify-end">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 rounded-full text-muted-foreground hover:text-destructive"
+                          onClick={() => { void handleRemoveAddress(address.id) }}
+                          disabled={addressSaving || savedAddresses.length <= 1}
+                        >
+                          <Trash2Icon className="size-4" />
+                          <span className="sr-only">Remove address</span>
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-[1.4rem] border border-dashed border-border/70 bg-background/70 px-4 py-5 text-sm text-muted-foreground">
+                No delivery address has been saved yet. Add one to continue checkout.
+              </div>
+            )}
+            <div className="mt-5 grid gap-4 rounded-[1.4rem] border border-border/70 bg-background/60 p-4">
+              <div>
+                <Label>Contact email</Label>
+                <p className="mt-2 text-sm text-foreground">{values.email}</p>
+              </div>
+              {selectedAddress ? (
+                <div className="grid gap-2 text-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Delivering to</p>
+                  <p className="font-medium text-foreground">
+                    {selectedAddress.firstName} {selectedAddress.lastName}
+                  </p>
+                  <p className="text-muted-foreground">{selectedAddress.addressLine1}</p>
+                  {selectedAddress.addressLine2 ? <p className="text-muted-foreground">{selectedAddress.addressLine2}</p> : null}
+                  <p className="text-muted-foreground">
+                    {selectedAddress.city}, {selectedAddress.state} {selectedAddress.postalCode}
+                  </p>
+                  <p className="text-muted-foreground">{selectedAddress.country}</p>
+                  <p className="text-muted-foreground">{selectedAddress.phone}</p>
+                </div>
+              ) : null}
+              <div className="space-y-2">
+                <Label htmlFor="checkout-note">Order note</Label>
+                <Textarea id="checkout-note" value={values.note} rows={3} onChange={(event) => setValues((current) => ({ ...current, note: event.target.value }))} />
+              </div>
             </div>
           </div>
 
           <div className="rounded-[1.8rem] border border-white/70 bg-white/82 p-5 shadow-sm">
             <div className="mb-4 flex items-center gap-2">
               <TruckIcon className="size-4 text-muted-foreground" />
-              <h2 className="text-xl font-semibold tracking-tight">Delivery options</h2>
+              <h2 className="text-xl font-semibold tracking-tight">Delivery preference</h2>
             </div>
             <div className="grid gap-3">
               {deliveryOptions.map((option) => (
@@ -708,7 +1133,7 @@ export function StoreCheckoutPage() {
           <div className="rounded-[1.8rem] border border-white/70 bg-white/82 p-5 shadow-sm">
             <div className="mb-4 flex items-center gap-2">
               <CreditCardIcon className="size-4 text-muted-foreground" />
-              <h2 className="text-xl font-semibold tracking-tight">Payment</h2>
+              <h2 className="text-xl font-semibold tracking-tight">Payment method</h2>
             </div>
             <div className="grid gap-3">
               {paymentOptions.map((option) => (
@@ -729,9 +1154,12 @@ export function StoreCheckoutPage() {
           </div>
         </section>
 
-        <aside className="space-y-5">
-          <div className="rounded-[1.8rem] border border-white/70 bg-white/82 p-5 shadow-sm">
+        <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
+          <div className="rounded-[1.8rem] border border-white/70 bg-white/88 p-5 shadow-[0_24px_60px_-44px_rgba(40,28,18,0.28)] backdrop-blur">
             <h2 className="mb-4 text-xl font-semibold tracking-tight">Order summary</h2>
+            <p className="mb-4 text-sm leading-6 text-muted-foreground">
+              A quick view of the garments in this order, delivery charges, and the final payable total.
+            </p>
             <div className="grid gap-4">
               {orderItems.map(({ item, product }) => (
                 <div key={`${item.productId}-${item.size}-${item.color}`} className="flex gap-3 rounded-[1.4rem] border border-border/70 bg-background/70 p-3">
@@ -755,7 +1183,7 @@ export function StoreCheckoutPage() {
               <div className="flex items-center justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(cartSubtotal)}</span></div>
               <div className="flex items-center justify-between"><span className="text-muted-foreground">Shipping</span><span>{shipping === 0 ? "Free" : formatCurrency(shipping)}</span></div>
               <div className="flex items-center justify-between"><span className="text-muted-foreground">Handling</span><span>{formatCurrency(handling)}</span></div>
-              <div className="flex items-center justify-between"><span className="text-muted-foreground">Payment flow</span><span>{isOnlinePayment ? "Razorpay Checkout" : "Direct order placement"}</span></div>
+              <div className="flex items-center justify-between"><span className="text-muted-foreground">Payment</span><span>{isOnlinePayment ? "Razorpay Checkout" : "Cash on delivery"}</span></div>
               <div className="flex items-center justify-between border-t border-border pt-3 text-base font-semibold"><span>Total</span><span>{formatCurrency(total)}</span></div>
             </div>
 
@@ -772,6 +1200,128 @@ export function StoreCheckoutPage() {
           </div>
         </aside>
       </div>
+
+      <Dialog open={addressDialogOpen} onOpenChange={setAddressDialogOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Add delivery address</DialogTitle>
+            <DialogDescription>
+              Save a complete Tirupur Direct delivery address once and reuse it for future orders.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-2">
+            {addressDialogError ? (
+              <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                {addressDialogError}
+              </div>
+            ) : null}
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="checkout-address-label">Address label</Label>
+                <Input id="checkout-address-label" value={draftAddress.label} onChange={(event) => setDraftAddress((current) => ({ ...current, label: event.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="checkout-address-phone">Phone</Label>
+                <Input id="checkout-address-phone" value={draftAddress.phone} onChange={(event) => setDraftAddress((current) => ({ ...current, phone: event.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="checkout-address-first-name">First name</Label>
+                <Input id="checkout-address-first-name" value={draftAddress.firstName} onChange={(event) => setDraftAddress((current) => ({ ...current, firstName: event.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="checkout-address-last-name">Last name</Label>
+                <Input id="checkout-address-last-name" value={draftAddress.lastName} onChange={(event) => setDraftAddress((current) => ({ ...current, lastName: event.target.value }))} />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="checkout-address-line-1">Address line 1</Label>
+                <Textarea id="checkout-address-line-1" value={draftAddress.addressLine1} rows={3} onChange={(event) => setDraftAddress((current) => ({ ...current, addressLine1: event.target.value }))} />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="checkout-address-line-2">Address line 2</Label>
+                <Input id="checkout-address-line-2" value={draftAddress.addressLine2} onChange={(event) => setDraftAddress((current) => ({ ...current, addressLine2: event.target.value }))} />
+              </div>
+              <CheckoutLookupField
+                label="Country"
+                value={draftAddress.countryId}
+                options={countries}
+                placeholder="Search country"
+                moduleKey="countries"
+                onItemsChange={setCountries}
+                onChange={(value) => setDraftAddress((current) => ({
+                  ...current,
+                  countryId: value,
+                  country: value ? resolveLookupLabel(countries, value) : "",
+                }))}
+              />
+              <CheckoutLookupField
+                label="State"
+                value={draftAddress.stateId}
+                options={states}
+                placeholder="Search state"
+                moduleKey="states"
+                onItemsChange={setStates}
+                onChange={(value) => setDraftAddress((current) => ({
+                  ...current,
+                  stateId: value,
+                  state: value ? resolveLookupLabel(states, value) : "",
+                }))}
+              />
+              <CheckoutLookupField
+                label="City"
+                value={draftAddress.cityId}
+                options={cities}
+                placeholder="Search city"
+                moduleKey="cities"
+                onItemsChange={setCities}
+                onChange={(value) => setDraftAddress((current) => ({
+                  ...current,
+                  cityId: value,
+                  city: value ? resolveLookupLabel(cities, value) : "",
+                }))}
+              />
+              <CheckoutLookupField
+                label="Postal code"
+                value={draftAddress.postalCodeId}
+                options={pincodes}
+                placeholder="Search postal code"
+                moduleKey="pincodes"
+                onItemsChange={setPincodes}
+                onChange={(value) => setDraftAddress((current) => ({
+                  ...current,
+                  postalCodeId: value,
+                  postalCode: value ? resolveLookupLabel(pincodes, value) : "",
+                }))}
+              />
+            </div>
+
+            <label className="flex items-center gap-2 text-sm font-medium">
+              <input
+                type="checkbox"
+                checked={draftAddress.isDefault}
+                onChange={(event) => setDraftAddress((current) => ({ ...current, isDefault: event.target.checked }))}
+              />
+              Set as default delivery address
+            </label>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setAddressDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={() => { void handleSaveAddress() }} disabled={addressSaving}>
+              {addressSaving ? (
+                <>
+                  <LoaderCircleIcon className="size-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save address"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

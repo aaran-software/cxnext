@@ -17,6 +17,8 @@ import { AuthService } from '../../features/auth/application/auth-service'
 import { AuthUserRepository } from '../../features/auth/data/auth-user-repository'
 import { MailboxService } from '../../features/mailbox/application/mailbox-service'
 import { MailboxRepository } from '../../features/mailbox/data/mailbox-repository'
+import { CustomerProfileService } from '../../features/customer-profile/application/customer-profile-service'
+import { CustomerProfileRepository } from '../../features/customer-profile/data/customer-profile-repository'
 import {
   readSystemSettings,
   runManualUpdate,
@@ -46,6 +48,7 @@ const contactService = new ContactService(new ContactRepository())
 const productService = new ProductService(new ProductRepository())
 const mediaService = new MediaService(new MediaRepository())
 const storefrontOrderService = new StorefrontOrderService(new StorefrontOrderRepository())
+const customerProfileService = new CustomerProfileService(new CustomerProfileRepository())
 
 function parseBooleanFlag(value: string | null) {
   if (!value) {
@@ -521,6 +524,23 @@ export async function routeRequest(
 
     if (method === 'GET' && url.pathname === '/auth/me') {
       writeJson(response, 200, await requireAuthenticatedUser(request))
+      return
+    }
+
+    if (method === 'GET' && url.pathname === '/customer/profile') {
+      writeJson(response, 200, await customerProfileService.getProfile(await requireAuthenticatedUser(request)))
+      return
+    }
+
+    if (method === 'PATCH' && url.pathname === '/customer/profile') {
+      writeJson(
+        response,
+        200,
+        await customerProfileService.saveProfile(
+          await requireAuthenticatedUser(request),
+          await readJsonBody(request),
+        ),
+      )
       return
     }
 
