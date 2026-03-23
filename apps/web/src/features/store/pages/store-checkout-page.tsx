@@ -1,22 +1,30 @@
 import { useEffect, useMemo, useState } from "react"
+import type { CommonModuleItem } from "@shared/index"
 import { CheckCircle2Icon, CreditCardIcon, LoaderCircleIcon, MapPinIcon, TruckIcon } from "lucide-react"
 import { Link } from "react-router-dom"
 
+import { AutocompleteLookup } from "@/components/lookups/AutocompleteLookup"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { useAuth } from "@/features/auth/components/auth-provider"
+import { useStorefront } from "@/features/store/context/storefront-context"
+import { formatCurrency, getPrimaryProductImage } from "@/features/store/lib/storefront-utils"
 import type {
   StorefrontDeliveryMethod,
   StorefrontOrder,
   StorefrontPaymentMethod,
   StorefrontRazorpayCheckoutSession,
 } from "@/features/store/types/storefront"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { useAuth } from "@/features/auth/components/auth-provider"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { useStorefront } from "@/features/store/context/storefront-context"
-import { formatCurrency, getPrimaryProductImage } from "@/features/store/lib/storefront-utils"
-import { createStorefrontCheckout, HttpError, verifyStorefrontPayment } from "@/shared/api/client"
+import {
+  createStorefrontCheckout,
+  HttpError,
+  listCommonModuleItems,
+  verifyStorefrontPayment,
+} from "@/shared/api/client"
+import { toLookupOption } from "@/shared/forms/common-lookup"
 import { showFailedActionToast, showSuccessToast, showWarningToast } from "@/shared/notifications/toast"
 
 type CheckoutFormValues = {
@@ -26,9 +34,13 @@ type CheckoutFormValues = {
   phone: string
   addressLine1: string
   addressLine2: string
+  cityId: string
   city: string
+  stateId: string
   state: string
+  countryId: string
   country: string
+  postalCodeId: string
   postalCode: string
   note: string
   deliveryMethod: StorefrontDeliveryMethod
@@ -276,13 +288,50 @@ const defaultFormValues: CheckoutFormValues = {
   phone: "+91 98765 43210",
   addressLine1: "27 Residency Road",
   addressLine2: "",
+  cityId: "",
   city: "Bengaluru",
+  stateId: "",
   state: "Karnataka",
+  countryId: "",
   country: "India",
+  postalCodeId: "",
   postalCode: "560025",
   note: "",
   deliveryMethod: "standard",
   paymentMethod: "upi",
+}
+
+function resolveLookupLabel(items: CommonModuleItem[], value: string) {
+  const match = items.find((item) => String(item.id) === value)
+  return match ? toLookupOption(match).label : value
+}
+
+function CheckoutLookupField({
+  label,
+  value,
+  options,
+  placeholder,
+  onChange,
+}: {
+  label: string
+  value: string
+  options: CommonModuleItem[]
+  placeholder: string
+  onChange: (value: string) => void
+}) {
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <AutocompleteLookup
+        value={value}
+        onChange={onChange}
+        options={options.map(toLookupOption)}
+        allowEmptyOption
+        emptyOptionLabel="-"
+        placeholder={placeholder}
+      />
+    </div>
+  )
 }
 
 function splitDisplayName(displayName: string) {
@@ -329,6 +378,10 @@ export function StoreCheckoutPage() {
   const auth = useAuth()
   const { cartItems, products, cartSubtotal, clearCart } = useStorefront()
   const [values, setValues] = useState<CheckoutFormValues>(defaultFormValues)
+  const [countries, setCountries] = useState<CommonModuleItem[]>([])
+  const [states, setStates] = useState<CommonModuleItem[]>([])
+  const [cities, setCities] = useState<CommonModuleItem[]>([])
+  const [pincodes, setPincodes] = useState<CommonModuleItem[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [placedOrder, setPlacedOrder] = useState<StorefrontOrder | null>(null)
@@ -346,6 +399,34 @@ export function StoreCheckoutPage() {
 
   const canSubmit = cartItems.length > 0 && !submitting
   const isOnlinePayment = values.paymentMethod !== "cod"
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadLookups() {
+      const [countryItems, stateItems, cityItems, pincodeItems] = await Promise.all([
+        listCommonModuleItems("countries", false),
+        listCommonModuleItems("states", false),
+        listCommonModuleItems("cities", false),
+        listCommonModuleItems("pincodes", false),
+      ])
+
+      if (cancelled) {
+        return
+      }
+
+      setCountries(countryItems)
+      setStates(stateItems)
+      setCities(cityItems)
+      setPincodes(pincodeItems)
+    }
+
+    void loadLookups()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     const user = auth.session?.user
@@ -499,7 +580,7 @@ export function StoreCheckoutPage() {
                 <div key={item.id} className="rounded-[1.4rem] border border-border/70 bg-background/70 p-3">
                   <div className="font-medium">{item.productName}</div>
                   <div className="text-sm text-muted-foreground">
-                    {item.size} � {item.color} � Qty {item.quantity}
+                    {item.size} / {item.color} / Qty {item.quantity}
                   </div>
                   <div className="mt-1 text-sm font-semibold">{formatCurrency(item.lineTotal)}</div>
                 </div>
@@ -552,10 +633,50 @@ export function StoreCheckoutPage() {
               <div className="space-y-2"><Label htmlFor="checkout-phone">Phone</Label><Input id="checkout-phone" value={values.phone} onChange={(event) => setValues((current) => ({ ...current, phone: event.target.value }))} /></div>
               <div className="space-y-2 md:col-span-2"><Label htmlFor="checkout-address-line-1">Address line 1</Label><Textarea id="checkout-address-line-1" value={values.addressLine1} rows={3} onChange={(event) => setValues((current) => ({ ...current, addressLine1: event.target.value }))} /></div>
               <div className="space-y-2 md:col-span-2"><Label htmlFor="checkout-address-line-2">Address line 2</Label><Input id="checkout-address-line-2" value={values.addressLine2} onChange={(event) => setValues((current) => ({ ...current, addressLine2: event.target.value }))} /></div>
-              <div className="space-y-2"><Label htmlFor="checkout-city">City</Label><Input id="checkout-city" value={values.city} onChange={(event) => setValues((current) => ({ ...current, city: event.target.value }))} /></div>
-              <div className="space-y-2"><Label htmlFor="checkout-state">State</Label><Input id="checkout-state" value={values.state} onChange={(event) => setValues((current) => ({ ...current, state: event.target.value }))} /></div>
-              <div className="space-y-2"><Label htmlFor="checkout-country">Country</Label><Input id="checkout-country" value={values.country} onChange={(event) => setValues((current) => ({ ...current, country: event.target.value }))} /></div>
-              <div className="space-y-2"><Label htmlFor="checkout-postal-code">Postal code</Label><Input id="checkout-postal-code" value={values.postalCode} onChange={(event) => setValues((current) => ({ ...current, postalCode: event.target.value }))} /></div>
+              <CheckoutLookupField
+                label="Country"
+                value={values.countryId}
+                options={countries}
+                placeholder="Search country"
+                onChange={(value) => setValues((current) => ({
+                  ...current,
+                  countryId: value,
+                  country: value ? resolveLookupLabel(countries, value) : "",
+                }))}
+              />
+              <CheckoutLookupField
+                label="State"
+                value={values.stateId}
+                options={states}
+                placeholder="Search state"
+                onChange={(value) => setValues((current) => ({
+                  ...current,
+                  stateId: value,
+                  state: value ? resolveLookupLabel(states, value) : "",
+                }))}
+              />
+              <CheckoutLookupField
+                label="City"
+                value={values.cityId}
+                options={cities}
+                placeholder="Search city"
+                onChange={(value) => setValues((current) => ({
+                  ...current,
+                  cityId: value,
+                  city: value ? resolveLookupLabel(cities, value) : "",
+                }))}
+              />
+              <CheckoutLookupField
+                label="Postal code"
+                value={values.postalCodeId}
+                options={pincodes}
+                placeholder="Search postal code"
+                onChange={(value) => setValues((current) => ({
+                  ...current,
+                  postalCodeId: value,
+                  postalCode: value ? resolveLookupLabel(pincodes, value) : "",
+                }))}
+              />
               <div className="space-y-2 md:col-span-2"><Label htmlFor="checkout-note">Order note</Label><Textarea id="checkout-note" value={values.note} rows={3} onChange={(event) => setValues((current) => ({ ...current, note: event.target.value }))} /></div>
             </div>
           </div>
@@ -621,7 +742,7 @@ export function StoreCheckoutPage() {
                   <div className="space-y-1">
                     <div className="font-medium">{product.name}</div>
                     <div className="text-sm text-muted-foreground">
-                      {item.size} � {item.color} � Qty {item.quantity}
+                      {item.size} / {item.color} / Qty {item.quantity}
                     </div>
                     <div className="text-sm font-semibold">{formatCurrency(product.price * item.quantity)}</div>
                   </div>
