@@ -19,6 +19,8 @@ import { MailboxService } from '../../features/mailbox/application/mailbox-servi
 import { MailboxRepository } from '../../features/mailbox/data/mailbox-repository'
 import { CustomerProfileService } from '../../features/customer-profile/application/customer-profile-service'
 import { CustomerProfileRepository } from '../../features/customer-profile/data/customer-profile-repository'
+import { CommerceOrderWorkflowService } from '../../features/commerce/application/commerce-order-workflow-service'
+import { CommerceOrderWorkflowRepository } from '../../features/commerce/data/commerce-order-workflow-repository'
 import {
   readSystemSettings,
   runManualUpdate,
@@ -49,6 +51,7 @@ const productService = new ProductService(new ProductRepository())
 const mediaService = new MediaService(new MediaRepository())
 const storefrontOrderService = new StorefrontOrderService(new StorefrontOrderRepository())
 const customerProfileService = new CustomerProfileService(new CustomerProfileRepository())
+const commerceOrderWorkflowService = new CommerceOrderWorkflowService(new CommerceOrderWorkflowRepository())
 
 function parseBooleanFlag(value: string | null) {
   if (!value) {
@@ -74,6 +77,15 @@ async function requireAuthenticatedUser(request: IncomingMessage) {
   }
 
   return authService.getAuthenticatedUser(token)
+}
+
+async function requireBackofficeUser(request: IncomingMessage) {
+  const user = await requireAuthenticatedUser(request)
+  if (user.actorType !== 'admin' && user.actorType !== 'staff') {
+    throw new ApplicationError('This route is available only to backoffice users.', { actorType: user.actorType }, 403)
+  }
+
+  return user
 }
 
 export async function routeRequest(
@@ -215,6 +227,11 @@ export async function routeRequest(
 
     if (method === 'POST' && url.pathname === '/storefront/checkout/verify-payment') {
       writeJson(response, 200, await storefrontOrderService.verifyPayment(await readJsonBody(request)))
+      return
+    }
+
+    if (method === 'GET' && url.pathname === '/admin/commerce/orders') {
+      writeJson(response, 200, await commerceOrderWorkflowService.listOrders(await requireBackofficeUser(request)))
       return
     }
 
@@ -391,6 +408,46 @@ export async function routeRequest(
         writeJson(response, 200, await mediaService.deactivate(mediaId))
         return
       }
+    }
+
+    const commerceWorkflowMatch = url.pathname.match(/^\/admin\/commerce\/orders\/([^/]+)\/workflow$/)
+    if (commerceWorkflowMatch) {
+      const orderId = commerceWorkflowMatch[1]
+
+      if (method === 'GET') {
+        writeJson(response, 200, await commerceOrderWorkflowService.getWorkflow(await requireBackofficeUser(request), orderId))
+        return
+      }
+
+      if (method === 'POST') {
+        writeJson(
+          response,
+          200,
+          await commerceOrderWorkflowService.applyWorkflowAction(
+            await requireBackofficeUser(request),
+            orderId,
+            await readJsonBody(request),
+          ),
+        )
+        return
+      }
+    }
+
+    const commerceInvoicePrintMatch = url.pathname.match(/^\/admin\/commerce\/orders\/([^/]+)\/invoice\/print$/)
+    if (method === 'GET' && commerceInvoicePrintMatch) {
+      const document = await commerceOrderWorkflowService.renderInvoice(
+        await requireBackofficeUser(request),
+        commerceInvoicePrintMatch[1],
+      )
+      response.writeHead(200, {
+        'content-type': `${document.mediaType}; charset=utf-8`,
+        'content-disposition': `inline; filename="${document.fileName}"`,
+        'access-control-allow-origin': environment.corsOrigin,
+        'access-control-allow-headers': 'authorization, content-type',
+        'access-control-allow-methods': 'GET, POST, PATCH, DELETE, OPTIONS',
+      })
+      response.end(document.html)
+      return
     }
 
     if (method === 'POST' && url.pathname === '/companies') {

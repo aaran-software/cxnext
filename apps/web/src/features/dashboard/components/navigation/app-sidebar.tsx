@@ -10,6 +10,7 @@ import {
   Mail,
   LayoutDashboard,
   Package,
+  Truck,
   Settings2,
 } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
@@ -128,6 +129,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <NavLink to={buildAdminPortalPath()}>
                       <LayoutDashboard />
                       <span>Overview</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="Orders">
+                    <NavLink to={buildAdminPortalPath('/orders')}>
+                      <Truck />
+                      <span>Orders</span>
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

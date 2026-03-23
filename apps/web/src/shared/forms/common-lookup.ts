@@ -9,10 +9,11 @@ export type LookupOption = {
 export function toLookupOption(item: CommonModuleItem): LookupOption {
   const name = typeof item.name === 'string' ? item.name : null
   const code = typeof item.code === 'string' ? item.code : null
+  const label = name ?? code ?? String(item.id)
 
   return {
     value: String(item.id),
-    label: name ?? code ?? String(item.id),
+    label,
   }
 }
 

@@ -13,6 +13,7 @@ import { authContactVerificationsMigration } from './012-auth-contact-verificati
 import { mailboxFoundationMigration } from './013-mailbox-foundation'
 import { sliderThemesMigration } from './014-slider-themes'
 import { customerProfileMigration } from './015-customer-profile'
+import { commerceOperationsMigration } from './016-commerce-operations'
 import type { Migration } from './migration'
 
 export const migrations: Migration[] = [
@@ -31,4 +32,5 @@ export const migrations: Migration[] = [
   mailboxFoundationMigration,
   sliderThemesMigration,
   customerProfileMigration,
+  commerceOperationsMigration,
 ]

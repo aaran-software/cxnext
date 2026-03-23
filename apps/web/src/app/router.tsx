@@ -43,6 +43,10 @@ const CustomerProfilePage = lazyPage(
   'CustomerProfilePage',
 )
 const DashboardPage = lazyPage(() => import('@/features/dashboard/pages/dashboard-page'), 'DashboardPage')
+const OrderOperationsPage = lazyPage(
+  () => import('@/features/commerce/pages/order-operations-page'),
+  'OrderOperationsPage',
+)
 const CommonModulePage = lazyPage(
   () => import('@/features/common-modules/pages/common-module-page'),
   'CommonModulePage',
@@ -143,6 +147,7 @@ const adminRoutes = {
       element: renderLazy(AppLayout),
       children: [
         { index: true, element: renderLazy(DashboardPage) },
+        { path: 'orders', element: renderLazy(OrderOperationsPage) },
         { path: 'companies', element: renderLazy(CompanyListPage) },
         { path: 'companies/new', element: renderLazy(CompanyFormPage) },
         { path: 'companies/:companyId', element: renderLazy(CompanyShowPage) },

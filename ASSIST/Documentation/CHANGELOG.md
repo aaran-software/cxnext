@@ -59,3 +59,5 @@
 - Configured the app container to join external Docker network `codexion-network`, default to the `mariadb` host with `root` / `DbPass1@@` / `cxnext_db`, and prefill the Git sync source as `https://github.com/aaran-software/cxnext.git` on `main`
 - Aligned `.container/docker-compose.yml` with the uploaded `.container/mariadb.yml` stack by using the shared `codexion-network` and the `mariadb` service hostname
 - Removed the runtime JSON config path and Compose-based app env injection so container startup now seeds a single `.env` file from `.env.example`, uses that file as the only runtime config source, and fails fast if `.env` is invalid
+- Added backend commerce workflow tables and contracts for order events, shipment events, sales invoices with child rows, and linked accounting vouchers for storefront orders
+- Added an admin `/admin/dashboard/orders` operations board that lets internal users review workflow timelines, apply fulfillment actions, inspect invoice details, print invoice HTML, and review accounting postings from one dashboard surface

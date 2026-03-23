@@ -1,6 +1,6 @@
 import type { CommonModuleKey } from '@shared/index'
 import { Link, useLocation } from 'react-router-dom'
-import { Building2, ChevronRight, ContactRound, Home, Image, LayoutDashboard, Mail, Package, Store } from 'lucide-react'
+import { Building2, ChevronRight, ContactRound, Home, Image, LayoutDashboard, Mail, Package, Store, Truck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
@@ -21,6 +21,13 @@ function resolveCurrentTitle(pathname: string) {
     return {
       section: 'Common Modules',
       title: 'Common workspace',
+    }
+  }
+
+  if (pathname === '/admin/dashboard/orders' || pathname === '/admin/dashboard/orders/') {
+    return {
+      section: 'Commerce',
+      title: 'Order Operations',
     }
   }
 
@@ -272,6 +279,12 @@ export function AppHeader() {
       </div>
 
       <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" asChild>
+          <Link to="/admin/dashboard/orders">
+            <Truck className="size-4" />
+            Orders
+          </Link>
+        </Button>
         <Button variant="outline" size="sm" asChild>
           <Link to="/admin/dashboard/contacts">
             <ContactRound className="size-4" />

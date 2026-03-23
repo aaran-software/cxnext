@@ -95,6 +95,16 @@ export const customerTableNames = {
   deliveryAddresses: 'customer_delivery_addresses',
 } as const
 
+export const commerceTableNames = {
+  orderEvents: 'storefront_order_events',
+  shipments: 'storefront_shipments',
+  shipmentEvents: 'storefront_shipment_events',
+  invoices: 'sales_invoices',
+  invoiceItems: 'sales_invoice_items',
+  vouchers: 'accounting_vouchers',
+  voucherLines: 'accounting_voucher_lines',
+} as const
+
 export const mailboxTableNames = {
   templates: 'mailbox_templates',
   messages: 'mailbox_messages',

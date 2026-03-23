@@ -7,7 +7,6 @@ import type {
   AuthRegisterOtpVerifyResponse,
   AuthTokenResponse,
   AuthUser,
-  CustomerProfile,
   CustomerProfileResponse,
   CustomerProfileUpdatePayload,
   CompanyListResponse,
@@ -26,6 +25,10 @@ import type {
   ProductListResponse,
   ProductResponse,
   ProductUpsertPayload,
+  CommerceOrderListResponse,
+  CommerceOrderWorkflowResponse,
+  CommerceWorkflowActionPayload,
+  PrintableDocumentResponse,
   MailboxMessageListResponse,
   MailboxMessageResponse,
   MailboxSendPayload,
@@ -119,6 +122,23 @@ export async function request<T>(path: string, init?: RequestInit) {
   }
 
   return payload as T
+}
+
+export async function requestText(path: string, init?: RequestInit) {
+  const response = await fetch(`${resolveApiBaseUrl()}${path}`, {
+    ...init,
+    headers: {
+      ...(init?.headers ?? {}),
+    },
+  })
+
+  const body = await response.text()
+
+  if (!response.ok) {
+    throw new HttpError(body || 'Request failed.', response.status)
+  }
+
+  return body
 }
 
 function createAuthorizationHeaders(token: string) {
@@ -471,6 +491,45 @@ export async function verifyStorefrontPayment(payload: StorefrontPaymentVerifica
     body: JSON.stringify(payload),
   })
   return response.order
+}
+
+export async function listCommerceOrders(token: string) {
+  const response = await request<CommerceOrderListResponse>('/admin/commerce/orders', {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.items
+}
+
+export async function getCommerceOrderWorkflow(token: string, orderId: string) {
+  const response = await request<CommerceOrderWorkflowResponse>(`/admin/commerce/orders/${orderId}/workflow`, {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.workflow
+}
+
+export async function applyCommerceWorkflowAction(
+  token: string,
+  orderId: string,
+  payload: CommerceWorkflowActionPayload,
+) {
+  const response = await request<CommerceOrderWorkflowResponse>(`/admin/commerce/orders/${orderId}/workflow`, {
+    method: 'POST',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
+  })
+  return response.workflow
+}
+
+export async function getCommerceInvoicePrint(token: string, orderId: string) {
+  const html = await requestText(`/admin/commerce/orders/${orderId}/invoice/print`, {
+    headers: createAuthorizationHeaders(token),
+  })
+
+  return {
+    fileName: `${orderId}.html`,
+    mediaType: 'text/html',
+    html,
+  } satisfies PrintableDocumentResponse
 }
 
 export async function listMedia() {

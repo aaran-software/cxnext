@@ -4,130 +4,47 @@
 
 This file records what was actually done for the current task, how it was validated, and what remains.
 
-## How To Use
-
-1. Update this after implementation and validation.
-2. Capture decisions, not just outcomes.
-3. Note residual risk and next steps.
-
-## Template
-
-### Task
-
-`<task title>`
-
-### Summary
-
-Short description of the delivered increment.
-
-### Files Changed
-
-- Path and reason
-- Path and reason
-
-### Validation Performed
-
-- Command or check
-- Result
-
-### Decisions
-
-- Decision 1
-- Decision 2
-
-### Remaining Work
-
-- Item 1
-- Item 2
-
-### Risks
-
-- Risk 1
-- Risk 2
-
 ## Current Entry
 
 ### Task
 
-`Storefront catalog toolbar copy removal`
+`Admin order operations board with fulfillment workflow actions`
 
 ### Summary
 
-Removed the helper copy from the catalog toolbar and left the shared search bar as the only control in that surface. The toolbar is now cleaner and more direct, without changing the underlying catalog search behavior.
+Added a routed admin order operations board that sits on top of the new commerce workflow backend. Internal users can now open `/admin/dashboard/orders`, review recent storefront orders, inspect order and shipment timelines, apply fulfillment updates, open print-ready invoice HTML, and review linked accounting vouchers from one dashboard surface.
 
 ### Files Changed
 
-- `apps/web/src/features/store/pages/store-catalog-page.tsx` to remove the toolbar helper copy and tighten the toolbar layout around the shared search bar
-- `ASSIST/Execution/TASK.md`, `ASSIST/Execution/PLANNING.md`, and `ASSIST/Execution/WALKTHROUGH.md` to record the current storefront UX task
+- `apps/api/src/features/commerce/data/commerce-order-workflow-repository.ts` to support ETA workflow updates without forcing a status jump
+- `apps/web/src/shared/api/client.ts` to add commerce workflow and invoice-print API helpers plus a text-response request helper
+- `apps/web/src/features/commerce/pages/order-operations-page.tsx` to add the new admin operations board UI
+- `apps/web/src/app/router.tsx` to route `/admin/dashboard/orders`
+- `apps/web/src/features/dashboard/components/navigation/app-sidebar.tsx` to expose the Orders entry in the dashboard sidebar
+- `apps/web/src/features/dashboard/components/navigation/app-header.tsx` to reflect the new Orders title and shortcut
+- `ASSIST/Execution/TASK.md`, `ASSIST/Execution/PLANNING.md`, and `ASSIST/Execution/WALKTHROUGH.md` to realign active execution records and remove stale merge-marker content
+- `ASSIST/Documentation/CHANGELOG.md` to record the new commerce workflow and operations board increment
 
 ### Validation Performed
 
-- Reviewed the catalog toolbar to confirm the helper copy and icon were defined locally in the page
-- `npx eslint apps/web/src/features/store/pages/store-catalog-page.tsx` succeeded
+- `npx eslint apps/web/src/features/commerce/pages/order-operations-page.tsx apps/web/src/shared/api/client.ts apps/web/src/app/router.tsx apps/web/src/features/dashboard/components/navigation/app-sidebar.tsx apps/web/src/features/dashboard/components/navigation/app-header.tsx apps/api/src/features/commerce/data/commerce-order-workflow-repository.ts` succeeded
+- `npm run build:api` succeeded
+- `npm run build:web` succeeded
 
 ### Decisions
 
-- Remove the helper copy entirely instead of replacing it with shorter text
-- Let the shared search bar span the toolbar width after the text block is removed
+- Build the first admin commerce UI as a master-detail board instead of separate list/detail routes so operators can move through fulfillment faster
+- Keep workflow transitions backend-driven and let the frontend submit only explicit event payloads
+- Use print-ready HTML for invoice output as the minimal safe path before introducing a PDF dependency
 
 ### Remaining Work
 
-- Run browser QA to confirm the simplified toolbar still feels balanced
+- Add dedicated invoice and accounting pages if finance users need deeper drill-down than the current board tabs
+- Add customer-facing order tracking and delivery-confirmation flows using the same workflow records
+- Add courier integration or webhook ingestion so shipment events can be captured automatically
 
 ### Risks
 
-- The toolbar may feel visually sparse after removing the text, depending on viewport width
-- Further spacing tweaks may still be needed after browser QA
-=======
-`Single-container VPS deploy plus first-run database setup mode`
-
-### Summary
-
-Added a production-oriented deployment path that can run CXNext as a single container serving both the Node API and the built React app. The API now starts in setup mode when MariaDB settings are missing or invalid, reads and updates a single volume-backed `.env` file, exposes setup endpoints, and lets the frontend block on a WordPress-style first-run database form until bootstrap succeeds.
-
-### Files Changed
-
-- `packages/shared/src/schemas/setup.ts` and `packages/shared/src/index.ts` to add shared contracts for setup status and database configuration payloads
-- `apps/api/src/shared/config/environment.ts`, `apps/api/src/shared/database/database.ts`, and `apps/api/src/shared/database/orm.ts` to support `.env`-only runtime config, setup-state tracking, DB auto-create-if-missing, and non-fatal startup when DB setup is incomplete
-- `apps/api/src/app/http/router.ts`, `apps/api/src/server.ts`, and `apps/api/src/shared/http/static-web.ts` to expose setup endpoints, include setup state in health responses, and serve the built React app from the API in production
-- `apps/web/src/features/setup/components/setup-provider.tsx`, `apps/web/src/features/setup/pages/initial-setup-page.tsx`, `apps/web/src/App.tsx`, `apps/web/src/main.tsx`, and `apps/web/src/shared/api/client.ts` to gate the application on setup status and provide the first-run database configuration screen
-- `.container/Dockerfile`, `.container/docker-compose.yml`, `.container/USAGE.md`, `.dockerignore`, and `.container/*` to keep the Docker assets together and document app-only deployment against an existing MariaDB server
-- `.container/mariadb.yml` and `.container/50-server.cnf` were reviewed and the app compose was aligned to the same `codexion-network` and `mariadb` hostname
-- `.env`, `.env.example`, `.container/docker-compose.yml`, and `.container/mariadb.yml` were finalized so `.env` is the only runtime config source, with concrete defaults `mariadb` / `root` / `DbPass1@@` / `cxnext_db` and the Git source `https://github.com/aaran-software/cxnext.git` on `main`
-- `.env.example`, `ASSIST/Documentation/PROJECT_OVERVIEW.md`, `ASSIST/Documentation/ARCHITECTURE.md`, `ASSIST/Documentation/SETUP_AND_RUN.md`, and `ASSIST/Documentation/CHANGELOG.md` to document the new setup/deployment architecture
-- `ASSIST/Execution/TASK.md`, `ASSIST/Execution/PLANNING.md`, and `ASSIST/Execution/WALKTHROUGH.md` to keep the active-work records aligned with this change set
-
-### Validation Performed
-
-- `npx eslint apps/api/src/shared/config/environment.ts apps/api/src/shared/database/database.ts apps/desktop/src/main.ts` succeeded
-- `npm run build:server` succeeded
-- `docker compose -f .container/mariadb.yml config` succeeded
-- `docker compose -f .container/docker-compose.yml config` succeeded
-- `docker network create codexion-network` reported the network already exists
-- `docker compose -f .container/mariadb.yml up -d --force-recreate` succeeded after removing the unnecessary host `3306` mapping from the MariaDB stack
-- `docker compose -f .container/docker-compose.yml up -d --build` built successfully with the container reading its runtime settings from `.env` only
-- `docker ps -a` confirmed `cxnext-app` and `mariadb` are running
-- `docker logs cxnext-app` showed `CXNext API listening on http://localhost:4000`
-- `Invoke-WebRequest http://localhost:4000/health` returned `status: ok` with MariaDB `status: ok`
-- `Invoke-WebRequest http://localhost:4000/setup/status` returned `status: ready`
-- `npm run typecheck` failed because the repository already has a large baseline of unrelated TypeScript errors in existing API, storefront, state, and notification modules
-- `npm run lint` failed because the repository already has a large baseline of unrelated ESLint violations outside the files changed for this task
-
-### Decisions
-
-- Store runtime DB settings in a single volume-backed `.env` file so container deployments have one authoritative startup config
-- Keep the API process alive in setup mode and fail DB-backed operations explicitly rather than crashing startup
-- Serve the built web bundle directly from the Node API so a single VPS container can host both the backend and SPA
-- Support Git sync/build-on-start in the container entrypoint because it was explicitly requested, while documenting that it is heavier than immutable-image deployment
-
-### Remaining Work
-
-- Run browser QA against the first-run setup screen and the production static-serving path in a real container session
-- Decide whether runtime DB settings should remain editable from an authenticated admin screen after first-run setup
-- Clean up the repository-wide pre-existing lint/typecheck failures so full validation can go green again
-
-### Risks
-
-- Runtime Git sync/build-on-start increases startup time and makes production state less deterministic than CI-built images
-- The setup flow assumes the provided MariaDB user can either connect to the named database or create it; more granular privilege diagnostics would improve operator feedback
-- The production web bundle is still large and emits Vite chunk-size warnings during `build:web`
+- Manual fulfillment updates still depend on operator discipline until courier integrations exist
+- Invoice print remains HTML-based, so PDF quality depends on browser print behavior
+- The new board surfaces accounting voucher lines, but not a full accounts module with ledgers, balances, or reconciliation workflows

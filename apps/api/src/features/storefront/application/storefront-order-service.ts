@@ -1,8 +1,6 @@
 import type {
-  StorefrontCheckoutPayload,
   StorefrontCheckoutResponse,
   StorefrontCheckoutSessionResponse,
-  StorefrontPaymentVerificationPayload,
 } from '@shared/index'
 import {
   storefrontCheckoutPayloadSchema,
@@ -13,9 +11,12 @@ import {
 import { environment } from '../../../shared/config/environment'
 import { ApplicationError } from '../../../shared/errors/application-error'
 import { createRazorpayOrder, verifyRazorpayPaymentSignature } from '../../../shared/payments/razorpay'
+import { CommerceOrderWorkflowRepository } from '../../commerce/data/commerce-order-workflow-repository'
 import type { StorefrontOrderRepository } from '../data/storefront-order-repository'
 
 export class StorefrontOrderService {
+  private readonly workflowRepository = new CommerceOrderWorkflowRepository()
+
   constructor(private readonly repository: StorefrontOrderRepository) {}
 
   async create(payload: unknown) {
@@ -23,6 +24,7 @@ export class StorefrontOrderService {
 
     if (parsedPayload.paymentMethod === 'cod') {
       const order = await this.repository.createPlacedOrder(parsedPayload)
+      await this.workflowRepository.initializeOrder(order)
       return storefrontCheckoutSessionResponseSchema.parse({
         order,
         requiresPayment: false,
@@ -45,6 +47,7 @@ export class StorefrontOrderService {
       },
     })
     const order = await this.repository.createPendingPaymentOrder(preparedCheckout, razorpayOrder.id)
+    await this.workflowRepository.initializeOrder(order)
 
     return storefrontCheckoutSessionResponseSchema.parse({
       order,
@@ -79,6 +82,7 @@ export class StorefrontOrderService {
     }
 
     const order = await this.repository.markOrderPaid(parsedPayload)
+    await this.workflowRepository.markPaymentCaptured(order.id)
     return storefrontCheckoutResponseSchema.parse({ order } satisfies StorefrontCheckoutResponse)
   }
 }
