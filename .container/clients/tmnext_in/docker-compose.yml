@@ -14,7 +14,6 @@ services:
     restart: unless-stopped
     volumes:
       - tmnext_in_runtime:/opt/cxnext/runtime
-      - ./tmnext-in.env:/opt/cxnext/runtime/.env
     networks:
       - codexion-network
 

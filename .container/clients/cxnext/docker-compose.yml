@@ -11,7 +11,6 @@ services:
     restart: unless-stopped
     volumes:
       - cxnext_runtime:/opt/cxnext/runtime
-      - ./.env:/opt/cxnext/runtime/.env
     networks:
       - codexion-network
 
