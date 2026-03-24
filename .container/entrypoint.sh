@@ -16,7 +16,39 @@ ensure_runtime_env_file() {
 
   if [ ! -f "$RUNTIME_ENV_FILE" ]; then
     cp "$APP_ROOT/.env.example" "$RUNTIME_ENV_FILE"
+    return
   fi
+
+  node - "$APP_ROOT/.env.example" "$RUNTIME_ENV_FILE" <<'NODE'
+const fs = require('fs')
+const dotenv = require('dotenv')
+
+const templatePath = process.argv[2]
+const runtimePath = process.argv[3]
+const templateRaw = fs.readFileSync(templatePath, 'utf8')
+const runtimeRaw = fs.readFileSync(runtimePath, 'utf8')
+const template = dotenv.parse(templateRaw)
+const runtime = dotenv.parse(runtimeRaw)
+const runtimeLines = runtimeRaw.split(/\r?\n/)
+let changed = false
+
+for (const [key, value] of Object.entries(template)) {
+  if (Object.prototype.hasOwnProperty.call(runtime, key)) {
+    continue
+  }
+
+  if (runtimeLines.length > 0 && runtimeLines[runtimeLines.length - 1] !== '') {
+    runtimeLines.push('')
+  }
+
+  runtimeLines.push(`${key}=${value}`)
+  changed = true
+}
+
+if (changed) {
+  fs.writeFileSync(runtimePath, `${runtimeLines.join('\n').replace(/\n*$/, '\n')}`, 'utf8')
+}
+NODE
 }
 
 prepare_source_layout() {

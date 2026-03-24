@@ -53,6 +53,8 @@ cat /opt/cxnext/runtime/.env
 
 ```
 docker logs --tail 100 cxnext-app
+docker logs --tail 100 tirupur-direct-app
+
 ```
 
 ## Notes
