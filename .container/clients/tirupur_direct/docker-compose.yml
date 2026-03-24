@@ -1,0 +1,41 @@
+name: tirupur-direct
+
+services:
+  mariadb:
+    image: mariadb:11.8
+    container_name: tirupur-direct-mariadb
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: tirupur_direct_db
+      MARIADB_ROOT_PASSWORD: DbPass1@@
+      MARIADB_ROOT_HOST: "%"
+    volumes:
+      - tirupur_direct_mariadb_data:/var/lib/mysql
+      - ../../50-server.cnf:/etc/mysql/mariadb.conf.d/50-server.cnf:ro
+    networks:
+      - codexion-network
+
+  app:
+    build:
+      context: ../../..
+      dockerfile: .container/Dockerfile
+    container_name: tirupur-direct-app
+    depends_on:
+      - mariadb
+    ports:
+      - "4000:4000"
+    restart: unless-stopped
+    volumes:
+      - tirupur_direct_runtime:/opt/cxnext/runtime
+      - ./tirupur-direct.env:/opt/cxnext/runtime/.env
+    networks:
+      - codexion-network
+
+volumes:
+  tirupur_direct_runtime:
+  tirupur_direct_mariadb_data:
+
+networks:
+  codexion-network:
+    external: true
+    name: codexion-network
