@@ -51,6 +51,10 @@ docker exec -it cxnext-app bash
 cat /opt/cxnext/runtime/.env
 ```
 
+```
+docker logs --tail 100 cxnext-app
+```
+
 ## Notes
 
 - App URLs: `http://YOUR_SERVER_IP:4000` and `http://YOUR_SERVER_IP:5000`

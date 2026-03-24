@@ -37,6 +37,10 @@ const optionalBooleanFlag = z
   })
 
 const requiredBooleanFlag = z.string().transform((value) => ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase()))
+const defaultFalseBooleanFlag = z
+  .string()
+  .optional()
+  .transform((value) => ['1', 'true', 'yes', 'on'].includes((value ?? '').trim().toLowerCase()))
 
 const environmentSchema = z.object({
   APP_MODE: appModeSchema.optional(),
@@ -93,7 +97,7 @@ const environmentSchema = z.object({
   RAZORPAY_BUSINESS_NAME: z.string().min(1),
   RAZORPAY_CHECKOUT_IMAGE: optionalNonEmptyString,
   RAZORPAY_THEME_COLOR: optionalNonEmptyString,
-  PAYMENT_TEST_BYPASS: requiredBooleanFlag,
+  PAYMENT_TEST_BYPASS: defaultFalseBooleanFlag,
   SUPER_ADMIN_EMAILS: z.string(),
   GIT_SYNC_ENABLED: requiredBooleanFlag,
   GIT_AUTO_UPDATE_ON_START: requiredBooleanFlag,
