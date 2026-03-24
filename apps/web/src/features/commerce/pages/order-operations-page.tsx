@@ -1,7 +1,7 @@
 import type { CommerceOrderSummary } from '@shared/index'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, PackageCheck, RefreshCcw, Search, ShieldAlert, Truck } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { CommonList, type CommonListColumn, type CommonListFilterOption } from '@/components/forms/CommonList'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -69,10 +69,11 @@ export function OrderOperationsPage() {
   const { session } = useAuth()
   const accessToken = session?.accessToken ?? null
   const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
   const [orders, setOrders] = useState<CommerceOrderSummary[]>([])
   const [searchValue, setSearchValue] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'delivered' | 'attention'>('all')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const filteredOrders = useMemo(() => {
@@ -93,12 +94,10 @@ export function OrderOperationsPage() {
     })
   }, [orders, searchValue, statusFilter])
 
-  const totals = useMemo(() => ({
-    orders: orders.length,
-    active: orders.filter((item) => !['delivered', 'delivery_confirmed', 'cancelled'].includes(item.status)).length,
-    delivered: orders.filter((item) => ['delivered', 'delivery_confirmed'].includes(item.status)).length,
-    revenue: orders.reduce((sum, item) => sum + item.totalAmount, 0),
-  }), [orders])
+  const totalRecords = filteredOrders.length
+  const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize))
+  const safeCurrentPage = Math.min(currentPage, totalPages)
+  const paginatedOrders = filteredOrders.slice((safeCurrentPage - 1) * pageSize, safeCurrentPage * pageSize)
 
   useEffect(() => {
     const token = accessToken
@@ -140,24 +139,6 @@ export function OrderOperationsPage() {
     }
   }, [accessToken])
 
-  async function refreshOrders() {
-    const token = accessToken
-    if (typeof token !== 'string') {
-      return
-    }
-
-    setRefreshing(true)
-    setErrorMessage(null)
-
-    try {
-      setOrders(await listCommerceOrders(token))
-    } catch (error) {
-      setErrorMessage(toErrorMessage(error))
-    } finally {
-      setRefreshing(false)
-    }
-  }
-
   if (session?.user.actorType !== 'admin' && session?.user.actorType !== 'staff') {
     return (
       <Card>
@@ -170,13 +151,21 @@ export function OrderOperationsPage() {
   }
 
   const filters: CommonListFilterOption[] = [
-    { key: 'all', label: 'All orders', isActive: statusFilter === 'all', onSelect: () => setStatusFilter('all') },
-    { key: 'active', label: 'Active', isActive: statusFilter === 'active', onSelect: () => setStatusFilter('active') },
-    { key: 'delivered', label: 'Delivered', isActive: statusFilter === 'delivered', onSelect: () => setStatusFilter('delivered') },
-    { key: 'attention', label: 'Needs action', isActive: statusFilter === 'attention', onSelect: () => setStatusFilter('attention') },
+    { key: 'all', label: 'All orders', isActive: statusFilter === 'all', onSelect: () => { setStatusFilter('all'); setCurrentPage(1) } },
+    { key: 'active', label: 'Active', isActive: statusFilter === 'active', onSelect: () => { setStatusFilter('active'); setCurrentPage(1) } },
+    { key: 'delivered', label: 'Delivered', isActive: statusFilter === 'delivered', onSelect: () => { setStatusFilter('delivered'); setCurrentPage(1) } },
+    { key: 'attention', label: 'Needs action', isActive: statusFilter === 'attention', onSelect: () => { setStatusFilter('attention'); setCurrentPage(1) } },
   ]
 
   const columns: CommonListColumn<CommerceOrderSummary>[] = [
+    {
+      id: 'serial',
+      header: 'Sl.No',
+      cell: (row) => ((safeCurrentPage - 1) * pageSize) + paginatedOrders.findIndex((entry) => entry.orderId === row.orderId) + 1,
+      className: 'w-12 min-w-12 px-2 text-center',
+      headerClassName: 'w-12 min-w-12 px-2 text-center',
+      sticky: 'left',
+    },
     {
       id: 'order',
       header: 'Order',
@@ -233,6 +222,9 @@ export function OrderOperationsPage() {
     {
       id: 'open',
       header: '',
+      className: 'w-20 min-w-20 px-2 text-center',
+      headerClassName: 'w-20 min-w-20 px-2 text-center',
+      sticky: 'right',
       cell: (row) => (
         <div className="flex justify-end">
           <Button variant="ghost" size="sm" asChild>
@@ -248,156 +240,67 @@ export function OrderOperationsPage() {
 
   return (
     <div className="space-y-4">
-      <Card className="mesh-panel overflow-hidden border-border/60 shadow-none">
-        <CardHeader className="border-b border-border/60 pb-5">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="space-y-2">
-              <Badge className="rounded-full px-3 py-1 text-[11px] uppercase tracking-[0.2em]">Order operations</Badge>
-              <CardDescription className="max-w-2xl text-sm leading-6">
-                Search orders and open the workflow page for actions, shipment, invoice, and accounts.
-              </CardDescription>
-            </div>
-            <Button variant="outline" onClick={() => void refreshOrders()} disabled={loading || refreshing}>
-              <RefreshCcw className="size-4" />
-              {refreshing ? 'Refreshing...' : 'Refresh'}
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-5 p-5">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-[1.4rem] border border-border/70 bg-background/70 p-5">
-              <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Orders</p>
-              <p className="mt-3 text-3xl font-semibold text-foreground">{totals.orders}</p>
-              <p className="mt-2 text-sm text-muted-foreground">Total storefront orders in the operations queue.</p>
-            </div>
-            <div className="rounded-[1.4rem] border border-border/70 bg-background/70 p-5">
-              <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Active orders</p>
-              <p className="mt-3 text-3xl font-semibold text-foreground">{totals.active}</p>
-              <p className="mt-2 text-sm text-muted-foreground">Orders still moving through payment or delivery flow.</p>
-            </div>
-            <div className="rounded-[1.4rem] border border-border/70 bg-background/70 p-5">
-              <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Delivered</p>
-              <p className="mt-3 text-3xl font-semibold text-foreground">{totals.delivered}</p>
-              <p className="mt-2 text-sm text-muted-foreground">Orders completed at courier or customer confirmation stage.</p>
-            </div>
-            <div className="rounded-[1.4rem] border border-border/70 bg-background/70 p-5">
-              <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Order value</p>
-              <p className="mt-3 text-3xl font-semibold text-foreground">{formatCurrency(totals.revenue, 'INR')}</p>
-              <p className="mt-2 text-sm text-muted-foreground">Combined order total across the current operations list.</p>
-            </div>
-          </div>
+      {errorMessage ? (
+        <Card>
+          <CardContent className="p-4 text-sm text-destructive">{errorMessage}</CardContent>
+        </Card>
+      ) : null}
 
-          <CommonList
-            header={{
-              pageTitle: 'Order list',
-              pageDescription: 'Open an order to review workflow control, shipment, invoice, and accounting.',
-            }}
-            search={{
-              value: searchValue,
-              onChange: setSearchValue,
-              placeholder: 'Search order, customer, or status',
-            }}
-            filters={{
-              buttonLabel: 'Order filters',
-              options: filters,
-              activeFilters: statusFilter === 'all' ? [] : [{ key: 'status', label: 'Status', value: statusFilter }],
-              onClearAllFilters: () => setStatusFilter('all'),
-              onRemoveFilter: () => setStatusFilter('all'),
-            }}
-            table={{
-              columns,
-              data: filteredOrders,
-              loading,
-              loadingMessage: 'Loading order operations...',
-              emptyMessage: 'No orders match the current filter.',
-              rowKey: (row) => row.orderId,
-            }}
-          />
-
-          <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-4">
-            <div className="rounded-[1.35rem] border border-border/70 bg-background/70 p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                  <PackageCheck className="size-5" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Order show page</p>
-                  <p className="text-sm text-muted-foreground">Open a record for the full operations view.</p>
-                </div>
-              </div>
-              <div className="mt-3 space-y-2 text-sm text-muted-foreground">
-                <p>Overview, line items, delivery address, payment state, and customer note.</p>
-                <p>Workflow actions, shipment history, invoice rows, and accounting entries.</p>
-              </div>
+      <CommonList
+        header={{
+          pageTitle: 'Orders',
+          pageDescription: 'Review storefront orders, workflow status, shipment readiness, invoice output, and accounting links.',
+        }}
+        search={{
+          value: searchValue,
+          onChange: (value) => {
+            setSearchValue(value)
+            setCurrentPage(1)
+          },
+          placeholder: 'Search order, customer, or status',
+        }}
+        filters={{
+          buttonLabel: 'Order filters',
+          options: filters,
+          activeFilters: statusFilter === 'all' ? [] : [{ key: 'status', label: 'Status', value: statusFilter }],
+          onClearAllFilters: () => {
+            setStatusFilter('all')
+            setCurrentPage(1)
+          },
+          onRemoveFilter: () => {
+            setStatusFilter('all')
+            setCurrentPage(1)
+          },
+        }}
+        table={{
+          columns,
+          data: paginatedOrders,
+          loading,
+          loadingMessage: 'Loading order operations...',
+          emptyMessage: 'No orders match the current filter.',
+          rowKey: (row) => row.orderId,
+        }}
+        footer={{
+          content: (
+            <div className="flex flex-wrap items-center gap-4">
+              <span>Total records: <span className="font-medium text-foreground">{totalRecords}</span></span>
+              <span>Active records: <span className="font-medium text-foreground">{filteredOrders.filter((item) => !['delivered', 'delivery_confirmed', 'cancelled'].includes(item.status)).length}</span></span>
+              <span>Delivered records: <span className="font-medium text-foreground">{filteredOrders.filter((item) => ['delivered', 'delivery_confirmed'].includes(item.status)).length}</span></span>
+              <span>Order value: <span className="font-medium text-foreground">{formatCurrency(filteredOrders.reduce((sum, item) => sum + item.totalAmount, 0), 'INR')}</span></span>
             </div>
-
-            <div className="rounded-[1.35rem] border border-border/70 bg-background/70 p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                  <Search className="size-5" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Workflow flow</p>
-                  <p className="text-sm text-muted-foreground">Keep actions structured and auditable.</p>
-                </div>
-              </div>
-              <div className="mt-3 grid gap-2">
-                <div className="rounded-[1rem] border border-border/70 bg-muted/20 px-4 py-3 text-sm">
-                  Use the actions tab to update fulfillment, ETA, and tracking.
-                </div>
-                <div className="rounded-[1rem] border border-border/70 bg-muted/20 px-4 py-3 text-sm">
-                  Review shipment, invoice, and accounts in separate clean sections.
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-[1.35rem] border border-amber-200 bg-amber-50/90 p-4 text-sm text-amber-950">
-              <div className="flex items-center gap-3">
-                <ShieldAlert className="size-5" />
-                <p className="font-semibold">Operations guidance</p>
-              </div>
-              <p className="mt-3 leading-6">
-                Keep courier references, tracking updates, and invoice actions tied to the selected order record.
-              </p>
-            </div>
-
-            <div className="rounded-[1.35rem] border border-border/70 bg-background/70 p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                  <Truck className="size-5" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Quick open</p>
-                  <p className="text-sm text-muted-foreground">Open recent operational cases.</p>
-                </div>
-              </div>
-              <div className="mt-3 space-y-2">
-                {filteredOrders.slice(0, 2).map((item) => (
-                  <Link
-                    key={item.orderId}
-                    to={`/admin/dashboard/orders/${item.orderId}`}
-                    className="block rounded-[1rem] border border-border/70 bg-muted/20 px-4 py-3 transition-colors hover:border-primary/40 hover:bg-primary/5"
-                  >
-                    <p className="font-medium text-foreground">{item.orderNumber}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">{item.customerName}</p>
-                  </Link>
-                ))}
-                {filteredOrders.length === 0 ? (
-                  <div className="rounded-[1rem] border border-dashed border-border/70 px-4 py-4 text-sm text-muted-foreground">
-                    No orders are available for quick-open suggestions.
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          </div>
-
-          {errorMessage ? (
-            <div className="rounded-[1.25rem] border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-              {errorMessage}
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
+          ),
+        }}
+        pagination={{
+          currentPage: safeCurrentPage,
+          pageSize,
+          totalRecords,
+          onPageChange: setCurrentPage,
+          onPageSizeChange: (value) => {
+            setPageSize(value)
+            setCurrentPage(1)
+          },
+        }}
+      />
     </div>
   )
 }

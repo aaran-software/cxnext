@@ -4,6 +4,8 @@
 
 Build a full stack ERP platform using TypeScript, Node.js, React, and Electron with shared domain code and production-oriented business workflows.
 
+The repository can also host standalone product lines when they preserve explicit runtime and domain boundaries, including a desktop-first billing-and-accounts product.
+
 ## Product Scope
 
 The platform is intended to cover:
@@ -18,6 +20,7 @@ The platform is intended to cover:
 8. Audit trail and role-based access control
 9. CRM and commerce workflows built on the same shared platform
 10. VPS-friendly single-container deployment with runtime-first database setup
+11. A standalone billing-and-accounts product track for small businesses, with Tally-like accounts-plus-inventory workflows and optional external connectors
 
 ## Current State
 
@@ -46,6 +49,7 @@ Current delivery is foundation work:
 21. Repository discipline and operating documentation
 22. Runtime configuration-backed setup mode that keeps the API online when MariaDB is not configured yet
 23. Single-process production serving where `apps/api` can serve the built `apps/web` bundle for VPS deployment
+24. Initial billing product direction documented as a standalone desktop-first plugin-style application boundary rather than an embedded ERP feature
 
 ## Product Principles
 

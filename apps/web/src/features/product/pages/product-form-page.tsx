@@ -1,30 +1,31 @@
 import type {
   CommonModuleKey,
   CommonModuleItem,
+  Media,
   Product,
   ProductAttributeInput,
   ProductAttributeValueInput,
   ProductDiscountInput,
-  ProductImageInput,
+  MediaImageUploadPayload,
   ProductOfferInput,
   ProductPriceInput,
   ProductReviewInput,
   ProductStockItemInput,
-  ProductStockMovementInput,
   ProductTagInput,
   ProductUpsertPayload,
   ProductVariantAttributeInput,
   ProductVariantImageInput,
   ProductVariantInput,
 } from '@shared/index'
-import { useEffect, useState, type FormEvent, type PropsWithChildren } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type PropsWithChildren } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, Boxes, Expand, ImagePlus, Plus, Star, Trash2, Upload } from 'lucide-react'
 import { MediaImageField } from '@/components/forms/media-image-field'
 import { AnimatedTabs, type AnimatedContentTab } from '@/components/ui/animated-tabs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -37,6 +38,7 @@ import {
   getProduct,
   HttpError,
   listCommonModuleItems,
+  uploadMediaImage,
   updateProduct,
 } from '@/shared/api/client'
 
@@ -50,12 +52,23 @@ const storefrontDepartmentOptions = [
 ]
 
 const createClientKey = () => globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2)
+const MAX_PRODUCT_IMAGES = 5
+const MAX_PRODUCT_IMAGE_BYTES = 5 * 1024 * 1024
+const PRODUCT_IMAGE_HELP = 'Up to 5 images. JPG, PNG, or WebP. Max 5 MB each. Recommended 1600 x 2000 px.'
 
-const emptyImage = (): ProductImageInput => ({ imageUrl: '', isPrimary: false, sortOrder: 0 })
 const emptyAttribute = (): ProductAttributeInput => ({ clientKey: createClientKey(), name: '' })
 const emptyAttributeValue = (attributeClientKey = ''): ProductAttributeValueInput => ({ clientKey: createClientKey(), attributeClientKey, value: '' })
-const emptyVariantImage = (): ProductVariantImageInput => ({ imageUrl: '', isPrimary: false })
+const emptyVariantImage = (isPrimary = false): ProductVariantImageInput => ({ imageUrl: '', isPrimary })
 const emptyVariantAttribute = (): ProductVariantAttributeInput => ({ attributeName: '', attributeValue: '' })
+const ensureSingleVariantImage = (images: ProductVariantImageInput[]) => {
+  if (images.length === 0) {
+    return [emptyVariantImage(true)]
+  }
+
+  const firstImage = images[0]
+  return [{ ...firstImage, isPrimary: true }]
+}
+
 const emptyVariant = (): ProductVariantInput => ({
   clientKey: createClientKey(),
   sku: '',
@@ -67,14 +80,13 @@ const emptyVariant = (): ProductVariantInput => ({
   weight: null,
   barcode: null,
   isActive: true,
-  images: [],
+  images: [emptyVariantImage(true)],
   attributes: [],
 })
 const emptyPrice = (): ProductPriceInput => ({ variantClientKey: null, mrp: 0, sellingPrice: 0, costPrice: 0 })
 const emptyDiscount = (): ProductDiscountInput => ({ variantClientKey: null, discountType: 'percentage', discountValue: 0, startDate: null, endDate: null })
 const emptyOffer = (): ProductOfferInput => ({ title: '', description: null, offerPrice: 0, startDate: null, endDate: null })
 const emptyStockItem = (): ProductStockItemInput => ({ variantClientKey: null, warehouseId: '', quantity: 0, reservedQuantity: 0 })
-const emptyStockMovement = (): ProductStockMovementInput => ({ variantClientKey: null, warehouseId: null, movementType: 'in', quantity: 0, referenceType: null, referenceId: null, movementAt: null })
 const emptyTag = (): ProductTagInput => ({ name: '' })
 const emptyReview = (): ProductReviewInput => ({ userId: null, rating: 5, review: null, reviewDate: null })
 const createDefaultStorefront = () => ({
@@ -154,11 +166,143 @@ function validateProduct(values: ProductFormValues) {
   return errors
 }
 
+function fileToDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result !== 'string') {
+        reject(new Error('Failed to read image file.'))
+        return
+      }
+
+      resolve(reader.result)
+    }
+    reader.onerror = () => reject(reader.error ?? new Error('Failed to read image file.'))
+    reader.readAsDataURL(file)
+  })
+}
+
+function buildMediaUploadPayload(file: File): Promise<MediaImageUploadPayload> {
+  return fileToDataUrl(file).then((dataUrl) => {
+    const fileName = file.name.replace(/\.[^.]+$/, '') || 'product-image'
+    const readableName = fileName.replace(/[-_]+/g, ' ').trim() || 'Product image'
+
+    return {
+      fileName,
+      originalName: file.name,
+      dataUrl,
+      folderId: null,
+      storageScope: 'public',
+      title: readableName,
+      altText: readableName,
+      isActive: true,
+    }
+  })
+}
+
+function slugifyProductName(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+function buildAutoSku(prefix: string, nextNumber: string, digits: number) {
+  const normalizedPrefix = prefix.trim().toUpperCase() || 'PRD'
+  const numericValue = Number.parseInt(nextNumber, 10)
+  const safeNumber = Number.isFinite(numericValue) && numericValue > 0 ? numericValue : 1
+  const safeDigits = Math.min(Math.max(digits, 2), 8)
+  return `${normalizedPrefix}-${String(safeNumber).padStart(safeDigits, '0')}`
+}
+
+function buildVariantSignature(attributes: ProductVariantAttributeInput[], optionNames?: Set<string>) {
+  return attributes
+    .filter((attribute) => !optionNames || optionNames.has(attribute.attributeName.trim().toLowerCase()))
+    .map((attribute) => `${attribute.attributeName.trim().toLowerCase()}::${attribute.attributeValue.trim().toLowerCase()}`)
+    .sort()
+    .join('||')
+}
+
+function buildVariantMatrix(values: ProductFormValues) {
+  const groups = values.attributes
+    .map((attribute) => {
+      const attributeName = attribute.name.trim()
+      const entries = values.attributeValues
+        .filter((entry) => entry.attributeClientKey === attribute.clientKey)
+        .map((entry) => entry.value.trim())
+        .filter(Boolean)
+
+      return {
+        attributeName,
+        values: Array.from(new Set(entries)),
+      }
+    })
+    .filter((group) => group.attributeName && group.values.length > 0)
+
+  if (groups.length === 0) {
+    return []
+  }
+
+  const optionNames = new Set(groups.map((group) => group.attributeName.trim().toLowerCase()))
+
+  const combinations: ProductVariantAttributeInput[][] = []
+
+  function visit(groupIndex: number, current: ProductVariantAttributeInput[]) {
+    if (groupIndex >= groups.length) {
+      combinations.push(current)
+      return
+    }
+
+    const group = groups[groupIndex]
+    group.values.forEach((value) => {
+      visit(groupIndex + 1, [...current, { attributeName: group.attributeName, attributeValue: value }])
+    })
+  }
+
+  visit(0, [])
+
+  const existingBySignature = new Map(values.variants.map((variant) => [buildVariantSignature(variant.attributes, optionNames), variant]))
+
+  return combinations.map((attributes) => {
+    const signature = buildVariantSignature(attributes, optionNames)
+    const existing = existingBySignature.get(signature)
+
+    if (existing) {
+      const customAttributes = existing.attributes.filter((attribute) => !optionNames.has(attribute.attributeName.trim().toLowerCase()))
+      return {
+        ...existing,
+        variantName: attributes.map((attribute) => attribute.attributeValue).join(' / '),
+        attributes: [...attributes, ...customAttributes],
+      }
+    }
+
+    return {
+      ...emptyVariant(),
+      variantName: attributes.map((attribute) => attribute.attributeValue).join(' / '),
+      attributes,
+    }
+  })
+}
+
+function resolveLookupDefault(currentValue: string | null | undefined, options: CommonModuleItem[]) {
+  if (options.length === 0) {
+    return currentValue ?? '1'
+  }
+
+  if (currentValue && options.some((option) => option.id === currentValue)) {
+    return currentValue
+  }
+
+  return options[0]?.id ?? '1'
+}
+
 function Section({
   title,
   description,
   addLabel,
   onAdd,
+  headerAction,
   className,
   contentClassName,
   children,
@@ -167,43 +311,60 @@ function Section({
   description?: string
   addLabel?: string
   onAdd?: () => void
+  headerAction?: React.ReactNode
   className?: string
   contentClassName?: string
 }>) {
-  const headerAction = addLabel && onAdd ? (
+  const defaultHeaderAction = addLabel && onAdd ? (
     <Button type="button" variant="outline" size="sm" onClick={onAdd}>
       <Plus className="size-4" />
       {addLabel}
     </Button>
   ) : null
-  const hasHeader = Boolean(title || description || headerAction)
+  const resolvedHeaderAction = headerAction ?? defaultHeaderAction
+  const hasHeader = Boolean(title || description || resolvedHeaderAction)
 
   return (
-    <Card className={className}>
+    <Card className={className ?? 'rounded-md border-border/70 shadow-none'}>
       {hasHeader ? (
-        <CardHeader className="flex flex-row items-start justify-between gap-4">
+        <CardHeader className="flex flex-row items-start justify-between gap-3 px-4 py-3">
           <div>
-            {title ? <CardTitle>{title}</CardTitle> : null}
-            {description ? <CardDescription>{description}</CardDescription> : null}
+            {title ? <CardTitle className="text-base">{title}</CardTitle> : null}
+            {description ? <CardDescription className="mt-1 text-xs">{description}</CardDescription> : null}
           </div>
-          {headerAction}
+          {resolvedHeaderAction}
         </CardHeader>
       ) : null}
-      <CardContent className={contentClassName ?? 'grid gap-4'}>{children}</CardContent>
+      <CardContent className={contentClassName ?? 'grid gap-3 px-4 pb-4 pt-3'}>{children}</CardContent>
     </Card>
   )
 }
 
-function Row({ children, onRemove }: PropsWithChildren<{ onRemove: () => void }>) {
+function Row({ children, onRemove, badge, removePosition = 'top' }: PropsWithChildren<{ onRemove: () => void; badge?: React.ReactNode; removePosition?: 'top' | 'bottom-left' | 'none' }>) {
   return (
-    <div className="rounded-[1.5rem] border border-border/70 p-4">
-      <div className="mb-4 flex justify-end">
-        <Button type="button" variant="ghost" size="sm" onClick={onRemove}>
-          <Trash2 className="size-4" />
-          Remove
-        </Button>
-      </div>
+    <div className="relative rounded-md border border-border/70 bg-background/80 p-3">
+      {badge ? (
+        <div className="absolute -left-3 -top-3 flex size-9 items-center justify-center rounded-full border border-primary/25 bg-primary text-sm font-semibold text-primary-foreground shadow-sm">
+          {badge}
+        </div>
+      ) : null}
+      {removePosition === 'top' ? (
+        <div className="mb-2 flex justify-end">
+          <Button type="button" variant="ghost" size="sm" onClick={onRemove}>
+            <Trash2 className="size-4" />
+            Remove
+          </Button>
+        </div>
+      ) : null}
       {children}
+      {removePosition === 'bottom-left' ? (
+        <div className="mt-2 flex justify-start">
+          <Button type="button" variant="ghost" size="sm" onClick={onRemove}>
+            <Trash2 className="size-4" />
+            Remove
+          </Button>
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -215,6 +376,7 @@ function LookupSelect({
   moduleKey,
   placeholder = '-',
   onItemsChange,
+  compact = false,
   onChange,
 }: {
   label: string
@@ -223,24 +385,33 @@ function LookupSelect({
   moduleKey?: CommonModuleKey
   placeholder?: string
   onItemsChange?: (items: CommonModuleItem[]) => void
+  compact?: boolean
   onChange: (value: string | null) => void
 }) {
+  const field = (
+    <AutocompleteLookup
+      value={value ?? ''}
+      onChange={(nextValue) => onChange(nextValue || null)}
+      options={options.map(toLookupOption)}
+      allowEmptyOption
+      emptyOptionLabel={placeholder}
+      placeholder={`Search ${label.toLowerCase()}`}
+      createOption={moduleKey ? async (labelValue) => {
+        const { item, option } = await createCommonLookupOption(moduleKey, labelValue)
+        onItemsChange?.([...options, item])
+        return option
+      } : undefined}
+    />
+  )
+
+  if (compact) {
+    return field
+  }
+
   return (
     <div className="grid gap-2">
       <Label>{label}</Label>
-      <AutocompleteLookup
-        value={value ?? ''}
-        onChange={(nextValue) => onChange(nextValue || null)}
-        options={options.map(toLookupOption)}
-        allowEmptyOption
-        emptyOptionLabel={placeholder}
-        placeholder={`Search ${label.toLowerCase()}`}
-        createOption={moduleKey ? async (labelValue) => {
-          const { item, option } = await createCommonLookupOption(moduleKey, labelValue)
-          onItemsChange?.([...options, item])
-          return option
-        } : undefined}
-      />
+      {field}
     </div>
   )
 }
@@ -249,28 +420,38 @@ function VariantSelect({
   label,
   value,
   variants,
+  compact = false,
   onChange,
 }: {
   label: string
   value: string | null
   variants: ProductVariantInput[]
+  compact?: boolean
   onChange: (value: string | null) => void
 }) {
+  const field = (
+    <select
+      value={value ?? ''}
+      onChange={(event) => onChange(event.target.value || null)}
+      className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
+    >
+      <option value="">Product level</option>
+      {variants.map((variant) => (
+        <option key={variant.clientKey} value={variant.clientKey}>
+          {variant.variantName || variant.sku || variant.clientKey}
+        </option>
+      ))}
+    </select>
+  )
+
+  if (compact) {
+    return field
+  }
+
   return (
     <div className="grid gap-2">
       <Label>{label}</Label>
-      <select
-        value={value ?? ''}
-        onChange={(event) => onChange(event.target.value || null)}
-        className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
-      >
-        <option value="">Product level</option>
-        {variants.map((variant) => (
-          <option key={variant.clientKey} value={variant.clientKey}>
-            {variant.variantName || variant.sku || variant.clientKey}
-          </option>
-        ))}
-      </select>
+      {field}
     </div>
   )
 }
@@ -317,7 +498,7 @@ function toFormValues(product: Product): ProductFormValues {
       weight: variant.weight,
       barcode: variant.barcode,
       isActive: variant.isActive,
-      images: variant.images.map((image) => ({ imageUrl: image.imageUrl, isPrimary: image.isPrimary })),
+      images: ensureSingleVariantImage(variant.images.map((image) => ({ imageUrl: image.imageUrl, isPrimary: image.isPrimary }))),
       attributes: variant.attributes.map((attribute) => ({ attributeName: attribute.attributeName, attributeValue: attribute.attributeValue })),
     })),
     prices: product.prices.map((price) => ({ variantClientKey: price.variantId ? variantClientKeyById.get(price.variantId) ?? null : null, mrp: price.mrp, sellingPrice: price.sellingPrice, costPrice: price.costPrice })),
@@ -369,6 +550,14 @@ export function ProductFormPage() {
   const [taxes, setTaxes] = useState<CommonModuleItem[]>([])
   const [styles, setStyles] = useState<CommonModuleItem[]>([])
   const [warehouses, setWarehouses] = useState<CommonModuleItem[]>([])
+  const [uploadingImages, setUploadingImages] = useState(false)
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null)
+  const productImageInputRef = useRef<HTMLInputElement | null>(null)
+  const [autoSlugEnabled, setAutoSlugEnabled] = useState(!isEditMode)
+  const [autoSkuEnabled, setAutoSkuEnabled] = useState(!isEditMode)
+  const [skuPrefix, setSkuPrefix] = useState('PRD')
+  const [skuNextNumber, setSkuNextNumber] = useState('1')
+  const [skuDigits, setSkuDigits] = useState(4)
 
   useEffect(() => {
     let cancelled = false
@@ -404,6 +593,33 @@ export function ProductFormPage() {
   }, [])
 
   useEffect(() => {
+    if (loading) {
+      return
+    }
+
+    setValues((current) => {
+      const nextProductGroupId = resolveLookupDefault(current.productGroupId, productGroups)
+      const nextUnitId = resolveLookupDefault(current.unitId, units)
+      const nextTaxId = resolveLookupDefault(current.taxId, taxes)
+
+      if (
+        current.productGroupId === nextProductGroupId &&
+        current.unitId === nextUnitId &&
+        current.taxId === nextTaxId
+      ) {
+        return current
+      }
+
+      return {
+        ...current,
+        productGroupId: nextProductGroupId,
+        unitId: nextUnitId,
+        taxId: nextTaxId,
+      }
+    })
+  }, [loading, productGroups, taxes, units])
+
+  useEffect(() => {
     let cancelled = false
 
     async function loadProduct() {
@@ -433,6 +649,24 @@ export function ProductFormPage() {
     void loadProduct()
     return () => { cancelled = true }
   }, [productId])
+
+  useEffect(() => {
+    if (!autoSlugEnabled) {
+      return
+    }
+
+    const nextSlug = slugifyProductName(values.name)
+    setValues((current) => current.slug === nextSlug ? current : { ...current, slug: nextSlug })
+  }, [autoSlugEnabled, values.name])
+
+  useEffect(() => {
+    if (!autoSkuEnabled) {
+      return
+    }
+
+    const nextSku = buildAutoSku(skuPrefix, skuNextNumber, skuDigits)
+    setValues((current) => current.sku === nextSku ? current : { ...current, sku: nextSku })
+  }, [autoSkuEnabled, skuDigits, skuNextNumber, skuPrefix])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -472,13 +706,64 @@ export function ProductFormPage() {
     }
   }
 
+  async function handleProductImageUpload(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? [])
+    event.target.value = ''
+
+    if (files.length === 0) {
+      return
+    }
+
+    const availableSlots = MAX_PRODUCT_IMAGES - values.images.length
+    if (availableSlots <= 0) {
+      setErrorMessage(`Only ${MAX_PRODUCT_IMAGES} product images are allowed.`)
+      return
+    }
+
+    const limitedFiles = files.slice(0, availableSlots)
+    const oversizeFile = limitedFiles.find((file) => file.size > MAX_PRODUCT_IMAGE_BYTES)
+    if (oversizeFile) {
+      setErrorMessage(`${oversizeFile.name} is larger than 5 MB.`)
+      return
+    }
+
+    setUploadingImages(true)
+    setErrorMessage(null)
+
+    try {
+      const uploadedAssets: Media[] = []
+      for (const file of limitedFiles) {
+        const payload = await buildMediaUploadPayload(file)
+        uploadedAssets.push(await uploadMediaImage(payload))
+      }
+
+      setValues((current) => {
+        const hasPrimary = current.images.some((image) => image.isPrimary)
+        const appended = uploadedAssets.map((asset, index) => ({
+          imageUrl: asset.fileUrl,
+          isPrimary: !hasPrimary && index === 0 && current.images.length === 0,
+          sortOrder: current.images.length + index,
+        }))
+
+        return {
+          ...current,
+          images: [...current.images, ...appended],
+        }
+      })
+    } catch (error) {
+      setErrorMessage(toErrorMessage(error))
+    } finally {
+      setUploadingImages(false)
+    }
+  }
+
   const overviewTab: AnimatedContentTab = {
     label: 'Overview',
     value: 'overview',
     content: (
       <>
-        <Section className="rounded-md" contentClassName="grid gap-4 pt-5">
-          <div className="grid gap-4 md:grid-cols-2">
+        <Section className="rounded-md border-border/70 shadow-none" contentClassName="grid gap-3 px-4 pb-4 pt-3">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             <div className="grid min-h-[4.75rem] gap-2"><Label className={fieldErrors.name ? 'text-destructive' : undefined}>Name</Label><Input className={inputErrorClassName(Boolean(fieldErrors.name))} value={values.name} onChange={(event) => setValues((current) => ({ ...current, name: event.target.value }))} /><FieldError message={fieldErrors.name} /></div>
             <div className="grid gap-2"><Label>Slug</Label><Input value={values.slug} onChange={(event) => setValues((current) => ({ ...current, slug: event.target.value }))} /></div>
             <div className="grid gap-2"><Label>SKU</Label><Input value={values.sku} onChange={(event) => setValues((current) => ({ ...current, sku: event.target.value }))} /></div>
@@ -490,35 +775,95 @@ export function ProductFormPage() {
             <LookupSelect label="HSN Code" value={values.hsnCodeId} options={hsnCodes} moduleKey="hsnCodes" onItemsChange={setHsnCodes} onChange={(value) => setValues((current) => ({ ...current, hsnCodeId: value ?? '1' }))} />
             <LookupSelect label="Tax" value={values.taxId} options={taxes} moduleKey="taxes" onItemsChange={setTaxes} onChange={(value) => setValues((current) => ({ ...current, taxId: value ?? '1' }))} />
             <LookupSelect label="Style" value={values.styleId} options={styles} moduleKey="styles" onItemsChange={setStyles} onChange={(value) => setValues((current) => ({ ...current, styleId: value ?? '1' }))} />
-            <div className="grid gap-2"><Label>Base Price</Label><Input type="number" step="0.01" value={values.basePrice} onChange={(event) => setValues((current) => ({ ...current, basePrice: Number(event.target.value || 0) }))} /></div>
-            <div className="grid gap-2"><Label>Cost Price</Label><Input type="number" step="0.01" value={values.costPrice} onChange={(event) => setValues((current) => ({ ...current, costPrice: Number(event.target.value || 0) }))} /></div>
-            <div className="grid gap-2 md:col-span-2"><Label>Short Description</Label><Input value={values.shortDescription} onChange={(event) => setValues((current) => ({ ...current, shortDescription: event.target.value }))} /></div>
-            <div className="grid gap-2 md:col-span-2"><Label>Description</Label><Textarea rows={4} value={values.description} onChange={(event) => setValues((current) => ({ ...current, description: event.target.value }))} /></div>
-            <label className="flex items-center gap-3"><Checkbox checked={values.hasVariants} onCheckedChange={(checked) => setValues((current) => ({ ...current, hasVariants: Boolean(checked) }))} /><span className="text-sm font-medium">Has variants</span></label>
-            <label className="flex items-center gap-3"><Checkbox checked={values.isFeatured} onCheckedChange={(checked) => setValues((current) => ({ ...current, isFeatured: Boolean(checked) }))} /><span className="text-sm font-medium">Featured product</span></label>
-            <label className="flex items-center gap-3 md:col-span-2"><Checkbox checked={values.isActive} onCheckedChange={(checked) => setValues((current) => ({ ...current, isActive: Boolean(checked) }))} /><span className="text-sm font-medium">Active product</span></label>
           </div>
         </Section>
-        <Section title="Images" description="Product gallery and merchandising visuals." addLabel="Add Image" onAdd={() => setValues((current) => ({ ...current, images: [...current.images, emptyImage()] }))}>
-          {values.images.map((image, index) => (
-            <Row key={`image-${index}`} onRemove={() => setValues((current) => ({ ...current, images: current.images.filter((_, rowIndex) => rowIndex !== index) }))}>
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="md:col-span-2">
-                  <MediaImageField
-                    label="Image"
-                    value={image.imageUrl}
-                    onChange={(value) => setValues((current) => ({
-                      ...current,
-                      images: current.images.map((entry, rowIndex) => rowIndex === index ? { ...entry, imageUrl: value } : entry),
-                    }))}
-                    description="Choose a public media asset or upload a new catalog image."
-                  />
+        <Section title="Images" description="Compact product gallery for storefront and merchandising." className="rounded-md border-border/70 shadow-none" contentClassName="grid gap-3 px-4 pb-4 pt-3">
+          <input
+            ref={productImageInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            multiple
+            className="hidden"
+            onChange={(event) => { void handleProductImageUpload(event) }}
+          />
+
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.05rem] border border-border/70 bg-muted/15 px-3 py-2.5">
+            <div>
+              <p className="text-sm font-medium text-foreground">Product gallery</p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">{PRODUCT_IMAGE_HELP}</p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => productImageInputRef.current?.click()}
+              disabled={uploadingImages || values.images.length >= MAX_PRODUCT_IMAGES}
+            >
+              {uploadingImages ? <Upload className="size-4 animate-pulse" /> : <ImagePlus className="size-4" />}
+              {uploadingImages ? 'Uploading...' : 'Media'}
+            </Button>
+          </div>
+
+          {values.images.length > 0 ? (
+            <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-5">
+              {values.images.map((image, index) => (
+                <div key={`image-${index}`} className="overflow-hidden rounded-[1rem] border border-border/70 bg-background/80">
+                  <button
+                    type="button"
+                    className="group relative block h-28 w-full overflow-hidden bg-muted/30"
+                    onClick={() => setPreviewImageUrl(image.imageUrl)}
+                  >
+                    <img src={image.imageUrl} alt={`Product image ${index + 1}`} className="h-full w-full object-cover" loading="lazy" decoding="async" />
+                    <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/55 to-transparent px-3 py-2 text-xs text-white">
+                      <span>{image.isPrimary ? 'Primary' : `Image ${index + 1}`}</span>
+                      <Expand className="size-3.5 opacity-90" />
+                    </div>
+                  </button>
+                  <div className="flex items-center justify-between gap-2 px-2.5 py-2.5">
+                    <Button
+                      type="button"
+                      variant={image.isPrimary ? 'secondary' : 'ghost'}
+                      size="sm"
+                      onClick={() => setValues((current) => ({
+                        ...current,
+                        images: current.images.map((entry, rowIndex) => ({
+                          ...entry,
+                          isPrimary: rowIndex === index,
+                          sortOrder: rowIndex,
+                        })),
+                      }))}
+                    >
+                      <Star className="size-4" />
+                      {image.isPrimary ? 'Primary' : 'Set primary'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setValues((current) => {
+                        const nextImages = current.images.filter((_, rowIndex) => rowIndex !== index).map((entry, rowIndex) => ({
+                          ...entry,
+                          sortOrder: rowIndex,
+                        }))
+
+                        if (nextImages.length > 0 && !nextImages.some((entry) => entry.isPrimary)) {
+                          nextImages[0] = { ...nextImages[0], isPrimary: true }
+                        }
+
+                        return { ...current, images: nextImages }
+                      })}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="grid gap-2"><Label>Sort Order</Label><Input type="number" value={image.sortOrder} onChange={(event) => setValues((current) => ({ ...current, images: current.images.map((entry, rowIndex) => rowIndex === index ? { ...entry, sortOrder: Number(event.target.value || 0) } : entry) }))} /></div>
-                <label className="flex items-center gap-3 md:col-span-3"><Checkbox checked={image.isPrimary} onCheckedChange={(checked) => setValues((current) => ({ ...current, images: current.images.map((entry, rowIndex) => rowIndex === index ? { ...entry, isPrimary: Boolean(checked) } : entry) }))} /><span className="text-sm font-medium">Primary image</span></label>
-              </div>
-            </Row>
-          ))}
+              ))}
+            </div>
+          ) : (
+            <div className="flex h-32 items-center justify-center rounded-[1.2rem] border border-dashed border-border/70 bg-background/60 px-4 text-sm text-muted-foreground">
+              No product images added yet.
+            </div>
+          )}
         </Section>
       </>
     ),
@@ -528,32 +873,171 @@ export function ProductFormPage() {
     label: 'Attributes',
     value: 'attributes',
     content: (
-      <Section title="Attributes" description="Catalog attributes and available values for this product." addLabel="Add Attribute" onAdd={() => setValues((current) => ({ ...current, attributes: [...current.attributes, emptyAttribute()] }))}>
+      <Section
+        title="Attributes"
+        description="Keep the base attribute list simple for color, size, fabric, and other option groups."
+        onAdd={() => setValues((current) => ({ ...current, attributes: [...current.attributes, emptyAttribute()] }))}
+        addLabel="Add Attribute"
+        headerAction={(
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setValues((current) => ({
+                ...current,
+                hasVariants: true,
+                variants: buildVariantMatrix(current),
+              }))}
+            >
+              <Boxes className="size-4" />
+              Set Variables
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => setValues((current) => ({ ...current, attributes: [...current.attributes, emptyAttribute()] }))}>
+              <Plus className="size-4" />
+              Add Attribute
+            </Button>
+          </div>
+        )}
+      >
         {values.attributes.map((attribute, index) => (
-          <Row key={attribute.clientKey} onRemove={() => setValues((current) => ({ ...current, attributes: current.attributes.filter((entry) => entry.clientKey !== attribute.clientKey), attributeValues: current.attributeValues.filter((entry) => entry.attributeClientKey !== attribute.clientKey) }))}>
-            <div className="grid gap-4">
-              <div className="grid gap-2"><Label>Attribute Name</Label><Input value={attribute.name} onChange={(event) => setValues((current) => ({ ...current, attributes: current.attributes.map((entry, rowIndex) => rowIndex === index ? { ...entry, name: event.target.value } : entry) }))} /></div>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label>Attribute Values</Label>
-                  <Button type="button" variant="outline" size="sm" onClick={() => setValues((current) => ({ ...current, attributeValues: [...current.attributeValues, emptyAttributeValue(attribute.clientKey)] }))}>
-                    <Plus className="size-4" />
-                    Add Value
+          <Row removePosition="none" badge={index + 1} key={attribute.clientKey} onRemove={() => setValues((current) => ({ ...current, attributes: current.attributes.filter((entry) => entry.clientKey !== attribute.clientKey), attributeValues: current.attributeValues.filter((entry) => entry.attributeClientKey !== attribute.clientKey) }))}>
+            <div className="grid items-start gap-1.5 lg:grid-cols-2">
+              <div className="self-start overflow-hidden rounded-md border border-border/60 bg-white">
+                <div className="grid grid-cols-[110px_minmax(0,1fr)] text-sm">
+                  <div className="flex items-center border-r border-border/60 bg-muted/30 px-3 py-1.5 font-medium text-muted-foreground">Name</div>
+                  <div className="bg-white px-2 py-1.5">
+                    <Input className="h-8 w-full border-0 bg-white px-2 shadow-none focus-visible:ring-0" placeholder="Color" value={attribute.name} onChange={(event) => setValues((current) => ({ ...current, attributes: current.attributes.map((entry, rowIndex) => rowIndex === index ? { ...entry, name: event.target.value } : entry) }))} />
+                  </div>
+                </div>
+                <div className="flex justify-start border-t border-border/60 bg-white px-2 py-1.5">
+                  <Button type="button" variant="ghost" size="sm" className="h-8 px-2" onClick={() => setValues((current) => ({ ...current, attributes: current.attributes.filter((entry) => entry.clientKey !== attribute.clientKey), attributeValues: current.attributeValues.filter((entry) => entry.attributeClientKey !== attribute.clientKey) }))}>
+                    <Trash2 className="size-4" />
+                    Remove
                   </Button>
                 </div>
-                {values.attributeValues.filter((entry) => entry.attributeClientKey === attribute.clientKey).map((value) => (
-                  <div key={value.clientKey} className="flex gap-3">
-                    <Input value={value.value} onChange={(event) => setValues((current) => ({ ...current, attributeValues: current.attributeValues.map((entry) => entry.clientKey === value.clientKey ? { ...entry, value: event.target.value } : entry) }))} />
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setValues((current) => ({ ...current, attributeValues: current.attributeValues.filter((entry) => entry.clientKey !== value.clientKey) }))}>
-                      <Trash2 className="size-4" />
+              </div>
+              <div className="space-y-1">
+                <div className="overflow-hidden rounded-md bg-white">
+                  <div className="flex items-center justify-end bg-white px-2 py-1.5">
+                    <Button type="button" variant="outline" size="sm" onClick={() => setValues((current) => ({ ...current, attributeValues: [...current.attributeValues, emptyAttributeValue(attribute.clientKey)] }))}>
+                      <Plus className="size-4" />
+                      Add Value
                     </Button>
                   </div>
-                ))}
+                  <div className="space-y-1 p-1">
+                    {values.attributeValues.filter((entry) => entry.attributeClientKey === attribute.clientKey).map((value) => (
+                      <div key={value.clientKey} className="overflow-hidden rounded-md border border-border/60 bg-white">
+                        <div className="grid grid-cols-[110px_minmax(0,1fr)_48px]">
+                          <div className="flex items-center border-r border-border/60 bg-muted/30 px-3 py-1.5 text-sm font-medium text-muted-foreground">Value</div>
+                          <div className="bg-white px-2 py-1.5">
+                            <Input className="h-8 w-full border-0 bg-white px-2 shadow-none focus-visible:ring-0" placeholder="Red" value={value.value} onChange={(event) => setValues((current) => ({ ...current, attributeValues: current.attributeValues.map((entry) => entry.clientKey === value.clientKey ? { ...entry, value: event.target.value } : entry) }))} />
+                          </div>
+                          <div className="flex items-center justify-center border-l border-border/60 bg-white px-1.5 py-1.5">
+                            <Button type="button" variant="ghost" size="icon" className="size-8" onClick={() => setValues((current) => ({ ...current, attributeValues: current.attributeValues.filter((entry) => entry.clientKey !== value.clientKey) }))}>
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </Row>
         ))}
       </Section>
+    ),
+  }
+
+  const contentTab: AnimatedContentTab = {
+    label: 'Content',
+    value: 'content',
+    content: (
+      <Section title="Descriptions" description="Short and full product copy for catalog and detail pages." className="rounded-md border-border/70 shadow-none" contentClassName="grid gap-3 px-4 pb-4 pt-3">
+        <div className="grid gap-3">
+          <div className="grid gap-2">
+            <Label>Short Description</Label>
+            <Input value={values.shortDescription} onChange={(event) => setValues((current) => ({ ...current, shortDescription: event.target.value }))} />
+          </div>
+          <div className="grid gap-2">
+            <Label>Description</Label>
+            <Textarea rows={5} value={values.description} onChange={(event) => setValues((current) => ({ ...current, description: event.target.value }))} />
+          </div>
+        </div>
+      </Section>
+    ),
+  }
+
+  const settingsTab: AnimatedContentTab = {
+    label: 'Settings',
+    value: 'settings',
+    content: (
+      <>
+        <Section title="Slug" description="Keep URL naming automatic or override it manually." className="rounded-md border-border/70 shadow-none" contentClassName="grid gap-3 px-4 pb-4 pt-3">
+          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+            <div className="grid gap-2">
+              <Label>New Slug</Label>
+              <Input value={values.slug} onChange={(event) => setValues((current) => ({ ...current, slug: event.target.value }))} />
+            </div>
+            <div className="flex items-end gap-3">
+              <label className="flex h-9 items-center gap-2 rounded-md border border-border/70 px-3 text-sm text-muted-foreground">
+                <Checkbox checked={autoSlugEnabled} onCheckedChange={(checked) => setAutoSlugEnabled(Boolean(checked))} />
+                Auto slug
+              </label>
+              <Button type="button" variant="outline" onClick={() => setValues((current) => ({ ...current, slug: slugifyProductName(current.name) }))}>
+                New Slug
+              </Button>
+            </div>
+          </div>
+        </Section>
+        <Section title="SKU" description="Use automatic numbering or maintain the product code directly." className="rounded-md border-border/70 shadow-none" contentClassName="grid gap-3 px-4 pb-4 pt-3">
+          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_140px_120px_100px]">
+            <div className="grid gap-2">
+              <div className="flex items-center justify-between gap-3">
+                <Label>SKU</Label>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Checkbox checked={autoSkuEnabled} onCheckedChange={(checked) => setAutoSkuEnabled(Boolean(checked))} />
+                  Auto numbering
+                </label>
+              </div>
+              <Input value={values.sku} onChange={(event) => setValues((current) => ({ ...current, sku: event.target.value }))} />
+            </div>
+            <div className="grid gap-2">
+              <Label>Prefix</Label>
+              <Input value={skuPrefix} onChange={(event) => setSkuPrefix(event.target.value)} />
+            </div>
+            <div className="grid gap-2">
+              <Label>Next No.</Label>
+              <Input value={skuNextNumber} onChange={(event) => setSkuNextNumber(event.target.value)} />
+            </div>
+            <div className="grid gap-2">
+              <Label>Digits</Label>
+              <Input type="number" min="2" max="8" value={skuDigits} onChange={(event) => setSkuDigits(Number(event.target.value || 4))} />
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <Button type="button" variant="outline" onClick={() => setValues((current) => ({ ...current, sku: buildAutoSku(skuPrefix, skuNextNumber, skuDigits) }))}>
+              New SKU
+            </Button>
+          </div>
+        </Section>
+        <Section title="Product Settings" description="Control product status and sales structure." className="rounded-md border-border/70 shadow-none" contentClassName="grid gap-2 px-4 pb-4 pt-3 md:grid-cols-3">
+          <label className="flex items-center gap-3 rounded-md border border-border/70 px-3 py-2.5">
+            <Checkbox checked={values.hasVariants} onCheckedChange={(checked) => setValues((current) => ({ ...current, hasVariants: Boolean(checked) }))} />
+            <span className="text-sm font-medium">Has variants</span>
+          </label>
+          <label className="flex items-center gap-3 rounded-md border border-border/70 px-3 py-2.5">
+            <Checkbox checked={values.isFeatured} onCheckedChange={(checked) => setValues((current) => ({ ...current, isFeatured: Boolean(checked) }))} />
+            <span className="text-sm font-medium">Featured product</span>
+          </label>
+          <label className="flex items-center gap-3 rounded-md border border-border/70 px-3 py-2.5">
+            <Checkbox checked={values.isActive} onCheckedChange={(checked) => setValues((current) => ({ ...current, isActive: Boolean(checked) }))} />
+            <span className="text-sm font-medium">Active product</span>
+          </label>
+        </Section>
+      </>
     ),
   }
 
@@ -561,66 +1045,110 @@ export function ProductFormPage() {
     label: 'Variants',
     value: 'variants',
     content: (
-      <Section title="Variants" description="Sellable variant rows, their media, and attribute labels." addLabel="Add Variant" onAdd={() => setValues((current) => ({ ...current, variants: [...current.variants, emptyVariant()] }))}>
+      <Section title="Variants" description="Keep variants focused on option identity, media, and active state." addLabel="Add Variant" onAdd={() => setValues((current) => ({ ...current, variants: [...current.variants, emptyVariant()] }))} className="border-0 bg-transparent shadow-none" contentClassName="grid gap-3 px-0 pb-0 pt-2">
         {values.variants.map((variant, index) => (
-          <Row key={variant.clientKey} onRemove={() => setValues((current) => ({ ...current, variants: current.variants.filter((entry) => entry.clientKey !== variant.clientKey), prices: current.prices.map((entry) => entry.variantClientKey === variant.clientKey ? { ...entry, variantClientKey: null } : entry), discounts: current.discounts.map((entry) => entry.variantClientKey === variant.clientKey ? { ...entry, variantClientKey: null } : entry), stockItems: current.stockItems.map((entry) => entry.variantClientKey === variant.clientKey ? { ...entry, variantClientKey: null } : entry), stockMovements: current.stockMovements.map((entry) => entry.variantClientKey === variant.clientKey ? { ...entry, variantClientKey: null } : entry) }))}>
-            <div className="grid gap-4">
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="grid gap-2"><Label>Variant Name</Label><Input value={variant.variantName} onChange={(event) => setValues((current) => ({ ...current, variants: current.variants.map((entry, rowIndex) => rowIndex === index ? { ...entry, variantName: event.target.value } : entry) }))} /></div>
-                <div className="grid gap-2"><Label>Variant SKU</Label><Input value={variant.sku} onChange={(event) => setValues((current) => ({ ...current, variants: current.variants.map((entry, rowIndex) => rowIndex === index ? { ...entry, sku: event.target.value } : entry) }))} /></div>
-                <div className="grid gap-2"><Label>Barcode</Label><Input value={variant.barcode ?? ''} onChange={(event) => setValues((current) => ({ ...current, variants: current.variants.map((entry, rowIndex) => rowIndex === index ? { ...entry, barcode: event.target.value || null } : entry) }))} /></div>
-                <div className="grid gap-2"><Label>Price</Label><Input type="number" step="0.01" value={variant.price} onChange={(event) => setValues((current) => ({ ...current, variants: current.variants.map((entry, rowIndex) => rowIndex === index ? { ...entry, price: Number(event.target.value || 0) } : entry) }))} /></div>
-                <div className="grid gap-2"><Label>Cost Price</Label><Input type="number" step="0.01" value={variant.costPrice} onChange={(event) => setValues((current) => ({ ...current, variants: current.variants.map((entry, rowIndex) => rowIndex === index ? { ...entry, costPrice: Number(event.target.value || 0) } : entry) }))} /></div>
-                <div className="grid gap-2"><Label>Weight</Label><Input type="number" step="0.01" value={variant.weight ?? ''} onChange={(event) => setValues((current) => ({ ...current, variants: current.variants.map((entry, rowIndex) => rowIndex === index ? { ...entry, weight: event.target.value ? Number(event.target.value) : null } : entry) }))} /></div>
-                <div className="grid gap-2"><Label>Stock Quantity</Label><Input type="number" step="0.01" value={variant.stockQuantity} onChange={(event) => setValues((current) => ({ ...current, variants: current.variants.map((entry, rowIndex) => rowIndex === index ? { ...entry, stockQuantity: Number(event.target.value || 0) } : entry) }))} /></div>
-                <div className="grid gap-2"><Label>Opening Stock</Label><Input type="number" step="0.01" value={variant.openingStock} onChange={(event) => setValues((current) => ({ ...current, variants: current.variants.map((entry, rowIndex) => rowIndex === index ? { ...entry, openingStock: Number(event.target.value || 0) } : entry) }))} /></div>
-                <label className="flex items-center gap-3 pt-8"><Checkbox checked={variant.isActive} onCheckedChange={(checked) => setValues((current) => ({ ...current, variants: current.variants.map((entry, rowIndex) => rowIndex === index ? { ...entry, isActive: Boolean(checked) } : entry) }))} /><span className="text-sm font-medium">Active variant</span></label>
+          <Row key={variant.clientKey} badge={index + 1} onRemove={() => setValues((current) => ({ ...current, variants: current.variants.filter((entry) => entry.clientKey !== variant.clientKey), prices: current.prices.map((entry) => entry.variantClientKey === variant.clientKey ? { ...entry, variantClientKey: null } : entry), discounts: current.discounts.map((entry) => entry.variantClientKey === variant.clientKey ? { ...entry, variantClientKey: null } : entry), stockItems: current.stockItems.map((entry) => entry.variantClientKey === variant.clientKey ? { ...entry, variantClientKey: null } : entry), stockMovements: current.stockMovements.map((entry) => entry.variantClientKey === variant.clientKey ? { ...entry, variantClientKey: null } : entry) }))}>
+            <div className="grid gap-2 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1fr)]">
+              <div className="grid content-start gap-2">
+                <div className="overflow-hidden rounded-md border border-border/60 bg-white">
+                  <div className="grid grid-cols-[132px_minmax(0,1fr)] divide-y divide-border/60 text-sm">
+                    <div className="flex items-center border-r border-border/60 bg-muted/30 px-3 py-1.5 font-medium text-muted-foreground">Variant Name</div>
+                    <div className="bg-white px-2 py-1.5"><Input className="h-8 w-full border-0 bg-white px-2 shadow-none focus-visible:ring-0" value={variant.variantName} onChange={(event) => setValues((current) => ({ ...current, variants: current.variants.map((entry, rowIndex) => rowIndex === index ? { ...entry, variantName: event.target.value } : entry) }))} /></div>
+                    <div className="flex items-center border-r border-border/60 bg-muted/30 px-3 py-1.5 font-medium text-muted-foreground">SKU</div>
+                    <div className="bg-white px-2 py-1.5"><Input className="h-8 w-full border-0 bg-white px-2 shadow-none focus-visible:ring-0" value={variant.sku} onChange={(event) => setValues((current) => ({ ...current, variants: current.variants.map((entry, rowIndex) => rowIndex === index ? { ...entry, sku: event.target.value } : entry) }))} /></div>
+                    <div className="flex items-center border-r border-border/60 bg-muted/30 px-3 py-1.5 font-medium text-muted-foreground">Status</div>
+                    <div className="bg-white px-2 py-1.5">
+                      <label className="flex items-center gap-2 px-2 py-1.5">
+                        <Checkbox checked={variant.isActive} onCheckedChange={(checked) => setValues((current) => ({ ...current, variants: current.variants.map((entry, rowIndex) => rowIndex === index ? { ...entry, isActive: Boolean(checked) } : entry) }))} />
+                        <span className="text-sm font-medium">Active variant</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                {variant.images.slice(0, 1).map((image, imageIndex) => (
+                  <div key={`${variant.clientKey}-image-${imageIndex}`} className="rounded-md border border-border/60 bg-background/80 p-2">
+                    <div className="grid gap-2 md:grid-cols-[190px_minmax(0,1fr)]">
+                      <div>
+                        {image.imageUrl ? (
+                          <button
+                            type="button"
+                            className="group relative block aspect-square w-full overflow-hidden rounded-[0.9rem] border border-border/60 bg-muted/30"
+                            onClick={() => setPreviewImageUrl(image.imageUrl)}
+                          >
+                            <img src={image.imageUrl} alt="Variant image" className="h-full w-full object-cover" loading="lazy" decoding="async" />
+                            <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/55 to-transparent px-3 py-2 text-xs text-white">
+                              <span>Primary</span>
+                              <Expand className="size-3.5 opacity-90" />
+                            </div>
+                          </button>
+                        ) : (
+                          <div className="flex aspect-square w-full items-center justify-center rounded-[0.9rem] border border-dashed border-border/60 bg-muted/15 px-3 text-xs text-muted-foreground">
+                            Add image
+                          </div>
+                        )}
+                      </div>
+                      <div className="grid content-start gap-2">
+                        <MediaImageField
+                          label=""
+                          value={image.imageUrl}
+                          showPreview={false}
+                          onChange={(value) => setValues((current) => ({
+                            ...current,
+                            variants: current.variants.map((entry, rowIndex) => rowIndex === index ? {
+                              ...entry,
+                              images: [{ ...(entry.images[0] ?? emptyVariantImage(true)), imageUrl: value, isPrimary: true }],
+                            } : entry),
+                          }))}
+                        />
+                        <div className="flex items-center gap-2">
+                          <Button type="button" size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
+                            <Star className="size-4" />
+                            Primary
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label>Variant Attributes</Label>
+              <div className="overflow-hidden rounded-md border border-border/60 bg-white">
+                <div className="flex items-center justify-end bg-white px-2 py-1.5">
                   <Button type="button" variant="outline" size="sm" onClick={() => setValues((current) => ({ ...current, variants: current.variants.map((entry, rowIndex) => rowIndex === index ? { ...entry, attributes: [...entry.attributes, emptyVariantAttribute()] } : entry) }))}>
                     <Plus className="size-4" />
-                    Add Variant Attribute
+                    Add Variant Name
                   </Button>
                 </div>
-                {variant.attributes.map((attribute, attributeIndex) => (
-                  <div key={`${variant.clientKey}-attribute-${attributeIndex}`} className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
-                    <Input placeholder="Attribute" value={attribute.attributeName} onChange={(event) => setValues((current) => ({ ...current, variants: current.variants.map((entry, rowIndex) => rowIndex === index ? { ...entry, attributes: entry.attributes.map((attributeEntry, nestedIndex) => nestedIndex === attributeIndex ? { ...attributeEntry, attributeName: event.target.value } : attributeEntry) } : entry) }))} />
-                    <Input placeholder="Value" value={attribute.attributeValue} onChange={(event) => setValues((current) => ({ ...current, variants: current.variants.map((entry, rowIndex) => rowIndex === index ? { ...entry, attributes: entry.attributes.map((attributeEntry, nestedIndex) => nestedIndex === attributeIndex ? { ...attributeEntry, attributeValue: event.target.value } : attributeEntry) } : entry) }))} />
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setValues((current) => ({ ...current, variants: current.variants.map((entry, rowIndex) => rowIndex === index ? { ...entry, attributes: entry.attributes.filter((_, nestedIndex) => nestedIndex !== attributeIndex) } : entry) }))}>
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label>Variant Images</Label>
-                  <Button type="button" variant="outline" size="sm" onClick={() => setValues((current) => ({ ...current, variants: current.variants.map((entry, rowIndex) => rowIndex === index ? { ...entry, images: [...entry.images, emptyVariantImage()] } : entry) }))}>
-                    <Plus className="size-4" />
-                    Add Variant Image
-                  </Button>
+                <div className="space-y-1 p-1">
+                  {variant.attributes.map((attribute, attributeIndex) => (
+                    <div key={`${variant.clientKey}-attribute-${attributeIndex}`} className="overflow-hidden rounded-md border border-border/60 bg-white">
+                      <div className="grid grid-cols-[110px_minmax(0,1fr)_48px]">
+                        <div className="flex items-center border-r border-border/60 bg-muted/30 px-3 py-1.5 text-sm font-medium text-muted-foreground">Name</div>
+                        <div className="bg-white px-2 py-1.5">
+                          <Input
+                            className="h-8 w-full border-0 bg-white px-2 shadow-none focus-visible:ring-0"
+                            placeholder="Weight"
+                            value={attribute.attributeName}
+                            onChange={(event) => setValues((current) => ({ ...current, variants: current.variants.map((entry, rowIndex) => rowIndex === index ? { ...entry, attributes: entry.attributes.map((attributeEntry, nestedIndex) => nestedIndex === attributeIndex ? { ...attributeEntry, attributeName: event.target.value } : attributeEntry) } : entry) }))}
+                          />
+                        </div>
+                        <div className="row-span-2 flex items-center justify-center border-l border-border/60 bg-white px-1.5 py-1.5">
+                          <Button type="button" variant="ghost" size="icon" className="size-8" onClick={() => setValues((current) => ({ ...current, variants: current.variants.map((entry, rowIndex) => rowIndex === index ? { ...entry, attributes: entry.attributes.filter((_, nestedIndex) => nestedIndex !== attributeIndex) } : entry) }))}>
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
+                        <div className="flex items-center border-r border-t border-border/60 bg-muted/30 px-3 py-1.5 text-sm font-medium text-muted-foreground">Value</div>
+                        <div className="border-t border-border/60 bg-white px-2 py-1.5">
+                          <Input
+                            className="h-8 w-full border-0 bg-white px-2 shadow-none focus-visible:ring-0"
+                            placeholder="12"
+                            value={attribute.attributeValue}
+                            onChange={(event) => setValues((current) => ({ ...current, variants: current.variants.map((entry, rowIndex) => rowIndex === index ? { ...entry, attributes: entry.attributes.map((attributeEntry, nestedIndex) => nestedIndex === attributeIndex ? { ...attributeEntry, attributeValue: event.target.value } : attributeEntry) } : entry) }))}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                {variant.images.map((image, imageIndex) => (
-                  <div key={`${variant.clientKey}-image-${imageIndex}`} className="grid gap-3 md:grid-cols-[1fr_auto_auto]">
-                    <MediaImageField
-                      label="Variant Image"
-                      value={image.imageUrl}
-                      onChange={(value) => setValues((current) => ({
-                        ...current,
-                        variants: current.variants.map((entry, rowIndex) => rowIndex === index ? {
-                          ...entry,
-                          images: entry.images.map((imageEntry, nestedIndex) => nestedIndex === imageIndex ? { ...imageEntry, imageUrl: value } : imageEntry),
-                        } : entry),
-                      }))}
-                    />
-                    <label className="flex items-center gap-3"><Checkbox checked={image.isPrimary} onCheckedChange={(checked) => setValues((current) => ({ ...current, variants: current.variants.map((entry, rowIndex) => rowIndex === index ? { ...entry, images: entry.images.map((imageEntry, nestedIndex) => nestedIndex === imageIndex ? { ...imageEntry, isPrimary: Boolean(checked) } : imageEntry) } : entry) }))} /><span className="text-sm">Primary</span></label>
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setValues((current) => ({ ...current, variants: current.variants.map((entry, rowIndex) => rowIndex === index ? { ...entry, images: entry.images.filter((_, nestedIndex) => nestedIndex !== imageIndex) } : entry) }))}>
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
-                ))}
               </div>
             </div>
           </Row>
@@ -629,32 +1157,115 @@ export function ProductFormPage() {
     ),
   }
 
-  const commerceTab: AnimatedContentTab = {
-    label: 'Commerce',
-    value: 'commerce',
+  const pricingTab: AnimatedContentTab = {
+    label: 'Pricing',
+    value: 'pricing',
     content: (
       <>
-        <Section title="Prices" description="List, sell, and cost price rows for product or variant scope." addLabel="Add Price" onAdd={() => setValues((current) => ({ ...current, prices: [...current.prices, emptyPrice()] }))}>
-          {values.prices.map((price, index) => (
-            <Row key={`price-${index}`} onRemove={() => setValues((current) => ({ ...current, prices: current.prices.filter((_, rowIndex) => rowIndex !== index) }))}>
-              <div className="grid gap-4 md:grid-cols-4">
-                <VariantSelect label="Variant Scope" value={price.variantClientKey} variants={values.variants} onChange={(value) => setValues((current) => ({ ...current, prices: current.prices.map((entry, rowIndex) => rowIndex === index ? { ...entry, variantClientKey: value } : entry) }))} />
-                <div className="grid gap-2"><Label>MRP</Label><Input type="number" step="0.01" value={price.mrp} onChange={(event) => setValues((current) => ({ ...current, prices: current.prices.map((entry, rowIndex) => rowIndex === index ? { ...entry, mrp: Number(event.target.value || 0) } : entry) }))} /></div>
-                <div className="grid gap-2"><Label>Selling Price</Label><Input type="number" step="0.01" value={price.sellingPrice} onChange={(event) => setValues((current) => ({ ...current, prices: current.prices.map((entry, rowIndex) => rowIndex === index ? { ...entry, sellingPrice: Number(event.target.value || 0) } : entry) }))} /></div>
-                <div className="grid gap-2"><Label>Cost Price</Label><Input type="number" step="0.01" value={price.costPrice} onChange={(event) => setValues((current) => ({ ...current, prices: current.prices.map((entry, rowIndex) => rowIndex === index ? { ...entry, costPrice: Number(event.target.value || 0) } : entry) }))} /></div>
+        <Section title="Product Pricing" description="Keep product-level pricing separate from variant identity." className="rounded-md border-border/70 shadow-none" contentClassName="grid gap-3 px-4 pb-4 pt-3">
+          <div className="overflow-hidden rounded-md border border-border/60 bg-white">
+            <div className="grid grid-cols-[132px_minmax(0,1fr)] border-b border-border/60 text-sm lg:grid-cols-[132px_minmax(0,1fr)_132px_minmax(0,1fr)]">
+              <div className="flex items-center border-r border-border/60 bg-muted/30 px-3 py-1.5 font-medium text-muted-foreground">Base Price</div>
+              <div className="bg-white px-2 py-1.5 lg:border-r lg:border-border/60">
+                <Input className="h-8 w-full border-0 bg-white px-2 shadow-none focus-visible:ring-0" type="number" step="0.01" value={values.basePrice} onChange={(event) => setValues((current) => ({ ...current, basePrice: Number(event.target.value || 0) }))} />
               </div>
-            </Row>
-          ))}
+              <div className="flex items-center border-r border-border/60 bg-muted/30 px-3 py-1.5 font-medium text-muted-foreground lg:border-l lg:border-border/60">Purchase Price</div>
+              <div className="bg-white px-2 py-1.5">
+                <Input className="h-8 w-full border-0 bg-white px-2 shadow-none focus-visible:ring-0" type="number" step="0.01" value={values.costPrice} onChange={(event) => setValues((current) => ({ ...current, costPrice: Number(event.target.value || 0) }))} />
+              </div>
+            </div>
+          </div>
+        </Section>
+        <Section title="Prices" description="List, sell, and cost price rows for product or variant scope." addLabel="Add Price" onAdd={() => setValues((current) => ({ ...current, prices: [...current.prices, emptyPrice()] }))}>
+          <div className="overflow-hidden rounded-md border border-border/60 bg-white">
+            <div className="hidden grid-cols-[minmax(0,1.25fr)_140px_140px_140px_56px] border-b border-border/60 bg-muted/20 text-xs font-semibold uppercase tracking-wide text-muted-foreground lg:grid">
+              <div className="px-3 py-2">Variant Scope</div>
+              <div className="border-l border-border/60 px-3 py-2">Purchase</div>
+              <div className="border-l border-border/60 px-3 py-2">Sell</div>
+              <div className="border-l border-border/60 px-3 py-2">MRP</div>
+              <div className="border-l border-border/60 px-3 py-2 text-center">Action</div>
+            </div>
+            {values.prices.map((price, index) => (
+              <div key={`price-${index}`} className="border-b border-border/60 last:border-b-0">
+                <div className="grid gap-0 lg:grid-cols-[minmax(0,1.25fr)_140px_140px_140px_56px]">
+                  <div className="border-border/60 bg-white px-2 py-2 lg:border-r">
+                    <Label className="px-1 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground lg:hidden">Variant Scope</Label>
+                    <select
+                      value={price.variantClientKey ?? ''}
+                      onChange={(event) => setValues((current) => ({ ...current, prices: current.prices.map((entry, rowIndex) => rowIndex === index ? { ...entry, variantClientKey: event.target.value || null } : entry) }))}
+                      className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/20 lg:h-8 lg:border-0 lg:bg-white lg:px-2 lg:shadow-none lg:focus-visible:ring-0"
+                    >
+                      <option value="">Product level</option>
+                      {values.variants.map((variant) => (
+                        <option key={variant.clientKey} value={variant.clientKey}>
+                          {variant.variantName || variant.sku || variant.clientKey}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="border-t border-border/60 bg-white px-2 py-2 lg:border-l lg:border-t-0">
+                    <Label className="px-1 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground lg:hidden">Purchase</Label>
+                    <Input className="h-8 w-full border-input bg-white px-2 lg:border-0 lg:shadow-none lg:focus-visible:ring-0" type="number" step="0.01" value={price.costPrice} onChange={(event) => setValues((current) => ({ ...current, prices: current.prices.map((entry, rowIndex) => rowIndex === index ? { ...entry, costPrice: Number(event.target.value || 0) } : entry) }))} />
+                  </div>
+                  <div className="border-t border-border/60 bg-white px-2 py-2 lg:border-l lg:border-t-0">
+                    <Label className="px-1 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground lg:hidden">Sell</Label>
+                    <Input className="h-8 w-full border-input bg-white px-2 lg:border-0 lg:shadow-none lg:focus-visible:ring-0" type="number" step="0.01" value={price.sellingPrice} onChange={(event) => setValues((current) => ({ ...current, prices: current.prices.map((entry, rowIndex) => rowIndex === index ? { ...entry, sellingPrice: Number(event.target.value || 0) } : entry) }))} />
+                  </div>
+                  <div className="border-t border-border/60 bg-white px-2 py-2 lg:border-l lg:border-t-0">
+                    <Label className="px-1 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground lg:hidden">MRP</Label>
+                    <Input className="h-8 w-full border-input bg-white px-2 lg:border-0 lg:shadow-none lg:focus-visible:ring-0" type="number" step="0.01" value={price.mrp} onChange={(event) => setValues((current) => ({ ...current, prices: current.prices.map((entry, rowIndex) => rowIndex === index ? { ...entry, mrp: Number(event.target.value || 0) } : entry) }))} />
+                  </div>
+                  <div className="flex items-center justify-end border-t border-border/60 bg-white px-2 py-2 lg:justify-center lg:border-l lg:border-t-0">
+                    <Button type="button" variant="ghost" size="icon" className="size-8" onClick={() => setValues((current) => ({ ...current, prices: current.prices.filter((_, rowIndex) => rowIndex !== index) }))}>
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </Section>
         <Section title="Discounts" description="Discount windows by product or variant scope." addLabel="Add Discount" onAdd={() => setValues((current) => ({ ...current, discounts: [...current.discounts, emptyDiscount()] }))}>
           {values.discounts.map((discount, index) => (
             <Row key={`discount-${index}`} onRemove={() => setValues((current) => ({ ...current, discounts: current.discounts.filter((_, rowIndex) => rowIndex !== index) }))}>
-              <div className="grid gap-4 md:grid-cols-4">
-                <VariantSelect label="Variant Scope" value={discount.variantClientKey} variants={values.variants} onChange={(value) => setValues((current) => ({ ...current, discounts: current.discounts.map((entry, rowIndex) => rowIndex === index ? { ...entry, variantClientKey: value } : entry) }))} />
-                <div className="grid gap-2"><Label>Discount Type</Label><Input value={discount.discountType} onChange={(event) => setValues((current) => ({ ...current, discounts: current.discounts.map((entry, rowIndex) => rowIndex === index ? { ...entry, discountType: event.target.value } : entry) }))} /></div>
-                <div className="grid gap-2"><Label>Discount Value</Label><Input type="number" step="0.01" value={discount.discountValue} onChange={(event) => setValues((current) => ({ ...current, discounts: current.discounts.map((entry, rowIndex) => rowIndex === index ? { ...entry, discountValue: Number(event.target.value || 0) } : entry) }))} /></div>
-                <div className="grid gap-2"><Label>Start Date</Label><Input type="date" value={discount.startDate ?? ''} onChange={(event) => setValues((current) => ({ ...current, discounts: current.discounts.map((entry, rowIndex) => rowIndex === index ? { ...entry, startDate: event.target.value || null } : entry) }))} /></div>
-                <div className="grid gap-2"><Label>End Date</Label><Input type="date" value={discount.endDate ?? ''} onChange={(event) => setValues((current) => ({ ...current, discounts: current.discounts.map((entry, rowIndex) => rowIndex === index ? { ...entry, endDate: event.target.value || null } : entry) }))} /></div>
+              <div className="overflow-hidden rounded-md border border-border/60 bg-white">
+                <div className="grid grid-cols-[132px_minmax(0,1fr)] border-b border-border/60 text-sm lg:grid-cols-[132px_minmax(0,1fr)_132px_minmax(0,1fr)]">
+                  <div className="flex items-center border-r border-border/60 bg-muted/30 px-3 py-1.5 font-medium text-muted-foreground">Variant Scope</div>
+                  <div className="bg-white px-2 py-1.5 lg:border-r lg:border-border/60">
+                    <select
+                      value={discount.variantClientKey ?? ''}
+                      onChange={(event) => setValues((current) => ({ ...current, discounts: current.discounts.map((entry, rowIndex) => rowIndex === index ? { ...entry, variantClientKey: event.target.value || null } : entry) }))}
+                      className="h-8 w-full rounded-md border-0 bg-white px-2 text-sm shadow-none outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/20"
+                    >
+                      <option value="">Product level</option>
+                      {values.variants.map((variant) => (
+                        <option key={variant.clientKey} value={variant.clientKey}>
+                          {variant.variantName || variant.sku || variant.clientKey}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-center border-r border-border/60 bg-muted/30 px-3 py-1.5 font-medium text-muted-foreground lg:border-l lg:border-border/60">Discount Type</div>
+                  <div className="bg-white px-2 py-1.5">
+                    <Input className="h-8 w-full border-0 bg-white px-2 shadow-none focus-visible:ring-0" value={discount.discountType} onChange={(event) => setValues((current) => ({ ...current, discounts: current.discounts.map((entry, rowIndex) => rowIndex === index ? { ...entry, discountType: event.target.value } : entry) }))} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-[132px_minmax(0,1fr)] border-b border-border/60 text-sm lg:grid-cols-[132px_minmax(0,1fr)_132px_minmax(0,1fr)]">
+                  <div className="flex items-center border-r border-border/60 bg-muted/30 px-3 py-1.5 font-medium text-muted-foreground">Start Date</div>
+                  <div className="bg-white px-2 py-1.5 lg:border-r lg:border-border/60">
+                    <Input className="h-8 w-full border-0 bg-white px-2 shadow-none focus-visible:ring-0" type="date" value={discount.startDate ?? ''} onChange={(event) => setValues((current) => ({ ...current, discounts: current.discounts.map((entry, rowIndex) => rowIndex === index ? { ...entry, startDate: event.target.value || null } : entry) }))} />
+                  </div>
+                  <div className="flex items-center border-r border-border/60 bg-muted/30 px-3 py-1.5 font-medium text-muted-foreground lg:border-l lg:border-border/60">Discount Value</div>
+                  <div className="bg-white px-2 py-1.5">
+                    <Input className="h-8 w-full border-0 bg-white px-2 shadow-none focus-visible:ring-0" type="number" step="0.01" value={discount.discountValue} onChange={(event) => setValues((current) => ({ ...current, discounts: current.discounts.map((entry, rowIndex) => rowIndex === index ? { ...entry, discountValue: Number(event.target.value || 0) } : entry) }))} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-[132px_minmax(0,1fr)] text-sm">
+                  <div className="flex items-center border-r border-border/60 bg-muted/30 px-3 py-1.5 font-medium text-muted-foreground">End Date</div>
+                  <div className="bg-white px-2 py-1.5">
+                    <Input className="h-8 w-full border-0 bg-white px-2 shadow-none focus-visible:ring-0" type="date" value={discount.endDate ?? ''} onChange={(event) => setValues((current) => ({ ...current, discounts: current.discounts.map((entry, rowIndex) => rowIndex === index ? { ...entry, endDate: event.target.value || null } : entry) }))} />
+                  </div>
+                </div>
               </div>
             </Row>
           ))}
@@ -663,37 +1274,48 @@ export function ProductFormPage() {
     ),
   }
 
-  const inventoryTab: AnimatedContentTab = {
-    label: 'Inventory',
-    value: 'inventory',
+  const stockTab: AnimatedContentTab = {
+    label: 'Stock',
+    value: 'stock',
     content: (
       <>
-        <Section title="Inventory" description="Warehouse-level stock and stock movement records." addLabel="Add Stock Item" onAdd={() => setValues((current) => ({ ...current, stockItems: [...current.stockItems, emptyStockItem()] }))}>
-          {values.stockItems.map((item, index) => (
-            <Row key={`stock-item-${index}`} onRemove={() => setValues((current) => ({ ...current, stockItems: current.stockItems.filter((_, rowIndex) => rowIndex !== index) }))}>
-              <div className="grid gap-4 md:grid-cols-4">
-                <VariantSelect label="Variant Scope" value={item.variantClientKey} variants={values.variants} onChange={(value) => setValues((current) => ({ ...current, stockItems: current.stockItems.map((entry, rowIndex) => rowIndex === index ? { ...entry, variantClientKey: value } : entry) }))} />
-                <LookupSelect label="Warehouse" value={item.warehouseId} options={warehouses} moduleKey="warehouses" onItemsChange={setWarehouses} placeholder="Select warehouse" onChange={(value) => setValues((current) => ({ ...current, stockItems: current.stockItems.map((entry, rowIndex) => rowIndex === index ? { ...entry, warehouseId: value ?? '' } : entry) }))} />
-                <div className="grid gap-2"><Label>Quantity</Label><Input type="number" step="0.01" value={item.quantity} onChange={(event) => setValues((current) => ({ ...current, stockItems: current.stockItems.map((entry, rowIndex) => rowIndex === index ? { ...entry, quantity: Number(event.target.value || 0) } : entry) }))} /></div>
-                <div className="grid gap-2"><Label>Reserved Quantity</Label><Input type="number" step="0.01" value={item.reservedQuantity} onChange={(event) => setValues((current) => ({ ...current, stockItems: current.stockItems.map((entry, rowIndex) => rowIndex === index ? { ...entry, reservedQuantity: Number(event.target.value || 0) } : entry) }))} /></div>
+        <Section title="Opening Stock" description="Keep only starting stock by warehouse and variant scope." addLabel="Add Stock Item" onAdd={() => setValues((current) => ({ ...current, stockItems: [...current.stockItems, emptyStockItem()] }))}>
+          <div className="overflow-hidden rounded-md border border-border/60 bg-white">
+            <div className="hidden grid-cols-[minmax(0,1.1fr)_minmax(0,1.15fr)_120px_120px_56px] border-b border-border/60 bg-muted/20 text-xs font-semibold uppercase tracking-wide text-muted-foreground lg:grid">
+              <div className="px-3 py-2">Variant</div>
+              <div className="border-l border-border/60 px-3 py-2">Warehouse</div>
+              <div className="border-l border-border/60 px-3 py-2">Qty</div>
+              <div className="border-l border-border/60 px-3 py-2">Reserved</div>
+              <div className="border-l border-border/60 px-3 py-2 text-center">Action</div>
+            </div>
+            {values.stockItems.map((item, index) => (
+              <div key={`stock-item-${index}`} className="border-b border-border/60 last:border-b-0">
+                <div className="grid gap-0 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.15fr)_120px_120px_56px]">
+                  <div className="border-border/60 bg-white px-2 py-2 lg:border-r">
+                    <Label className="px-1 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground lg:hidden">Variant Scope</Label>
+                    <VariantSelect label="Variant Scope" compact value={item.variantClientKey} variants={values.variants} onChange={(value) => setValues((current) => ({ ...current, stockItems: current.stockItems.map((entry, rowIndex) => rowIndex === index ? { ...entry, variantClientKey: value } : entry) }))} />
+                  </div>
+                  <div className="border-t border-border/60 bg-white px-2 py-2 lg:border-l lg:border-t-0">
+                    <Label className="px-1 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground lg:hidden">Warehouse</Label>
+                    <LookupSelect label="Warehouse" compact value={item.warehouseId} options={warehouses} moduleKey="warehouses" onItemsChange={setWarehouses} placeholder="Select warehouse" onChange={(value) => setValues((current) => ({ ...current, stockItems: current.stockItems.map((entry, rowIndex) => rowIndex === index ? { ...entry, warehouseId: value ?? '' } : entry) }))} />
+                  </div>
+                  <div className="border-t border-border/60 bg-white px-2 py-2 lg:border-l lg:border-t-0">
+                    <Label className="px-1 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground lg:hidden">Quantity</Label>
+                    <Input className="h-8 w-full border-input bg-white px-2 lg:border-0 lg:shadow-none lg:focus-visible:ring-0" type="number" step="0.01" value={item.quantity} onChange={(event) => setValues((current) => ({ ...current, stockItems: current.stockItems.map((entry, rowIndex) => rowIndex === index ? { ...entry, quantity: Number(event.target.value || 0) } : entry) }))} />
+                  </div>
+                  <div className="border-t border-border/60 bg-white px-2 py-2 lg:border-l lg:border-t-0">
+                    <Label className="px-1 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground lg:hidden">Reserved</Label>
+                    <Input className="h-8 w-full border-input bg-white px-2 lg:border-0 lg:shadow-none lg:focus-visible:ring-0" type="number" step="0.01" value={item.reservedQuantity} onChange={(event) => setValues((current) => ({ ...current, stockItems: current.stockItems.map((entry, rowIndex) => rowIndex === index ? { ...entry, reservedQuantity: Number(event.target.value || 0) } : entry) }))} />
+                  </div>
+                  <div className="flex items-center justify-end border-t border-border/60 bg-white px-2 py-2 lg:justify-center lg:border-l lg:border-t-0">
+                    <Button type="button" variant="ghost" size="icon" className="size-8" onClick={() => setValues((current) => ({ ...current, stockItems: current.stockItems.filter((_, rowIndex) => rowIndex !== index) }))}>
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                </div>
               </div>
-            </Row>
-          ))}
-        </Section>
-        <Section title="Stock Movements" description="Editable movement history records for this master setup increment." addLabel="Add Movement" onAdd={() => setValues((current) => ({ ...current, stockMovements: [...current.stockMovements, emptyStockMovement()] }))}>
-          {values.stockMovements.map((movement, index) => (
-            <Row key={`movement-${index}`} onRemove={() => setValues((current) => ({ ...current, stockMovements: current.stockMovements.filter((_, rowIndex) => rowIndex !== index) }))}>
-              <div className="grid gap-4 md:grid-cols-4">
-                <VariantSelect label="Variant Scope" value={movement.variantClientKey} variants={values.variants} onChange={(value) => setValues((current) => ({ ...current, stockMovements: current.stockMovements.map((entry, rowIndex) => rowIndex === index ? { ...entry, variantClientKey: value } : entry) }))} />
-                <LookupSelect label="Warehouse" value={movement.warehouseId} options={warehouses} moduleKey="warehouses" onItemsChange={setWarehouses} onChange={(value) => setValues((current) => ({ ...current, stockMovements: current.stockMovements.map((entry, rowIndex) => rowIndex === index ? { ...entry, warehouseId: value } : entry) }))} />
-                <div className="grid gap-2"><Label>Movement Type</Label><Input value={movement.movementType} onChange={(event) => setValues((current) => ({ ...current, stockMovements: current.stockMovements.map((entry, rowIndex) => rowIndex === index ? { ...entry, movementType: event.target.value } : entry) }))} /></div>
-                <div className="grid gap-2"><Label>Quantity</Label><Input type="number" step="0.01" value={movement.quantity} onChange={(event) => setValues((current) => ({ ...current, stockMovements: current.stockMovements.map((entry, rowIndex) => rowIndex === index ? { ...entry, quantity: Number(event.target.value || 0) } : entry) }))} /></div>
-                <div className="grid gap-2"><Label>Reference Type</Label><Input value={movement.referenceType ?? ''} onChange={(event) => setValues((current) => ({ ...current, stockMovements: current.stockMovements.map((entry, rowIndex) => rowIndex === index ? { ...entry, referenceType: event.target.value || null } : entry) }))} /></div>
-                <div className="grid gap-2"><Label>Reference ID</Label><Input value={movement.referenceId ?? ''} onChange={(event) => setValues((current) => ({ ...current, stockMovements: current.stockMovements.map((entry, rowIndex) => rowIndex === index ? { ...entry, referenceId: event.target.value || null } : entry) }))} /></div>
-                <div className="grid gap-2"><Label>Movement Time</Label><Input type="datetime-local" value={movement.movementAt ?? ''} onChange={(event) => setValues((current) => ({ ...current, stockMovements: current.stockMovements.map((entry, rowIndex) => rowIndex === index ? { ...entry, movementAt: event.target.value || null } : entry) }))} /></div>
-              </div>
-            </Row>
-          ))}
+            ))}
+          </div>
         </Section>
       </>
     ),
@@ -705,7 +1327,7 @@ export function ProductFormPage() {
     content: (
       <>
         <Section title="Storefront Publishing" description="Backend merchandising, home placements, and storefront filter metadata.">
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-4">
             <div className="grid gap-2">
               <Label>Department</Label>
               <select
@@ -787,27 +1409,27 @@ export function ProductFormPage() {
                 storefront: { ...(current.storefront ?? createDefaultStorefront()), featureSectionOrder: Number(event.target.value || 0) },
               }))} />
             </div>
-            <label className="flex items-center gap-3"><Checkbox checked={values.storefront?.homeSliderEnabled ?? false} onCheckedChange={(checked) => setValues((current) => ({
+            <label className="flex items-center gap-3 rounded-md border border-border/60 bg-muted/15 px-3 py-2"><Checkbox checked={values.storefront?.homeSliderEnabled ?? false} onCheckedChange={(checked) => setValues((current) => ({
               ...current,
               storefront: { ...(current.storefront ?? createDefaultStorefront()), homeSliderEnabled: Boolean(checked) },
             }))} /><span className="text-sm font-medium">Home slider</span></label>
-            <label className="flex items-center gap-3"><Checkbox checked={values.storefront?.promoSliderEnabled ?? false} onCheckedChange={(checked) => setValues((current) => ({
+            <label className="flex items-center gap-3 rounded-md border border-border/60 bg-muted/15 px-3 py-2"><Checkbox checked={values.storefront?.promoSliderEnabled ?? false} onCheckedChange={(checked) => setValues((current) => ({
               ...current,
               storefront: { ...(current.storefront ?? createDefaultStorefront()), promoSliderEnabled: Boolean(checked) },
             }))} /><span className="text-sm font-medium">Promo slider</span></label>
-            <label className="flex items-center gap-3"><Checkbox checked={values.storefront?.featureSectionEnabled ?? false} onCheckedChange={(checked) => setValues((current) => ({
+            <label className="flex items-center gap-3 rounded-md border border-border/60 bg-muted/15 px-3 py-2"><Checkbox checked={values.storefront?.featureSectionEnabled ?? false} onCheckedChange={(checked) => setValues((current) => ({
               ...current,
               storefront: { ...(current.storefront ?? createDefaultStorefront()), featureSectionEnabled: Boolean(checked) },
             }))} /><span className="text-sm font-medium">Feature section</span></label>
-            <label className="flex items-center gap-3"><Checkbox checked={values.storefront?.isNewArrival ?? false} onCheckedChange={(checked) => setValues((current) => ({
+            <label className="flex items-center gap-3 rounded-md border border-border/60 bg-muted/15 px-3 py-2"><Checkbox checked={values.storefront?.isNewArrival ?? false} onCheckedChange={(checked) => setValues((current) => ({
               ...current,
               storefront: { ...(current.storefront ?? createDefaultStorefront()), isNewArrival: Boolean(checked) },
             }))} /><span className="text-sm font-medium">New arrival</span></label>
-            <label className="flex items-center gap-3"><Checkbox checked={values.storefront?.isBestSeller ?? false} onCheckedChange={(checked) => setValues((current) => ({
+            <label className="flex items-center gap-3 rounded-md border border-border/60 bg-muted/15 px-3 py-2"><Checkbox checked={values.storefront?.isBestSeller ?? false} onCheckedChange={(checked) => setValues((current) => ({
               ...current,
               storefront: { ...(current.storefront ?? createDefaultStorefront()), isBestSeller: Boolean(checked) },
             }))} /><span className="text-sm font-medium">Best seller</span></label>
-            <label className="flex items-center gap-3"><Checkbox checked={values.storefront?.isFeaturedLabel ?? false} onCheckedChange={(checked) => setValues((current) => ({
+            <label className="flex items-center gap-3 rounded-md border border-border/60 bg-muted/15 px-3 py-2"><Checkbox checked={values.storefront?.isFeaturedLabel ?? false} onCheckedChange={(checked) => setValues((current) => ({
               ...current,
               storefront: { ...(current.storefront ?? createDefaultStorefront()), isFeaturedLabel: Boolean(checked) },
             }))} /><span className="text-sm font-medium">Featured label</span></label>
@@ -816,7 +1438,7 @@ export function ProductFormPage() {
         <Section title="Offers" description="Promotional offers attached to the product." addLabel="Add Offer" onAdd={() => setValues((current) => ({ ...current, offers: [...current.offers, emptyOffer()] }))}>
           {values.offers.map((offer, index) => (
             <Row key={`offer-${index}`} onRemove={() => setValues((current) => ({ ...current, offers: current.offers.filter((_, rowIndex) => rowIndex !== index) }))}>
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-3 md:grid-cols-4">
                 <div className="grid gap-2"><Label>Title</Label><Input value={offer.title} onChange={(event) => setValues((current) => ({ ...current, offers: current.offers.map((entry, rowIndex) => rowIndex === index ? { ...entry, title: event.target.value } : entry) }))} /></div>
                 <div className="grid gap-2"><Label>Offer Price</Label><Input type="number" step="0.01" value={offer.offerPrice} onChange={(event) => setValues((current) => ({ ...current, offers: current.offers.map((entry, rowIndex) => rowIndex === index ? { ...entry, offerPrice: Number(event.target.value || 0) } : entry) }))} /></div>
                 <div className="grid gap-2"><Label>Start Date</Label><Input type="date" value={offer.startDate ?? ''} onChange={(event) => setValues((current) => ({ ...current, offers: current.offers.map((entry, rowIndex) => rowIndex === index ? { ...entry, startDate: event.target.value || null } : entry) }))} /></div>
@@ -827,7 +1449,7 @@ export function ProductFormPage() {
           ))}
         </Section>
         <Section title="SEO and Tags" description="Search metadata and tag assignments for discoverability." addLabel="Add Tag" onAdd={() => setValues((current) => ({ ...current, tags: [...current.tags, emptyTag()] }))}>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-3 md:grid-cols-4">
             <div className="grid gap-2"><Label>Meta Title</Label><Input value={values.seo?.metaTitle ?? ''} onChange={(event) => setValues((current) => ({ ...current, seo: { metaTitle: event.target.value || null, metaDescription: current.seo?.metaDescription ?? null, metaKeywords: current.seo?.metaKeywords ?? null } }))} /></div>
             <div className="grid gap-2"><Label>Meta Keywords</Label><Input value={values.seo?.metaKeywords ?? ''} onChange={(event) => setValues((current) => ({ ...current, seo: { metaTitle: current.seo?.metaTitle ?? null, metaDescription: current.seo?.metaDescription ?? null, metaKeywords: event.target.value || null } }))} /></div>
             <div className="grid gap-2 md:col-span-2"><Label>Meta Description</Label><Textarea rows={3} value={values.seo?.metaDescription ?? ''} onChange={(event) => setValues((current) => ({ ...current, seo: { metaTitle: current.seo?.metaTitle ?? null, metaDescription: event.target.value || null, metaKeywords: current.seo?.metaKeywords ?? null } }))} /></div>
@@ -841,7 +1463,7 @@ export function ProductFormPage() {
         <Section title="Reviews" description="Seed or maintain review records stored against this product." addLabel="Add Review" onAdd={() => setValues((current) => ({ ...current, reviews: [...current.reviews, emptyReview()] }))}>
           {values.reviews.map((review, index) => (
             <Row key={`review-${index}`} onRemove={() => setValues((current) => ({ ...current, reviews: current.reviews.filter((_, rowIndex) => rowIndex !== index) }))}>
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-3 md:grid-cols-4">
                 <div className="grid gap-2"><Label>User ID</Label><Input value={review.userId ?? ''} onChange={(event) => setValues((current) => ({ ...current, reviews: current.reviews.map((entry, rowIndex) => rowIndex === index ? { ...entry, userId: event.target.value || null } : entry) }))} /></div>
                 <div className="grid gap-2"><Label>Rating</Label><Input type="number" min="1" max="5" value={review.rating} onChange={(event) => setValues((current) => ({ ...current, reviews: current.reviews.map((entry, rowIndex) => rowIndex === index ? { ...entry, rating: Number(event.target.value || 5) } : entry) }))} /></div>
                 <div className="grid gap-2"><Label>Review Time</Label><Input type="datetime-local" value={review.reviewDate ?? ''} onChange={(event) => setValues((current) => ({ ...current, reviews: current.reviews.map((entry, rowIndex) => rowIndex === index ? { ...entry, reviewDate: event.target.value || null } : entry) }))} /></div>
@@ -854,14 +1476,14 @@ export function ProductFormPage() {
     ),
   }
 
-  const productTabs = [overviewTab, attributesTab, variantsTab, commerceTab, inventoryTab, publishingTab]
+  const productTabs = [overviewTab, settingsTab, contentTab, attributesTab, variantsTab, pricingTab, stockTab, publishingTab]
 
   if (loading) {
     return <Card><CardContent className="p-8 text-sm text-muted-foreground">Loading product...</CardContent></Card>
   }
 
   return (
-    <form className="space-y-6 pt-2" onSubmit={(event) => { void handleSubmit(event) }}>
+    <form className="space-y-4 pt-1" onSubmit={(event) => { void handleSubmit(event) }}>
       <div className="flex items-center justify-between gap-4">
         <div>
           <Button variant="ghost" size="sm" asChild className="-ml-3 mb-2">
@@ -880,7 +1502,7 @@ export function ProductFormPage() {
 
       {errorMessage ? (
         <Card className={`${warningCardClassName} rounded-md`}>
-          <CardContent className="rounded-md p-4 text-sm">
+          <CardContent className="rounded-md p-3 text-sm">
             <p className="font-medium">{errorMessage}</p>
             {Object.keys(fieldErrors).length > 0 ? (
               <ul className="mt-2 list-disc space-y-1 pl-5">
@@ -894,11 +1516,17 @@ export function ProductFormPage() {
       ) : null}
 
       <AnimatedTabs defaultTabValue="overview" tabs={productTabs} />
-
-
-
-
+      <Dialog open={Boolean(previewImageUrl)} onOpenChange={(open) => { if (!open) setPreviewImageUrl(null) }}>
+        <DialogContent className="w-[min(92vw,42rem)] max-w-2xl overflow-hidden border border-border/70 bg-background p-0">
+          {previewImageUrl ? (
+            <div className="bg-muted/20 p-4">
+              <div className="overflow-hidden rounded-[1.2rem] border border-border/70 bg-background">
+                <img src={previewImageUrl} alt="Product preview" className="h-[24rem] w-full object-contain" loading="lazy" decoding="async" />
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </form>
   )
 }
-

@@ -34,9 +34,9 @@ function TabContent({ tab }: { tab: AnimatedContentTab }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
       transition={transition}
-      className="mt-4 rounded-2xl border border-border/60 bg-card p-4 md:p-6"
+      className="mt-3 rounded-xl border border-border/60 bg-card p-3 md:p-4"
     >
-      <div className="space-y-6">{tab.content}</div>
+      <div className="space-y-4">{tab.content}</div>
     </motion.div>
   )
 }
@@ -67,7 +67,7 @@ function Tabs({
   return (
     <nav
       ref={navRef}
-      className="relative z-0 flex items-center justify-start gap-1 overflow-x-auto overflow-y-hidden py-2"
+      className="relative z-0 flex items-center justify-start gap-1 overflow-x-auto overflow-y-hidden py-1.5"
       onPointerLeave={() => setHoveredTabIndex(null)}
     >
       {tabs.map((item, i) => {
@@ -76,7 +76,7 @@ function Tabs({
         return (
           <button
             key={item.value}
-            className="relative z-20 flex h-9 cursor-pointer select-none items-center rounded-md bg-transparent px-4 text-sm transition-colors"
+            className="relative z-20 flex h-8 cursor-pointer select-none items-center rounded-md bg-transparent px-3 text-sm transition-colors"
             onPointerEnter={() => setHoveredTabIndex(i)}
             onFocus={() => setHoveredTabIndex(i)}
             onClick={() => {

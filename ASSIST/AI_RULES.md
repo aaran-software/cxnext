@@ -23,6 +23,7 @@ AI agents in this repository exist to accelerate delivery of a production-grade 
 9. Treat accounting, inventory, tax, billing, and permissions work as high-risk domains requiring extra rigor.
 10. Maintain traceability for writes, especially financial postings and audit events.
 11. Fail explicitly with contextual errors instead of masking faults.
+12. When working on the standalone billing product, preserve an independent runtime, data, and release boundary from the main ERP unless an integration contract explicitly says otherwise.
 
 ## What An AI Agent Must Not Do
 
@@ -36,6 +37,7 @@ AI agents in this repository exist to accelerate delivery of a production-grade 
 8. Must not weaken validation, audit metadata, or balancing constraints for convenience.
 9. Must not conflate demo UI with production readiness in summaries or docs.
 10. Must not change repository rules silently; rule changes require explicit documentation updates.
+11. Must not couple the standalone billing product directly to existing ERP feature internals when a shared package or documented connector boundary should be used instead.
 
 ## Required Delivery Pattern
 
@@ -47,6 +49,18 @@ AI agents in this repository exist to accelerate delivery of a production-grade 
 6. Record the implementation walkthrough, validation, and follow-up items in `ASSIST/Execution/WALKTHROUGH.md`.
 7. Update docs and changelog.
 8. Report what changed, what remains, and what still carries risk.
+
+## Standalone Billing Product Rule
+
+The repository may host a standalone billing-and-accounts product in parallel with the main ERP.
+
+When that product is being changed:
+
+1. Treat it as an independent desktop-first application boundary.
+2. Keep accounting and inventory correctness as the primary design concern.
+3. Prefer billing-owned packages such as `packages/billing-core` over pushing billing-specific rules into `packages/shared`.
+4. Reuse the main ERP only through explicit shared contracts or connector adapters.
+5. Keep external integrations such as `Tally` and `ERPNext` optional, isolated, and traceable.
 
 ## Conflict Resolution
 

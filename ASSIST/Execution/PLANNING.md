@@ -8,40 +8,45 @@ This file captures the execution plan for the current task before implementation
 
 ### Task
 
-`Admin helpdesk and order operations list/show refinement`
+`Standalone billing product documentation and initial scaffold`
 
 ### Goal
 
-Create cleaner admin browse/detail flows by keeping customer helpdesk in a master list plus dedicated customer show page, converting order operations into a dedicated order list plus order show page, and preserving the safe OTP password-reset support flow.
+Create a documented and compile-safe starting point for a standalone billing-and-accounts product that is desktop-first, auditor-focused, and architecturally isolated from the existing ERP unless explicit integration contracts are added later.
 
 ### Assumptions
 
-- The existing customer account email remains the only safe destination for support-triggered password reset in this batch
-- Existing contact verification storage can be reused for password-reset OTP sessions instead of adding a separate reset token table
-- Support and operations users need dedicated product-style detail pages instead of embedded split panes under list tables
+- The billing product should remain a separate product line inside the repo, not a feature nested under current ERP flows
+- The first implementation increment should establish boundaries and manifests, not real accounting transactions
+- Electron remains the preferred shell for the first billing operator runtime
+- `packages/shared` should expose only product-level metadata needed across boundaries, while billing-owned domain rules should stay in billing packages
 
 ### Constraints
 
-- Keep reset and verification business rules in backend auth services, not only in React
-- Do not let admin users set a new customer password directly without customer OTP completion
-- Keep the helpdesk and order operations UI inside the existing admin dashboard navigation, using CommonList for browse flow and the existing entity detail tone for the show pages
-- Update execution tracking, walkthrough, and changelog in the same change set
+- Do not weaken existing ERP architecture or compile behavior while adding the scaffold
+- Do not represent the billing product as production-ready beyond the current scaffold
+- Keep accounting and inventory correctness central in the documented design
+- Keep external integrations optional and adapter-driven
+- Update changelog and execution tracking in the same change set
 
 ### Plan
 
-1. Add shared auth/helpdesk contracts plus backend password-reset OTP support and admin customer helpdesk data queries
-2. Add admin helpdesk routes and service actions for customer list/detail, support-triggered password reset, and disabled-account recovery email initiation
-3. Add an admin dashboard customer helpdesk list page plus a dedicated customer show page for overview, orders, addresses, and verification history
-4. Convert order operations into a full-width order list plus a dedicated order show page with organized workflow actions, shipment, invoice, and accounts tabs
-5. Validate with `typecheck` and `build`, then record the implementation and remaining support/workflow risks
+1. Promote the billing vision into a formal documentation file under `ASSIST/Documentation`
+2. Update `AI_RULES.md`, `PROJECT_OVERVIEW.md`, and `ARCHITECTURE.md` so the standalone billing product boundary is explicit
+3. Reduce `ASSIST/Execution/IDEAS.md` to a pointer now that the concept has been formalized
+4. Add a shared billing product manifest in `packages/shared` to describe the new product line without coupling it to the current ERP module registry
+5. Scaffold `packages/billing-core` with initial domain manifests for accounts, inventory, and billing capabilities
+6. Scaffold `packages/billing-connectors` with initial adapter metadata for Tally and ERPNext/Frappe integrations
+7. Scaffold `apps/billing-api` and `apps/billing-desktop` with compile-safe placeholder entry points
+8. Add package scripts where useful, then validate with `npm run typecheck`
 
 ### Validation
 
 - `npm run typecheck`
-- `npm run build`
-- Pending for this batch: `npm run typecheck` and `npm run build`
+- Pending for this batch: `npm run typecheck`
 
 ### Open Questions
 
-- Whether support workflows later need persistent notes, ticket ownership, and audit entries beyond current derived customer/account context
-- Whether customer identity should later store durable verified-contact flags instead of inferring support verification context from challenge history
+- Whether the billing desktop app should later embed a local database for offline-first operation
+- Whether billing will need a separate frontend renderer target or can begin with desktop-shell-plus-backend scaffolding only
+- Which shared auth or organization contracts are truly cross-product versus billing-owned

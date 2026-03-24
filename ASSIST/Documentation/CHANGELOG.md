@@ -75,3 +75,17 @@
 - Split the web production bundle into stable vendor chunks in `apps/web/vite.config.ts` so Vite build output no longer triggers the 500 kB chunk-size warning
 - Added an admin customer helpdesk workspace with a master-list browse page plus product-tone customer show page, and added OTP password-reset flows so staff can send reset assistance to the customer's existing email without requiring the current password
 - Refined admin order operations into a master-list browse page plus product-tone order show page with organized workflow, shipment, invoice, and accounting tabs
+- Simplified the product form image manager into a compact gallery with one bulk-upload entry point, a five-image cap, fixed-height previews, and a lightweight preview lightbox
+- Added product-form helpers for auto slug generation, configurable auto SKU numbering, automatic defaults for product group/unit/tax, a dedicated settings tab, and a separate content tab for short and full descriptions
+- Tightened product-form tab panels and repeated edit rows into denser table-like layouts to reduce empty space across attributes, variants, pricing, inventory, and publishing
+- Simplified product structure, variants, inventory, and stock-movement editors into slimmer row-and-column layouts for faster editing
+- Reworked each variant editor into a split detail row with left-side title/value fields and right-side attribute and image cards using the main gallery tone
+- Removed the duplicate variant-image preview by keeping a single fixed-height image card in the variant editor
+- Reorganized each variant image row so the preview holder sits on the left and the media/input/actions stay grouped on the right
+- Finalized the variant image row by removing the extra section label, keeping a single remove path, and enlarging the left preview holder
+- Simplified variant images to one default image slot per variant and removed the add-image flow to close layout gaps
+- Added a visible numbered badge and accent border to each variant row for quick identification without saving any row number
+- Separated core product editing from stock management by simplifying attributes into editable tables, slimming variants down to identity/media fields, and consolidating product pricing, discounts, inventory, and stock movements into a dedicated Stock tab
+- Added a `Set Variables` action on the product attribute editor that builds the full variant matrix automatically from the current attribute values while preserving matching existing variant rows
+- Simplified the variant editor by removing fixed barcode and weight inputs, folding image and dynamic custom fields into one tighter right-side workspace, and letting extra per-variant fields such as weight, length, or width be added as name/value rows on demand
+- Moved the variant image block below the left-side status rows, let dynamic variant fields fill the full right workspace, split pricing into a dedicated `Pricing` tab, and reduced `Stock` to opening-stock setup without editable stock movements

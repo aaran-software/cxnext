@@ -8,7 +8,7 @@ This file tracks the current active task so contributors and AI agents stay alig
 
 ### Title
 
-`Admin helpdesk and order operations list/show refinement`
+`Standalone billing product documentation and initial scaffold`
 
 ### Status
 
@@ -16,38 +16,34 @@ in_progress
 
 ### Objective
 
-Refine admin support and operations surfaces into cleaner list/show flows by keeping customer helpdesk in a master-list plus customer show pattern, and converting order operations into a separate order list and product-tone order show page with organized workflow actions.
+Promote the standalone billing-and-accounts product concept into formal ASSIST documentation, update repository rules to preserve its independent product boundary, and implement the first compile-safe scaffold for a desktop-first billing app with billing-owned core and connector packages.
 
 ### In Scope
 
-- Add backend admin customer helpdesk list/detail APIs using existing customer, order, address, and verification data
-- Add an admin dashboard customer helpdesk list page in the existing master-list tone and a dedicated customer show page in the product-detail tone
-- Convert order operations into a full-width master-list page plus a dedicated order show page in the product-detail tone
-- Show customer support pain-point context including order summary, saved delivery addresses, verification history, and mismatch indicators
-- Show order workflow context including actions, shipment history, invoice detail, and accounting postings in an organized tabbed show page
-- Add OTP-based customer password-reset request and confirmation flows that do not require the current password
-- Let staff trigger password-reset help to the customer's existing email and recovery mail for disabled accounts
-- Add customer-facing login-page support for self-service password reset with OTP
-- Keep execution notes and changelog aligned with the change set
+- Create formal ASSIST documentation for the standalone billing product architecture
+- Update repository rules and high-level architecture docs to recognize the billing product as an independent boundary
+- Add initial `apps/billing-api` and `apps/billing-desktop` scaffolding
+- Add initial `packages/billing-core` and `packages/billing-connectors` scaffolding
+- Add the first shared billing manifest/contracts needed to describe the product shape
+- Keep changelog and execution notes aligned with the change set
 
 ### Out Of Scope
 
-- Building a full CRM or ticketing subsystem with persistent support cases
-- Adding SMS password reset delivery in this batch
-- Redesigning the overall admin shell or customer portal shell beyond the required route additions
+- Building real invoice, voucher, stock, or report workflows in this batch
+- Wiring billing into the existing ERP navigation or database runtime
+- Implementing Tally or ERPNext connector behavior beyond initial manifest and adapter scaffolding
+- Redesigning the current ERP web or desktop experience
 
 ### Dependencies
 
 - `ASSIST/AI_RULES.md`
-- `apps/api/src/features/auth/*`
-- `apps/api/src/features/customer-profile/*`
-- `apps/api/src/features/storefront/*`
-- `apps/web/src/features/auth/*`
-- `apps/web/src/features/commerce/*`
-- `apps/web/src/components/forms/CommonList.tsx`
+- `ASSIST/Documentation/PROJECT_OVERVIEW.md`
+- `ASSIST/Documentation/ARCHITECTURE.md`
+- `packages/shared/src/domain/*`
+- `package.json`
 
 ### Risks
 
-- Customer order linkage still depends on checkout email matching the customer account email
-- Contact verification history is challenge-based and does not yet represent a full long-term verified-contact ledger
-- Support-triggered password reset must remain limited to the customer's existing email destination and must not bypass OTP confirmation
+- New product scaffolding can become misleading if documentation overstates readiness
+- Shared-package boundaries may drift if billing-specific rules are pushed into generic shared modules too early
+- Future connector work could pressure the team into coupling billing internals to external system formats unless adapter boundaries stay strict

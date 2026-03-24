@@ -10,6 +10,8 @@ apps/
 packages/
   shared/
   ui/
+  billing-core/
+  billing-connectors/
 ASSIST/
   Discipline/
   Documentation/
@@ -69,6 +71,7 @@ ASSIST/
 18. Adjacent sticky-header utility triggers should reuse the same hover surface language where appropriate to avoid visual drift within the top navigation cluster.
 19. Catalog toolbar helper copy can be removed when the shared search control alone communicates the surface purpose clearly enough.
 20. Production VPS deployment can run as a single Node container that serves the built React app from `apps/web/dist` and stores runtime config/media data in an external volume.
+21. A standalone billing product can live beside the main ERP as its own Electron desktop shell and API/runtime boundary, using billing-owned packages instead of leaking accounting rules across existing feature modules.
 
 ## Current Auth Foundation
 
@@ -86,3 +89,4 @@ ASSIST/
 3. Accounting writes must be modeled as explicit, reversible operations.
 4. Security and authorization are mandatory cross-cutting concerns.
 5. Reporting must remain reproducible for historical date ranges.
+6. Standalone products such as billing must keep explicit package, runtime, and integration boundaries instead of importing feature-local ERP internals directly.

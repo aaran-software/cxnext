@@ -15,6 +15,7 @@ interface MediaImageFieldProps {
   dialogDescription?: string
   defaultStorageScope?: MediaStorageScope
   allowPrivateAssets?: boolean
+  showPreview?: boolean
 }
 
 export function MediaImageField({
@@ -26,6 +27,7 @@ export function MediaImageField({
   dialogDescription,
   defaultStorageScope = 'public',
   allowPrivateAssets = false,
+  showPreview = true,
 }: MediaImageFieldProps) {
   const [open, setOpen] = useState(false)
 
@@ -37,10 +39,12 @@ export function MediaImageField({
     <>
       <div className="grid gap-3">
         <div className="flex items-center justify-between gap-3">
-          <div>
-            <Label>{label}</Label>
-            {description ? <p className="mt-1 text-xs text-muted-foreground">{description}</p> : null}
-          </div>
+          {label || description ? (
+            <div>
+              {label ? <Label>{label}</Label> : null}
+              {description ? <p className="mt-1 text-xs text-muted-foreground">{description}</p> : null}
+            </div>
+          ) : <div />}
           <div className="flex items-center gap-2">
             <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
               <ImagePlus className="size-4" />
@@ -57,7 +61,7 @@ export function MediaImageField({
 
         <Input value={value} onChange={(event) => onChange(event.target.value)} placeholder="Select or paste an image URL" />
 
-        {value ? (
+        {value && showPreview ? (
           <div className="overflow-hidden rounded-[1.25rem] border border-border/70 bg-muted">
             <img src={value} alt={label} className="h-48 w-full object-cover" loading="lazy" decoding="async" />
           </div>
