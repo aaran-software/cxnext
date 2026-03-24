@@ -2,12 +2,11 @@ name: cxnext
 
 services:
   app:
-    build:
-      context: ..
-      dockerfile: .container/Dockerfile
+    image: cxnext-app:v1
     container_name: cxnext-app
     ports:
       - "4000:4000"
+      - "5000:4000"
     restart: unless-stopped
     volumes:
       - cxnext_runtime:/opt/cxnext/runtime

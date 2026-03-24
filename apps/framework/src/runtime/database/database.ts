@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto'
 import type { DatabaseHealth, SetupStatus } from '@shared/index'
 import { databaseSetupPayloadSchema, setupStatusSchema } from '@shared/index'
 import mysql from 'mysql2/promise'
@@ -42,6 +43,10 @@ function isMissingDatabaseError(error: unknown) {
 
 function quoteIdentifier(value: string) {
   return '`' + value.replaceAll('`', '``') + '`'
+}
+
+function generateJwtSecret() {
+  return randomBytes(32).toString('hex')
 }
 
 async function createDatabaseIfMissing() {
@@ -190,6 +195,7 @@ export async function applyDatabaseSetup(payload: unknown, options?: { mediaPubl
     DB_USER: parsedPayload.user,
     DB_PASSWORD: parsedPayload.password,
     DB_NAME: parsedPayload.name,
+    JWT_SECRET: generateJwtSecret(),
     MEDIA_PUBLIC_BASE_URL: mediaPublicBaseUrl,
   })
   reloadEnvironment()

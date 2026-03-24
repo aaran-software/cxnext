@@ -1,4 +1,4 @@
-name: tirupur-direct
+name: tmnext-in
 
 services:
   app:
@@ -6,19 +6,19 @@ services:
     build:
       context: ../../..
       dockerfile: .container/Dockerfile
-    container_name: tirupur-direct-app
+    container_name: tmnext-in-app
     ports:
-      - "4001:4000"
-      - "5001:4000"
+      - "4002:4000"
+      - "5002:4000"
     restart: unless-stopped
     volumes:
-      - tirupur_direct_runtime:/opt/cxnext/runtime
-      - ./tirupur-direct.env:/opt/cxnext/runtime/.env
+      - tmnext_in_runtime:/opt/cxnext/runtime
+      - ./tmnext-in.env:/opt/cxnext/runtime/.env
     networks:
       - codexion-network
 
 volumes:
-  tirupur_direct_runtime:
+  tmnext_in_runtime:
 
 networks:
   codexion-network:
