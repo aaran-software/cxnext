@@ -108,6 +108,18 @@ build_source() {
   npm run build:web
 }
 
+current_layout_exists() {
+  target_root="$1"
+
+  [ -f "$target_root/apps/core/api/src/server.ts" ] && [ -f "$target_root/apps/ecommerce/web/vite.config.ts" ]
+}
+
+current_build_exists() {
+  target_root="$1"
+
+  [ -f "$target_root/apps/core/api/dist/server.js" ] && [ -f "$target_root/apps/ecommerce/web/dist/index.html" ]
+}
+
 sync_from_git() {
   if [ -z "${GIT_REPOSITORY_URL:-}" ]; then
     log "GIT_REPOSITORY_URL is required when GIT_SYNC_ENABLED=true."
@@ -124,7 +136,12 @@ sync_from_git() {
   fi
 
   if [ -d "$SOURCE_ROOT/.git" ] && [ "$should_refresh_source" != "true" ]; then
-    should_use_existing_source="true"
+    if current_layout_exists "$SOURCE_ROOT"; then
+      should_use_existing_source="true"
+    else
+      log "Existing runtime Git checkout uses an old app layout. Refreshing it."
+      should_refresh_source="true"
+    fi
   fi
 
   if [ "$should_use_existing_source" = "true" ]; then
@@ -154,8 +171,15 @@ sync_from_git() {
     run_npm_install
   fi
 
-  if [ "$should_refresh_source" != "true" ] && { [ ! -f apps/core/api/dist/server.js ] || [ ! -f apps/ecommerce/web/dist/index.html ]; }; then
+  if [ "$should_refresh_source" != "true" ] && ! current_build_exists "$SOURCE_ROOT"; then
     build_source
+  fi
+
+  if ! current_build_exists "$SOURCE_ROOT"; then
+    log "Runtime Git source did not produce the current build layout. Falling back to bundled app source."
+    SOURCE_ROOT="$APP_ROOT"
+    prepare_source_layout "$SOURCE_ROOT"
+    cd "$SOURCE_ROOT"
   fi
 
   if [ "${GIT_FORCE_UPDATE_ON_START:-false}" = "true" ]; then
