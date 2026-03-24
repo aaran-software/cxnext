@@ -1,5 +1,11 @@
 # CXNext Deploy
 
+If an old container or runtime volume is causing restart loops, use the clean reinstall guide first:
+
+```bash
+cat .container/INSTALL.md
+```
+
 ### 1. Check network is installed
 
 ```bash
