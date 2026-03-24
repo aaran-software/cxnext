@@ -3,6 +3,10 @@ import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { expect, test } from '@playwright/test'
 import dotenv from 'dotenv'
+import {
+  storefrontCheckoutResponseSchema,
+  storefrontCheckoutSessionResponseSchema,
+} from '@shared/index'
 
 const envFilePath = path.resolve(process.cwd(), '.env')
 const razorpaySecret = existsSync(envFilePath)
@@ -115,15 +119,17 @@ test('storefront checkout opens Razorpay flow and verifies payment', async ({ pa
   const checkoutResponse = await checkoutResponsePromise
   expect(checkoutResponse.status()).toBe(201)
 
-  const checkoutPayload = await checkoutResponse.json()
+  const checkoutPayload = storefrontCheckoutSessionResponseSchema.parse(await checkoutResponse.json())
+  const paymentSession = checkoutPayload.paymentSession
   expect(checkoutPayload.requiresPayment).toBeTruthy()
-  expect(checkoutPayload.paymentSession.provider).toBe('razorpay')
-  expect(checkoutPayload.paymentSession.orderId).toMatch(/^order_/)
+  expect(paymentSession).not.toBeNull()
+  expect(paymentSession?.provider).toBe('razorpay')
+  expect(paymentSession?.orderId).toMatch(/^order_/)
 
   const verifyResponse = await verifyResponsePromise
   expect(verifyResponse.status()).toBe(200)
 
-  const verifiedPayload = await verifyResponse.json()
+  const verifiedPayload = storefrontCheckoutResponseSchema.parse(await verifyResponse.json())
   const verifiedOrder = verifiedPayload.order
   expect(verifiedOrder.paymentGateway).toBe('razorpay')
   expect(verifiedOrder.paymentStatus).toBe('captured')

@@ -1,21 +1,48 @@
 {
-  "extends": "./tsconfig.base.json",
   "compilerOptions": {
+    "target": "ES2023",
+    "useDefineForClassFields": true,
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true,
+    "skipLibCheck": true,
     "noEmit": true,
-    "types": ["node"]
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["apps/ecommerce/web/src/*"],
+      "@framework-core/*": ["apps/framework/src/*"],
+      "@ecommerce-api/*": ["apps/ecommerce/api/src/*"],
+      "@core-domain/*": ["apps/core/domain/src/*"],
+      "@ecommerce-domain/*": ["apps/ecommerce/domain/src/*"],
+      "@billing-core/*": ["apps/billing/core/src/*"],
+      "@shared/*": ["apps/core/shared/src/*"],
+      "@ui/*": ["apps/ui/src/*"]
+    }
   },
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx",
     "apps/**/*.ts",
     "apps/**/*.tsx",
-    "packages/**/*.ts",
-    "packages/**/*.tsx",
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
+    "playwright.config.ts",
     "vite.config.ts",
     "eslint.config.js"
   ],
   "exclude": [
-    "apps/web/src/state/**/*",
-    "apps/web/src/components/forms/ProtectedRoute.tsx"
+    "apps/ui/**/*",
+    "apps/ecommerce/web/src/state/**/*",
+    "apps/ecommerce/web/src/components/forms/ProtectedRoute.tsx"
   ]
 }

@@ -3,49 +3,45 @@
 ## Core Principles
 
 1. TypeScript is mandatory across frontend, backend, desktop, and shared code.
-2. Business logic belongs in domain or application layers, not UI event handlers.
-3. Shared contracts, schemas, and domain primitives belong in `packages/shared`.
-4. Prefer pure functions for domain decisions and explicit side-effect boundaries.
-5. No silent failure paths. Errors must carry actionable context.
+2. Business logic belongs in domain or application layers, not UI handlers.
+3. Framework services and app business logic must stay separated.
+4. Shared business masters belong under `apps/core`.
+5. Prefer explicit failures and contextual errors over silent fallbacks.
+
+## Framework Rules
+
+1. Platform runtime concerns belong in `apps/framework`.
+2. Authentication belongs at framework level.
+3. Database, config, migrations, storage, notifications, payments, HTTP helpers, and future cache/jobs/realtime/CLI blocks should stay explicit.
+4. Do not move ecommerce or billing business logic into framework for convenience.
+
+## App Rules
+
+1. `apps/core` owns shared business masters and reusable business-common flows.
+2. `apps/ecommerce` owns ecommerce workflows.
+3. `apps/billing` owns accounting, inventory, billing, and reporting workflows.
+4. `apps/site` owns static presentation only.
+5. `apps/ui` owns reusable UI primitives.
+6. `apps/docs` owns unified written documentation.
+7. `apps/cli` owns operational control commands.
 
 ## Backend Rules
 
-1. Validate all API inputs at the boundary before invoking use cases.
-2. Separate request parsing, application orchestration, domain rules, and persistence concerns.
+1. Validate input at boundaries before invoking use cases.
+2. Keep transport, application, domain, and persistence concerns separate.
 3. Financial writes must be atomic, balanced, traceable, and audit-safe.
-4. Never hard-delete financial transactions. Model reversals, cancellations, or correction entries.
-5. Store posting date, effective date, and created timestamp separately for accounting events.
-6. Database tables should default to lifecycle columns named `is_active`, `created_at`, and `updated_at` unless a documented exception exists.
+4. Never hard-delete financial or stock-affecting records.
 
 ## Frontend Rules
 
 1. React components should compose state and presentation, not own domain rules.
-2. Network boundaries should map API responses into typed view models.
-3. Reusable primitives belong in `packages/ui`.
-4. Keep module screens composable and avoid monolithic page components.
-
-## Shared Package Rules
-
-1. Centralize enums, identifiers, schemas, and business guardrails.
-2. Version tax and rule-based calculation structures when future changes are expected.
-3. Keep module contracts stable and additive where possible.
-
-## Error Handling
-
-1. Return explicit results or throw typed errors with context.
-2. Do not swallow exceptions.
-3. Log infrastructure faults with enough metadata to trace the failing operation.
-
-## File And Naming Conventions
-
-1. Use clear module-oriented names.
-2. Keep directories aligned to architecture boundaries.
-3. Avoid `utils` dumping grounds. Name code by responsibility.
+2. App shells should not hide business decisions that belong in backend or domain code.
+3. Reusable UI primitives belong in `apps/ui`.
 
 ## Documentation Coupling
 
-Any user-visible, architecture-relevant, or workflow-relevant code change must update:
+Architecture-relevant changes must update:
 
-- `ASSIST/Documentation/PROJECT_OVERVIEW.md`
-- `ASSIST/Documentation/ARCHITECTURE.md`
-- `ASSIST/Documentation/CHANGELOG.md`
+1. `ASSIST/Documentation/ARCHITECTURE.md`
+2. `ASSIST/Documentation/PROJECT_OVERVIEW.md`
+3. `ASSIST/Documentation/CHANGELOG.md`

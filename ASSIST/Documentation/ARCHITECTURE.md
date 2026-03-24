@@ -1,92 +1,203 @@
 # Architecture
 
-## Target Structure
+## Purpose
 
-```text
-apps/
-  api/
-  desktop/
-  web/
-packages/
-  shared/
-  ui/
-  billing-core/
-  billing-connectors/
-ASSIST/
-  Discipline/
-  Documentation/
-```
+This file is the single source of truth for framework and app architecture.
 
-## Layering Rules
+If another ASSIST file conflicts with this file, this file wins.
 
-### Domain
+## Source Roots
 
-- Core business vocabulary
-- Invariants and guardrails
-- Shared identifiers, enums, and schemas
+All source code lives under one `apps/` container:
 
-### Application
+1. `apps/framework`
+2. `apps/core`
+3. `apps/ecommerce`
+4. `apps/billing`
+5. `apps/site`
+6. `apps/ui`
+7. `apps/docs`
+8. `apps/cli`
 
-- Use cases and orchestration
-- Cross-entity workflows
-- Transaction boundaries
+## Platform Structure
 
-### Transport
+The whole system is one ERP platform with explicit app boundaries.
 
-- HTTP routing
-- Request parsing
-- Response serialization
+### Framework
 
-### Persistence
+`apps/framework` owns platform-level runtime services:
 
-- Repositories
-- Database adapters
-- External service integrations
+1. authentication
+2. database
+3. config
+4. migrations
+5. files and media storage
+6. notifications
+7. payments
+8. HTTP runtime helpers
+9. platform manifests
+10. future cache, jobs, realtime, and CLI blocks
+
+Current framework code lives mainly in:
+
+1. `apps/framework/src/auth`
+2. `apps/framework/src/mailbox`
+3. `apps/framework/src/runtime`
+4. `apps/framework/src/app-suite.ts`
+5. `apps/framework/src/manifest.ts`
+
+### Core
+
+`apps/core` owns shared business masters and reusable business-common behavior.
+
+Current core ownership:
+
+1. company
+2. contact
+3. common modules
+4. media
+5. shared settings
+6. setup/bootstrap
+7. shared schemas and domain contracts
+
+Current core code lives in:
+
+1. `apps/core/api`
+2. `apps/core/desktop`
+3. `apps/core/domain`
+4. `apps/core/shared`
+
+### Ecommerce
+
+`apps/ecommerce` owns ecommerce and customer-commerce behavior.
+
+Current ecommerce ownership:
+
+1. product
+2. storefront
+3. checkout
+4. commerce order operations
+5. customer profile
+6. customer helpdesk
+7. ecommerce web UX
+
+Current ecommerce code lives in:
+
+1. `apps/ecommerce/api`
+2. `apps/ecommerce/web`
+3. `apps/ecommerce/domain`
+
+### Billing
+
+`apps/billing` is the separate accounting and inventory application.
+
+Current billing structure:
+
+1. `apps/billing/api`
+2. `apps/billing/web`
+3. `apps/billing/desktop`
+4. `apps/billing/core`
+5. `apps/billing/connectors`
+
+### Site
+
+`apps/site` is the static presentation surface. It is not a business app.
 
 ### UI
 
-- Page composition
-- View state
-- Presentation primitives
+`apps/ui` owns reusable UI primitives and shared presentation building blocks.
 
-## Current Technical Foundation
+### Docs
 
-1. `apps/web` renders the operator-facing shell plus the storefront-facing `shop` target, now including a full static frontend shopping flow for home, catalog, product detail, wishlist, cart, and checkout.
-2. `apps/api` exposes bootstrap, health, auth, and setup endpoints with MariaDB-backed RBAC persistence.
-3. API database bootstrap now separates schema migrations from optional tracked seeders for development/demo aggregate data and can enter a runtime setup mode instead of crashing when DB settings are missing or invalid.
-4. `apps/desktop` wraps the web client in Electron.
-5. `packages/shared` centralizes domain types, schemas, auth contracts, and accounting guardrails.
-6. `packages/ui` contains reusable React primitives.
-7. Media uploads now persist through the API into configured public/private storage and create tracked media asset records that frontend forms can reuse through shared popup manager components under `apps/web/src/components/forms`.
-8. The storefront now uses a feature-local static data/model/context layer so the shopping experience can be reviewed end to end without backend commerce wiring while keeping the existing public shop shell intact.
-9. The storefront layout owns route-entry scroll behavior so browser scroll restoration does not pull product detail views away from the hero section on navigation.
-10. Storefront utility actions such as save/share stay in the UI layer and reuse shared presentation helpers such as the toast system across both card and detail surfaces, with aligned hover and motion behavior.
-11. Storefront collection/category navigation cues remain presentational within the card-link UI layer, using accent tokens and motion to signal clickability without introducing nested interactive controls.
-12. Theme tokens in `apps/web/src/css/styles.css` must keep the neutral accent readable by default, because storefront CTA and utility affordances depend on that baseline before hover state is applied.
-13. Shared storefront navigation/search primitives can be reused inside feature pages such as the catalog toolbar, as long as route-derived state remains synchronized from the page layer.
-14. Search-input copy decisions belong in the shared storefront search primitive so header and page-level search surfaces stay behaviorally and visually aligned.
-15. Home-page feature notes can stay in the UI layer as presentational-interactive button surfaces, using shared feedback primitives such as toasts until real destinations exist.
-16. Shared storefront utility controls should keep the container visually calm and reserve stronger motion/state expression for the icon so they remain secondary to primary commerce CTAs.
-17. Header utility icons should follow the same icon-led interaction rule when acting as lightweight status shortcuts, so sticky navigation does not visually overpower core storefront actions.
-18. Adjacent sticky-header utility triggers should reuse the same hover surface language where appropriate to avoid visual drift within the top navigation cluster.
-19. Catalog toolbar helper copy can be removed when the shared search control alone communicates the surface purpose clearly enough.
-20. Production VPS deployment can run as a single Node container that serves the built React app from `apps/web/dist` and stores runtime config/media data in an external volume.
-21. A standalone billing product can live beside the main ERP as its own Electron desktop shell and API/runtime boundary, using billing-owned packages instead of leaking accounting rules across existing feature modules.
+`apps/docs` owns the consolidated documentation surface for the whole suite.
 
-## Current Auth Foundation
+It should contain:
 
-1. The API persists auth data in normalized `auth_users`, `auth_roles`, `auth_permissions`, `auth_user_roles`, and `auth_role_permissions` tables so it can coexist with pre-existing schemas in `cxnext_db`.
-2. The default table shape now expects `is_active`, `created_at`, and `updated_at` lifecycle columns unless an exception is documented.
-3. JWT auth responses expose avatar, roles, and permissions to the frontend through shared schemas.
-4. Development bootstrap can seed a default admin user and RBAC metadata from environment-driven configuration.
-5. Optional aggregate/demo data should flow through tracked seeders under `apps/api/src/shared/database/seeders` instead of being embedded in schema-only migrations.
-6. Runtime database settings may come from a volume-backed JSON config file that overrides `.env`, allowing first-run setup without image rebuilds.
+1. startup documentation
+2. app ownership documentation
+3. server operations notes
+4. cross-app reference documentation
 
-## Architecture Constraints
+### CLI
 
-1. Business logic must not live only in frontend components.
-2. Shared schemas must remain the contract source of truth.
-3. Accounting writes must be modeled as explicit, reversible operations.
-4. Security and authorization are mandatory cross-cutting concerns.
-5. Reporting must remain reproducible for historical date ranges.
-6. Standalone products such as billing must keep explicit package, runtime, and integration boundaries instead of importing feature-local ERP internals directly.
+`apps/cli` owns server-side operational control commands for the suite.
+
+It should provide:
+
+1. app listing
+2. build orchestration
+3. server start helpers
+4. runtime health and environment checks
+
+## Runtime Model
+
+Current runtime reality:
+
+1. `apps/core/api` is the suite host API and mounts framework, core, and ecommerce behavior.
+2. `apps/ecommerce/web` is the active backoffice and storefront web application.
+3. `apps/core/desktop` is the current desktop shell.
+4. `apps/billing/*` already exists as the base of a separate billing product.
+
+Rule:
+
+1. `apps/core/api` may host routes from other apps during extraction, but it must not own their business code.
+
+## Boundary Rules
+
+1. Framework code must not depend on ecommerce or billing business rules.
+2. Core code must stay reusable across apps.
+3. Ecommerce code must not be added back into `apps/core`.
+4. Billing code must stay independent from ecommerce behavior.
+5. UI primitives belong in `apps/ui`, not inside business apps unless they are app-specific.
+
+## Authentication And Authorization
+
+1. Authentication is framework-level.
+2. Authorization is app-level on top of framework auth primitives.
+
+## Current Extraction Status
+
+Completed:
+
+1. framework runtime services moved out of `apps/core/api` into `apps/framework/src/runtime`
+2. framework auth and mailbox moved into `apps/framework/src`
+3. ecommerce backend features moved into `apps/ecommerce/api`
+4. `apps/core/api` now consumes framework and ecommerce code instead of owning it
+
+Remaining:
+
+1. split the suite host API into clearer mounted route modules
+2. continue moving app-specific frontend code into cleaner app-owned sections where needed
+3. build billing business workflows on top of the current billing base
+
+## Target Shape
+
+```text
+apps/
+  framework/
+    src/
+      auth/
+      mailbox/
+      runtime/
+  core/
+    api/
+    desktop/
+    domain/
+    shared/
+  ecommerce/
+    api/
+    web/
+    domain/
+  billing/
+    api/
+    web/
+    desktop/
+    core/
+    connectors/
+  site/
+  docs/
+  cli/
+    src/
+  ui/
+    src/
+```

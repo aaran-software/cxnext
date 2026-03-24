@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { storefrontCheckoutSessionResponseSchema } from '@shared/index'
 
 test('storefront catalog loads and checkout places a cod order', async ({ page }) => {
   await page.goto('/login')
@@ -52,7 +53,7 @@ test('storefront catalog loads and checkout places a cod order', async ({ page }
   const checkoutResponse = await checkoutResponsePromise
   expect(checkoutResponse.status()).toBe(201)
 
-  const payload = await checkoutResponse.json()
+  const payload = storefrontCheckoutSessionResponseSchema.parse(await checkoutResponse.json())
   expect(payload.requiresPayment).toBeFalsy()
   expect(payload.order.orderNumber).toMatch(/^SO-/)
   expect(payload.order.items).toHaveLength(1)

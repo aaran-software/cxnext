@@ -1,24 +1,26 @@
 # Release Discipline
 
-## Quality Gates Before Merge
+## Quality Gates
 
-1. Build passes
-2. Lint passes
-3. Required tests pass, or the gap is documented
-4. Documentation is updated
-5. Changelog is updated
+1. Relevant validation passes or is explicitly documented as blocked.
+2. Documentation is current.
+3. Changelog is updated.
+4. No secrets or unsafe environment data are committed.
 
-## Release Requirements
+## Release Caution
 
-1. No secrets in source control
-2. Database or financial schema changes must include rollout notes
-3. User-visible changes must be reflected in changelog entries
-4. Breaking contract changes must be explicitly documented
+Changes touching these areas require extra rigor:
 
-## Financial Domain Caution
+1. framework auth
+2. shared `Core` masters
+3. billing/accounting/inventory logic
+4. ecommerce checkout/order state
+5. migrations or storage behavior
 
-Any release touching vouchers, ledgers, stock, tax, or report reproducibility requires:
+## Required Notes
 
-1. Verification of audit metadata handling
-2. Verification of reversible correction flow behavior
-3. Verification of deterministic numbering and posting semantics
+If a release changes contracts, data shape, or high-risk logic, document:
+
+1. rollout impact
+2. validation performed
+3. remaining risks

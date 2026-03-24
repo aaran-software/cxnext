@@ -5,7 +5,7 @@
   "tsx": true,
   "tailwind": {
     "config": "",
-    "css": "apps/web/src/css/styles.css",
+    "css": "apps/ecommerce/web/src/css/styles.css",
     "baseColor": "neutral",
     "cssVariables": true,
     "prefix": ""

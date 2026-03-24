@@ -2,90 +2,14 @@
 
 ## Unreleased
 
-### Added
-
-- Introduced `apps/web`, `apps/api`, `apps/desktop`, `packages/shared`, and `packages/ui`
-- Added repository governance under `ASSIST/Discipline`
-- Added architecture and setup documentation under `ASSIST/Documentation`
-- Added `ASSIST/AI_RULES.md` for AI agent operating constraints
-- Replaced starter Vite screen with ERP platform foundation shell
-- Added initial Node API bootstrap endpoint and Electron desktop shell
-- Added Tailwind CSS, shadcn-style component primitives, and theme switching to `apps/web`
-- Added `WebLayout`, `AppLayout`, and `AuthLayout` with routed Home, About, Contact, Dashboard, Login, and 404 pages
-- Added a dashboard sidebar shell inspired by `sidebar-08` and committed `components.json` for future shadcn generator compatibility
-- Refined the dashboard app shell to use the full available width and simplified the login screen to a cleaner baseline form
-- Repointed the root frontend entry at `apps/web` and removed the stale root starter component files
-- Added shared auth schemas, actor types, token contracts, and database health contracts in `packages/shared`
-- Added MariaDB configuration, connection health reporting, auth-user persistence, bcrypt password hashing, and JWT auth routes in `apps/api`
-- Added protected frontend auth flows with separate login and register pages for customer, staff, admin, and vendor roles
-- Added normalized `users`, `roles`, `permissions`, `user_roles`, and `role_permissions` tables with development bootstrap seeding
-- Added avatar, role, and permission data to frontend auth sessions and dashboard presentation
-- Added a discipline rule that tables should default to `is_active`, `created_at`, and `updated_at` lifecycle columns
-- Added `.env.example`, local `.env` wiring, `cxnext_db` bootstrap, and verified local login for `sundar@sundar.com`
-- Added automatic `.env` loading for the API runtime so local `/auth/login` works through the normal dev server path
-- Added a lightweight backend ORM wrapper, recorded migration runner, and committed migrations for auth plus shared ecommerce/billing reference tables including geography, contact grouping, product grouping, units, HSN, tax, brands, colours, sizes, currencies, order types, transports, warehouses, destinations, payment terms, and product categories
-- Added shared common-module API contracts plus backend metadata, list, fetch, create, update, deactivate, and restore endpoints for the common geography, contact, product, tax, logistics, warehouse, currency, and payment master tables
-- Added a grouped application menu, common workspace header, and working common-module management screens in `apps/web` using the existing common list/dialog UX connected to the backend common-module APIs
-- Added a dedicated company aggregate feature with new company-related tables and `CODEXSUN` seed data, backend company CRUD routes, and frontend company list plus full-page create/edit screens
-- Added a dedicated contact aggregate feature with new contact-related tables and placeholder seed data, backend contact CRUD routes, and frontend contact list plus full-page create/edit screens
-- Added a dedicated product aggregate feature that reuses the existing common product masters, adds product-specific tables and placeholder seed data, exposes backend product CRUD routes, and provides frontend product list plus full-page create/edit screens
-- Added a shared animated tab component and reorganized the company, contact, and product master forms into grouped tabs for easier data entry
-- Added a dedicated media manager feature with storage-aware media tables, filesystem bootstrap for public and private storage, backend media and folder CRUD routes plus public asset streaming, and frontend dashboard pages for media asset and folder management
-- Added a tracked database seeder flow under `apps/api/src/shared/database/seeders` and a dummy product aggregate bootstrap that runs after schema migrations when enabled
-- Refactored the product foundation migration to stop inserting placeholder product data directly, keeping optional demo aggregate data in seeders instead of schema migrations
-- Added upload-backed media asset creation through the API plus a reusable popup media picker/uploader used by company logo and product image form fields
-- Added temporary upload metadata review in the popup flow so asset name, original name, storage scope, and folder selection are confirmed before the media asset is persisted
-- Redesigned the popup uploader into shared form components with a two-column upload workspace, right-side live preview, and tabbed metadata sections for basic details, SEO content, and file details
-- Adjusted the shared media manager dialog to fit the viewport with internal vertical scrolling and fixed upload/preview panel heights
-- Replaced the storefront `shop` home placeholder with a polished catalog-first merchandising page that keeps the existing store shell intact while adding category storytelling, product-driven collection grids, spotlight content, and explicit empty/error states for live catalog loading
-- Expanded the storefront `shop` target into a full static frontend shopping flow with garment-focused home, catalog filters, product detail, wishlist, cart, and checkout pages while preserving the existing menu and footer shell
-- Added storefront scroll-reset handling so route changes into product detail force the viewport back to the hero section instead of restoring prior listing scroll position
-- Added a placeholder share CTA to storefront product cards and grouped it with wishlist beside the primary add-to-cart action
-- Aligned the storefront share button hover and press treatment with the wishlist control so the product-card utility actions feel visually consistent
-- Added the Share CTA to the storefront product-detail action row after Save using the same utility-action styling and placeholder toast behavior
-- Refined the storefront category-card `Explore` affordance into a clearer inline CTA with a visible neutral-black baseline, arrow motion, and accent hover feedback
-- Corrected the storefront neutral accent tokens so the neutral theme now resolves to black-based values instead of near-white
-- Replaced the storefront catalog toolbar placeholder control with the shared search bar and synchronized it with current query and department params
-- Removed the placeholder copy from the shared storefront search input so header and catalog search bars render with a cleaner empty state
-- Converted the storefront home-page feature cards into interactive button surfaces with hover motion, accent feedback, and placeholder click toasts
-- Reworked the storefront wishlist and share buttons so icon fill, accent color, and motion carry the interaction while the button shell stays lightweight
-- Reduced the top storefront cart icon shell so the sticky-header cart now expresses hover and active state through the icon instead of a filled button background
-- Reduced the top storefront wishlist and login/account shells so those sticky-header controls now express hover and active state through their icons instead of filled button backgrounds
-- Aligned the top header login/account trigger hover surface with the adjacent `More` trigger for more consistent sticky-nav feedback
-- Removed the helper copy from the storefront catalog toolbar so the shared search bar stands alone in a cleaner browsing surface
-- Added a first-run setup mode that keeps the API online when MariaDB is missing or misconfigured, exposes setup status/configuration endpoints, persists runtime DB settings outside `.env`, and gates the React app with a WordPress-style database setup screen
-- Added production static serving from `apps/api` so the built `apps/web` bundle can be deployed as part of the same Node process
-- Moved the production Docker assets into `.container/`, switched the default Compose stack to app-only deployment against an existing MariaDB server, and added `.container/USAGE.md` for VPS setup guidance
-- Configured the app container to join external Docker network `codexion-network`, default to the `mariadb` host with `root` / `DbPass1@@` / `cxnext_db`, and prefill the Git sync source as `https://github.com/aaran-software/cxnext.git` on `main`
-- Aligned `.container/docker-compose.yml` with the uploaded `.container/mariadb.yml` stack by using the shared `codexion-network` and the `mariadb` service hostname
-- Removed the runtime JSON config path and Compose-based app env injection so container startup now seeds a single `.env` file from `.env.example`, uses that file as the only runtime config source, and fails fast if `.env` is invalid
-- Added backend commerce workflow tables and contracts for order events, shipment events, sales invoices with child rows, and linked accounting vouchers for storefront orders
-- Added an admin `/admin/dashboard/orders` operations board that lets internal users review workflow timelines, apply fulfillment actions, inspect invoice details, print invoice HTML, and review accounting postings from one dashboard surface
-
 ### Changed
 
-- Restored a green repo baseline by fixing current TypeScript blocker clusters across API, web, and shared modules without redesigning existing UX flows
-- Excluded unused legacy frontend state files and the unused legacy `ProtectedRoute` wrapper from the active compile graph so stale dead-path imports no longer block repo validation
-- Hardened the shared database ORM transaction typings so repository transaction helpers now return consistent `execute`, `insert`, and `first` types
-- Corrected auth, mailbox, Razorpay, storefront, router, settings, media-picker, and order-board typing defects so `npm run typecheck` and `npm run build` both succeed again
-- Added a local `nodemailer` module declaration for the current notification path instead of leaving the API compile blocked on missing external typings
-- Replaced customer portal placeholders for overview, orders, wishlist, cart, and notifications with live current commerce data driven by existing storefront state and authenticated customer order history
-- Added an authenticated customer order-history API and an environment-driven `PAYMENT_TEST_BYPASS` checkout mode so online order testing can complete without Razorpay when explicitly enabled
-- Enforced immediate auth revocation for disabled customer accounts by rejecting inactive bearer-token sessions on the API and clearing stale frontend sessions when `/auth/me` refresh fails
-- Split the web production bundle into stable vendor chunks in `apps/web/vite.config.ts` so Vite build output no longer triggers the 500 kB chunk-size warning
-- Added an admin customer helpdesk workspace with a master-list browse page plus product-tone customer show page, and added OTP password-reset flows so staff can send reset assistance to the customer's existing email without requiring the current password
-- Refined admin order operations into a master-list browse page plus product-tone order show page with organized workflow, shipment, invoice, and accounting tabs
-- Simplified the product form image manager into a compact gallery with one bulk-upload entry point, a five-image cap, fixed-height previews, and a lightweight preview lightbox
-- Added product-form helpers for auto slug generation, configurable auto SKU numbering, automatic defaults for product group/unit/tax, a dedicated settings tab, and a separate content tab for short and full descriptions
-- Tightened product-form tab panels and repeated edit rows into denser table-like layouts to reduce empty space across attributes, variants, pricing, inventory, and publishing
-- Simplified product structure, variants, inventory, and stock-movement editors into slimmer row-and-column layouts for faster editing
-- Reworked each variant editor into a split detail row with left-side title/value fields and right-side attribute and image cards using the main gallery tone
-- Removed the duplicate variant-image preview by keeping a single fixed-height image card in the variant editor
-- Reorganized each variant image row so the preview holder sits on the left and the media/input/actions stay grouped on the right
-- Finalized the variant image row by removing the extra section label, keeping a single remove path, and enlarging the left preview holder
-- Simplified variant images to one default image slot per variant and removed the add-image flow to close layout gaps
-- Added a visible numbered badge and accent border to each variant row for quick identification without saving any row number
-- Separated core product editing from stock management by simplifying attributes into editable tables, slimming variants down to identity/media fields, and consolidating product pricing, discounts, inventory, and stock movements into a dedicated Stock tab
-- Added a `Set Variables` action on the product attribute editor that builds the full variant matrix automatically from the current attribute values while preserving matching existing variant rows
-- Simplified the variant editor by removing fixed barcode and weight inputs, folding image and dynamic custom fields into one tighter right-side workspace, and letting extra per-variant fields such as weight, length, or width be added as name/value rows on demand
-- Moved the variant image block below the left-side status rows, let dynamic variant fields fill the full right workspace, split pricing into a dedicated `Pricing` tab, and reduced `Stock` to opening-stock setup without editable stock movements
+1. rewrote ASSIST guidance around the current `apps/` architecture
+2. moved framework runtime infrastructure from `apps/core/api/src/shared` to `apps/framework/src/runtime`
+3. moved framework auth and mailbox modules into `apps/framework/src`
+4. moved ecommerce backend features into `apps/ecommerce/api/src/features`
+5. rewired `apps/core/api` to host framework, core, and ecommerce code through explicit cross-app imports instead of owning all of it directly
+6. added `apps/framework/src/manifest.ts` as the framework-owned suite manifest source
+7. added the `@ecommerce-api/*` TypeScript path alias for clean backend app boundaries
+8. added `apps/docs` as the unified documentation root for the whole suite
+9. added `apps/cli` as the suite control CLI for server-side operations

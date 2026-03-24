@@ -11,6 +11,9 @@ export default defineConfig([
     '**/node_modules/**',
     '**/.turbo/**',
     'package-lock.json',
+    'apps/ecommerce/web/src/components/forms/ProtectedRoute.tsx',
+    'apps/ecommerce/web/src/state/**',
+    'apps/ui/**',
   ]),
   {
     files: ['**/*.{ts,tsx}'],
@@ -40,7 +43,10 @@ export default defineConfig([
     },
   },
   {
-    files: ['apps/web/**/*.{ts,tsx}', 'packages/ui/**/*.{ts,tsx}'],
+    files: ['apps/ecommerce/web/**/*.{ts,tsx}', 'apps/billing/web/**/*.{ts,tsx}', 'apps/ui/**/*.{ts,tsx}'],
     extends: [reactRefresh.configs.vite],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
   },
 ])

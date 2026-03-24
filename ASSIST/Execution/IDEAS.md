@@ -2,24 +2,11 @@
 
 ## Purpose
 
-This file captures lightweight future ideas before they are promoted into formal documentation or active execution.
+Capture future ideas that are not yet active tasks.
 
-Read `ASSIST/AI_RULES.md`.
-Read this file fully.
-Update `TASK.md` before starting implementation.
+## Current Follow-Up Ideas
 
-Date: 2026-03-24
-
-## Promoted Idea
-
-The standalone billing-and-accounts product concept was promoted into formal documentation.
-
-See:
-
-1. `ASSIST/Documentation/BILLING_PRODUCT_ARCHITECTURE.md`
-
-## Open Follow-Up Ideas
-
-1. Define the first billing database migration strategy with full separation from the current ERP schema path.
-2. Decide whether the billing desktop product should embed its own local database option for offline-first operators.
-3. Define a connector conflict-resolution UX for Tally and ERPNext sync retries.
+1. Create a feature ownership matrix for `Core`, `Ecommerce`, `Billing`, `CRM`, and `Site`.
+2. Define which current `core/shared` modules should move to framework services and which should remain under `Core`.
+3. Define the first clean authorization model for app-level access on top of framework-level authentication.
+4. Define the next extraction batch from the current `core`, `ecommerce`, `billing`, and `site` roots into clearer internal runtime slices.

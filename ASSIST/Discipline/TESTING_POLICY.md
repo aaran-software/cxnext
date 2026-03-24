@@ -2,35 +2,35 @@
 
 ## Baseline
 
-1. All changes must pass lint and typecheck.
-2. Build must pass before merge.
-3. New business logic should be introduced in testable units with focused tests.
+1. All changes should pass the relevant validation for the affected area.
+2. `typecheck` and build should stay green unless a documented blocker exists.
+3. High-risk business logic should be introduced in testable units.
 
 ## Test Priorities
 
-1. Domain invariants
-2. Accounting balancing rules
-3. Tax computation versioning behavior
-4. Role and permission checks
-5. Report reproducibility for date-bound queries
+1. framework service contracts
+2. shared `Core` masters and permissions
+3. accounting and balancing rules
+4. stock and inventory transitions
+5. ecommerce checkout and order-state behavior
 6. API contract validation
 
-## Minimum Expectations By Change Type
+## Minimum Expectations
 
-1. UI-only layout change:
-   - Lint, typecheck, build
-2. API contract change:
-   - Lint, typecheck, build
-   - Contract and handler tests when available
-3. Domain or accounting logic change:
-   - Lint, typecheck, build
-   - Focused domain tests are required unless blocked and documented
+1. Documentation-only change:
+   - consistency review
+2. UI-only change:
+   - typecheck and build where relevant
+3. API or schema change:
+   - typecheck, build, and focused validation where available
+4. Billing/accounting/inventory logic change:
+   - typecheck, build, and focused tests unless blocked and documented
 
 ## Test Gap Discipline
 
 If tests are missing, document:
 
-1. What was validated manually
-2. What automated coverage is missing
-3. Why the gap exists
-4. What follow-up work is required
+1. what was validated
+2. what automated coverage is missing
+3. why the gap exists
+4. what follow-up is required
