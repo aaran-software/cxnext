@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { useAuth } from "@/features/auth/components/auth-provider"
+import { useAuth } from "@framework-core/web/auth/components/auth-provider"
 import {
   createEmptyAddress,
   getDefaultCustomerAddress,
@@ -307,23 +307,23 @@ async function openRazorpayCheckout(
 }
 
 const defaultFormValues: CheckoutFormValues = {
-  firstName: "Sundar",
-  lastName: "Raj",
-  email: "sundar@cxnext.app",
-  phone: "+91 98765 43210",
-  addressLine1: "27 Residency Road",
+  firstName: "",
+  lastName: "",
+  email: "",
+  phone: "",
+  addressLine1: "",
   addressLine2: "",
   cityId: "",
-  city: "Bengaluru",
+  city: "",
   stateId: "",
-  state: "Karnataka",
+  state: "",
   countryId: "",
-  country: "India",
+  country: "",
   postalCodeId: "",
-  postalCode: "560025",
+  postalCode: "",
   note: "",
   deliveryMethod: "standard",
-  paymentMethod: "upi",
+  paymentMethod: "cod",
 }
 
 function resolveLookupLabel(items: CommonModuleItem[], value: string) {
@@ -389,7 +389,7 @@ const deliveryOptions: Array<{ value: StorefrontDeliveryMethod; label: string; d
 const paymentOptions: Array<{ value: StorefrontPaymentMethod; label: string; detail: string; disabled?: boolean }> = [
   { value: "upi", label: "UPI / Wallet", detail: "Opens Razorpay Checkout with UPI and wallet payment methods." },
   { value: "card", label: "Credit or debit card", detail: "Opens Razorpay Checkout and completes payment before confirmation." },
-  { value: "cod", label: "Cash on delivery", detail: "Available later. Keep online payment enabled for now.", disabled: true },
+  { value: "cod", label: "Cash on delivery", detail: "Pay in cash when the order is delivered." },
 ]
 
 function toErrorMessage(error: unknown) {

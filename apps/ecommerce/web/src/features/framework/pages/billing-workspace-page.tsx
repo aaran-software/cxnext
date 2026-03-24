@@ -1,5 +1,5 @@
-import { FrameworkAppWorkspacePage } from '@/features/framework/pages/framework-app-workspace-page'
+import { BillingOverviewPage } from '../../../../../../billing/web/src/features/billing/pages/billing-pages.tsx'
 
 export function BillingWorkspacePage() {
-  return <FrameworkAppWorkspacePage appId="billing" />
+  return <BillingOverviewPage />
 }

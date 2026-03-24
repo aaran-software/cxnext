@@ -1,14 +1,14 @@
 import type { FormEvent } from 'react'
 import type { Company } from '@shared/index'
 import { useEffect, useMemo, useState } from 'react'
-import { Mail, MessageCircle, SendIcon } from 'lucide-react'
+import { MessageCircle, SendIcon } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { useAuth } from '@/features/auth/components/auth-provider'
+import { useAuth } from '@framework-core/web/auth/components/auth-provider'
 import { getCompany, HttpError, sendMailboxMessage } from '@/shared/api/client'
 import { useBranding } from '@/shared/branding/branding-provider'
 import { showErrorToast, showSuccessToast, showValidationToast } from '@/shared/notifications/toast'
@@ -214,19 +214,15 @@ export function CustomerSupportPage() {
           <CardHeader>
             <CardTitle>Mail support</CardTitle>
             <CardDescription>
-              Your contact email is fixed from the signed-in account. Write the issue once and send it directly to the current company support inbox.
+              Your contact email is fixed from the signed-in account. Write the issue once and send it directly to the current company support email.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form className="space-y-4" onSubmit={(event) => void handleSubmit(event)}>
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-1">
                 <div className="space-y-2">
                   <Label htmlFor="customer-support-email">Your email</Label>
                   <Input id="customer-support-email" value={customerEmail} readOnly />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="customer-support-target">Support inbox</Label>
-                  <Input id="customer-support-target" value={supportEmail} readOnly />
                 </div>
               </div>
 
@@ -281,7 +277,7 @@ export function CustomerSupportPage() {
             <div className="flex flex-col gap-3">
               <Button variant="outline" asChild>
                 <a href={`mailto:${supportEmail}`}>
-                  <Mail className="size-4" />
+                  <SendIcon className="size-4" />
                   Open mail app
                 </a>
               </Button>

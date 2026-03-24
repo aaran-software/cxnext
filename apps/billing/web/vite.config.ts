@@ -8,6 +8,8 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
+      '@admin-web': path.resolve(import.meta.dirname, '../../ecommerce/web/src'),
+      '@billing-web': path.resolve(import.meta.dirname, './src'),
       '@framework-core': path.resolve(import.meta.dirname, '../../framework/src'),
       '@billing-core': path.resolve(import.meta.dirname, '../core/src'),
       '@shared': path.resolve(import.meta.dirname, '../../core/shared/src'),

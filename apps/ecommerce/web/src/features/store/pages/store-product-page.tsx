@@ -12,7 +12,7 @@ import { ReviewForm } from '@/features/store/components/product/ReviewForm'
 import { ReviewList } from '@/features/store/components/product/ReviewList'
 import { ShareButton } from '@/features/store/components/product/ShareButton'
 import { WishlistButton } from '@/features/store/components/product/WishlistButton'
-import { useAuth } from '@/features/auth/components/auth-provider'
+import { useAuth } from '@framework-core/web/auth/components/auth-provider'
 import { useStorefront } from '@/features/store/context/storefront-context'
 import { formatCurrency, getPrimaryProductImage } from '@/features/store/lib/storefront-utils'
 

@@ -20,7 +20,7 @@ import {
   Wallet,
   Warehouse,
 } from 'lucide-react'
-import { buildAdminPortalPath } from '@/features/auth/lib/portal-routing'
+import { buildAdminPortalPath } from '@framework-core/web/auth/lib/portal-routing'
 
 export type CommonModuleGroupKey =
   | 'location'

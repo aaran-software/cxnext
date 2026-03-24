@@ -29,7 +29,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar'
-import { buildAdminPortalPath } from '@/features/auth/lib/portal-routing'
+import { buildAdminPortalPath } from '@framework-core/web/auth/lib/portal-routing'
 
 function toInitials(name: string) {
   return name

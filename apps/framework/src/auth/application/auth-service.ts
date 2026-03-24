@@ -37,7 +37,6 @@ import type { AuthUserRepository } from '../data/auth-user-repository'
 import { environment } from '@framework-core/runtime/config/environment'
 import { isDatabaseEnabled } from '@framework-core/runtime/database/database'
 import { ApplicationError } from '@framework-core/runtime/errors/application-error'
-import { normalizeMsg91Destination, verifyMsg91WidgetAccessToken } from '@framework-core/runtime/notifications/msg91-otp'
 import type { MailboxService } from '../../mailbox/application/mailbox-service'
 
 interface TokenClaims {
@@ -56,33 +55,24 @@ export class AuthService {
     this.assertDatabaseEnabled()
 
     const parsedPayload = authRegisterOtpRequestPayloadSchema.parse(payload)
-    const actorType = 'customer'
-    const destination =
-      parsedPayload.channel === 'email'
-        ? parsedPayload.destination.trim().toLowerCase()
-        : this.normalizePhoneNumber(parsedPayload.destination)
-
-    if (parsedPayload.channel === 'email') {
-      const existingUser = await this.repository.findByEmailAndActorType(destination, actorType)
-      if (existingUser) {
-        throw new ApplicationError('An account already exists for this email.', { email: destination }, 409)
-      }
+    if (parsedPayload.channel !== 'email') {
+      throw new ApplicationError(
+        'Mobile OTP is currently disabled. Use email OTP verification instead.',
+        { channel: parsedPayload.channel },
+        400,
+      )
     }
 
-    if (parsedPayload.channel === 'mobile') {
-      const existingUsers = await this.repository.findByPhoneNumber(destination)
-      if (existingUsers.some((entry) => entry.user.actorType === actorType)) {
-        throw new ApplicationError('An account already exists for this mobile number.', { phoneNumber: destination }, 409)
-      }
+    const actorType = 'customer'
+    const destination = parsedPayload.destination.trim().toLowerCase()
+
+    const existingUser = await this.repository.findByEmailAndActorType(destination, actorType)
+    if (existingUser) {
+      throw new ApplicationError('An account already exists for this email.', { email: destination }, 409)
     }
 
     const otp = String(randomInt(100000, 1000000))
-    const otpHash = await bcrypt.hash(
-      parsedPayload.channel === 'mobile' && environment.notifications.msg91.enabled
-        ? `msg91-widget:${destination}:${Date.now()}`
-        : otp,
-      10,
-    )
+    const otpHash = await bcrypt.hash(otp, 10)
     const expiresAt = new Date(Date.now() + environment.auth.otp.expiryMinutes * 60_000)
 
     await this.repository.deactivatePendingContactVerifications({
@@ -117,9 +107,7 @@ export class AuthService {
       })
 
       throw new ApplicationError(
-        parsedPayload.channel === 'email'
-          ? 'Unable to send the email OTP right now.'
-          : 'Unable to send the mobile OTP right now.',
+        'Unable to send the email OTP right now.',
         {
           channel: parsedPayload.channel,
           destination,
@@ -132,7 +120,7 @@ export class AuthService {
     return authRegisterOtpRequestResponseSchema.parse({
       verificationId: verification.id,
       expiresAt: verification.expiresAt,
-      debugOtp: environment.auth.otp.debug && !(parsedPayload.channel === 'mobile' && environment.notifications.msg91.enabled) ? otp : null,
+      debugOtp: environment.auth.otp.debug ? otp : null,
     } satisfies AuthRegisterOtpRequestResponse)
   }
 
@@ -165,29 +153,8 @@ export class AuthService {
       throw new ApplicationError('Verification session is missing a stored OTP hash.', { verificationId: verification.id }, 500)
     }
 
-    let otpMatches = false
-
-    if (verification.channel === 'mobile' && environment.notifications.msg91.enabled) {
-      try {
-        otpMatches = await this.verifyMobileOtp(verification.destination, parsedPayload.accessToken)
-      } catch (error) {
-        if (error instanceof ApplicationError) {
-          throw error
-        }
-
-        throw new ApplicationError(
-          'Unable to validate the mobile OTP right now.',
-          {
-            verificationId: verification.id,
-            detail: error instanceof Error ? error.message : 'Unknown MSG91 verification error',
-          },
-          502,
-        )
-      }
-    } else {
-      const comparePassword = bcrypt.compare as (password: string, hash: string) => Promise<boolean>
-      otpMatches = await comparePassword(String(parsedPayload.otp ?? ''), String(verification.otpHash ?? ''))
-    }
+    const comparePassword = bcrypt.compare as (password: string, hash: string) => Promise<boolean>
+    const otpMatches = await comparePassword(String(parsedPayload.otp ?? ''), String(verification.otpHash ?? ''))
     if (!otpMatches) {
       await this.repository.incrementContactVerificationAttempts(verification.id)
       throw new ApplicationError('Invalid OTP. Check the code and try again.', { verificationId: verification.id }, 400)
@@ -219,18 +186,6 @@ export class AuthService {
       expectedChannel: 'email',
       expectedDestination: normalizedEmail,
     })
-
-    const mobileVerification = parsedPayload.mobileVerificationId
-      ? await this.repository.getContactVerification(parsedPayload.mobileVerificationId)
-      : null
-
-    if (mobileVerification) {
-      this.assertVerifiedRegistrationContact({
-        verification: mobileVerification,
-        expectedChannel: 'mobile',
-        expectedDestination: normalizedPhone,
-      })
-    }
 
     const existingUser = await this.repository.findByEmailAndActorType(
       normalizedEmail,
@@ -266,10 +221,6 @@ export class AuthService {
     })
 
     await this.repository.consumeContactVerification(emailVerification!.id)
-
-    if (mobileVerification) {
-      await this.repository.consumeContactVerification(mobileVerification.id)
-    }
 
     return this.createAuthResponse(user)
   }
@@ -674,49 +625,22 @@ export class AuthService {
     otp: string
     verificationId: string
   }) {
-    if (input.channel === 'email') {
-      await this.mailboxService.sendTemplatedEmail({
-        to: [{ email: input.destination, name: null }],
-        subject: '',
-        templateCode: 'customer_registration_otp',
-        templateData: {
-          brandName: environment.notifications.email.fromName || 'CXNext',
-          otp: input.otp,
-          expiryMinutes: environment.auth.otp.expiryMinutes,
-        },
-        referenceType: 'customer_registration_otp',
-        referenceId: input.verificationId,
-      }, { allowDebugFallback: true })
-      return
+    if (input.channel !== 'email') {
+      throw new Error('Mobile OTP delivery is disabled.')
     }
 
-    if (environment.notifications.msg91.enabled) {
-      return
-    }
-
-    if (environment.auth.otp.debug) {
-      return
-    }
-
-    throw new Error('MSG91 mobile OTP delivery is not configured.')
-  }
-
-  private async verifyMobileOtp(destination: string, accessToken: string | undefined) {
-    if (!accessToken?.trim()) {
-      throw new ApplicationError('Complete mobile verification before continuing.', { destination }, 400)
-    }
-
-    const verification = await verifyMsg91WidgetAccessToken(accessToken.trim())
-    const expectedDestination = normalizeMsg91Destination(destination)
-
-    if (verification.identifier && verification.identifier !== expectedDestination) {
-      throw new ApplicationError('Verified mobile number does not match the registration number.', {
-        expectedDestination,
-        verifiedDestination: verification.identifier,
-      }, 400)
-    }
-
-    return true
+    await this.mailboxService.sendTemplatedEmail({
+      to: [{ email: input.destination, name: null }],
+      subject: '',
+      templateCode: 'customer_registration_otp',
+      templateData: {
+        brandName: environment.notifications.email.fromName || 'CXNext',
+        otp: input.otp,
+        expiryMinutes: environment.auth.otp.expiryMinutes,
+      },
+      referenceType: 'customer_registration_otp',
+      referenceId: input.verificationId,
+    }, { allowDebugFallback: true })
   }
 
   private async createCustomerEmailOtp<TResponse extends {

@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { ArrowLeft, KeyRound } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { confirmPasswordReset, requestPasswordResetOtp } from '@/shared/api/client'
-import { getAuthNavigationState } from '@/features/auth/lib/navigation-state'
+import { getAuthNavigationState } from '@framework-core/web/auth/lib/navigation-state'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -15,7 +15,6 @@ export function ForgotPasswordPage() {
   const navigationState = getAuthNavigationState(location.state)
   const [email, setEmail] = useState('')
   const [verificationId, setVerificationId] = useState<string | null>(null)
-  const [debugOtp, setDebugOtp] = useState<string | null>(null)
   const [otp, setOtp] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -40,7 +39,6 @@ export function ForgotPasswordPage() {
       })
 
       setVerificationId(response.verificationId)
-      setDebugOtp(response.debugOtp)
       showSuccessToast({
         title: 'Password reset OTP sent',
         description: 'Check the account email for the password reset code.',
@@ -81,7 +79,6 @@ export function ForgotPasswordPage() {
 
       setOtp('')
       setVerificationId(null)
-      setDebugOtp(null)
       setNewPassword('')
       setConfirmPassword('')
 
@@ -174,9 +171,6 @@ export function ForgotPasswordPage() {
                 placeholder="Repeat the new password"
               />
             </div>
-            {debugOtp ? (
-              <p className="text-xs text-muted-foreground">Debug OTP: {debugOtp}</p>
-            ) : null}
             <Button type="button" className="w-full" onClick={() => void handleConfirmReset()} disabled={isResettingPassword}>
               {isResettingPassword ? 'Resetting password...' : 'Confirm password reset'}
             </Button>

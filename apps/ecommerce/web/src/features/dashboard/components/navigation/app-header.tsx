@@ -12,7 +12,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { frontendTarget } from '@/config/frontend'
-import { useAuth } from '@/features/auth/components/auth-provider'
+import { useAuth } from '@framework-core/web/auth/components/auth-provider'
 import { useDesk } from '@/features/framework/desk/desk-provider'
 import { ThemeSwitcher } from '@/shared/theme/theme-switcher'
 

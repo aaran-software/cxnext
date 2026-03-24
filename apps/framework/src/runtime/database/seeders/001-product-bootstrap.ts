@@ -14,9 +14,9 @@ interface TagRow extends RowDataPacket {
   id: string
 }
 
-const demoProductId = 'product:demo-cxnext-polo'
-const demoProductUuid = 'demo-cxnext-polo'
-const demoProductSlug = 'cxnext-demo-polo'
+const productId = 'product:cxnext-polo'
+const productUuid = 'cxnext-polo'
+const productSlug = 'cxnext-polo'
 
 async function insertRows(
   execute: (sql: string, params?: SqlValue[]) => Promise<unknown>,
@@ -60,16 +60,16 @@ async function resolveWarehouseId(
   return warehouse?.id ?? null
 }
 
-export const dummyProductSeeder: Seeder = {
-  id: '001-dummy-product',
-  name: 'Dummy product aggregate bootstrap',
+export const productBootstrapSeeder: Seeder = {
+  id: '001-product-bootstrap',
+  name: 'Single product catalog bootstrap',
   isEnabled: () => environment.seed.products.enabled,
   async run({ db }) {
     await db.transaction(async (transaction) => {
       const warehouseId = await resolveWarehouseId(transaction.first.bind(transaction))
       const existing = await transaction.first<RowDataPacket>(
         `SELECT id FROM ${productTableNames.products} WHERE id = ? OR slug = ? OR sku = ? LIMIT 1`,
-        [demoProductId, demoProductSlug, 'CXN-POLO-001'],
+        [productId, productSlug, 'CXN-POLO-001'],
       )
 
       if (existing) {
@@ -84,11 +84,11 @@ export const dummyProductSeeder: Seeder = {
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
-          demoProductId,
-          demoProductUuid,
-          'CXNext Demo Polo',
-          demoProductSlug,
-          'A seeded demo apparel product used to bootstrap product, pricing, stock, and catalog flows in local environments.',
+          productId,
+          productUuid,
+          'CXNext Polo',
+          productSlug,
+          'A Seeded apparel product used to bootstrap product, pricing, stock, and catalog flows.',
           'Seeded product with variants, images, stock, SEO, and tags.',
           'brand:codexsun',
           'product-category:menswear',
@@ -109,15 +109,15 @@ export const dummyProductSeeder: Seeder = {
 
       await insertRows(transaction.execute.bind(transaction), productTableNames.images, [
         {
-          id: 'product-image:demo-cxnext-polo-front',
-          product_id: demoProductId,
+          id: 'product-image:cxnext-polo-front',
+          product_id: productId,
           image_url: 'https://placehold.co/1200x1200?text=CXNext+Polo+Front',
           is_primary: true,
           sort_order: 1,
         },
         {
-          id: 'product-image:demo-cxnext-polo-detail',
-          product_id: demoProductId,
+          id: 'product-image:cxnext-polo-detail',
+          product_id: productId,
           image_url: 'https://placehold.co/1200x1200?text=CXNext+Polo+Detail',
           is_primary: false,
           sort_order: 2,
@@ -126,63 +126,63 @@ export const dummyProductSeeder: Seeder = {
 
       await insertRows(transaction.execute.bind(transaction), productTableNames.attributes, [
         {
-          id: 'product-attribute:demo-cxnext-polo-size',
-          product_id: demoProductId,
+          id: 'product-attribute:cxnext-polo-size',
+          product_id: productId,
           name: 'Size',
         },
         {
-          id: 'product-attribute:demo-cxnext-polo-colour',
-          product_id: demoProductId,
+          id: 'product-attribute:cxnext-polo-colour',
+          product_id: productId,
           name: 'Colour',
         },
       ])
 
       await insertRows(transaction.execute.bind(transaction), productTableNames.attributeValues, [
         {
-          id: 'product-attribute-value:demo-cxnext-polo-size-m',
-          product_id: demoProductId,
-          attribute_id: 'product-attribute:demo-cxnext-polo-size',
+          id: 'product-attribute-value:cxnext-polo-size-m',
+          product_id: productId,
+          attribute_id: 'product-attribute:cxnext-polo-size',
           value: 'M',
         },
         {
-          id: 'product-attribute-value:demo-cxnext-polo-size-l',
-          product_id: demoProductId,
-          attribute_id: 'product-attribute:demo-cxnext-polo-size',
+          id: 'product-attribute-value:cxnext-polo-size-l',
+          product_id: productId,
+          attribute_id: 'product-attribute:cxnext-polo-size',
           value: 'L',
         },
         {
-          id: 'product-attribute-value:demo-cxnext-polo-colour-navy',
-          product_id: demoProductId,
-          attribute_id: 'product-attribute:demo-cxnext-polo-colour',
+          id: 'product-attribute-value:cxnext-polo-colour-navy',
+          product_id: productId,
+          attribute_id: 'product-attribute:cxnext-polo-colour',
           value: 'Navy',
         },
       ])
 
       await insertRows(transaction.execute.bind(transaction), productTableNames.variantMap, [
         {
-          id: 'product-variant-map:demo-cxnext-polo-size-m',
-          product_id: demoProductId,
-          attribute_id: 'product-attribute:demo-cxnext-polo-size',
-          value_id: 'product-attribute-value:demo-cxnext-polo-size-m',
+          id: 'product-variant-map:cxnext-polo-size-m',
+          product_id: productId,
+          attribute_id: 'product-attribute:cxnext-polo-size',
+          value_id: 'product-attribute-value:cxnext-polo-size-m',
         },
         {
-          id: 'product-variant-map:demo-cxnext-polo-size-l',
-          product_id: demoProductId,
-          attribute_id: 'product-attribute:demo-cxnext-polo-size',
-          value_id: 'product-attribute-value:demo-cxnext-polo-size-l',
+          id: 'product-variant-map:cxnext-polo-size-l',
+          product_id: productId,
+          attribute_id: 'product-attribute:cxnext-polo-size',
+          value_id: 'product-attribute-value:cxnext-polo-size-l',
         },
         {
-          id: 'product-variant-map:demo-cxnext-polo-colour-navy',
-          product_id: demoProductId,
-          attribute_id: 'product-attribute:demo-cxnext-polo-colour',
-          value_id: 'product-attribute-value:demo-cxnext-polo-colour-navy',
+          id: 'product-variant-map:cxnext-polo-colour-navy',
+          product_id: productId,
+          attribute_id: 'product-attribute:cxnext-polo-colour',
+          value_id: 'product-attribute-value:cxnext-polo-colour-navy',
         },
       ])
 
       await insertRows(transaction.execute.bind(transaction), productTableNames.variants, [
         {
-          id: 'product-variant:demo-cxnext-polo-m',
-          product_id: demoProductId,
+          id: 'product-variant:cxnext-polo-m',
+          product_id: productId,
           sku: 'CXN-POLO-001-M',
           variant_name: 'Navy / M',
           price: 899,
@@ -194,8 +194,8 @@ export const dummyProductSeeder: Seeder = {
           is_active: true,
         },
         {
-          id: 'product-variant:demo-cxnext-polo-l',
-          product_id: demoProductId,
+          id: 'product-variant:cxnext-polo-l',
+          product_id: productId,
           sku: 'CXN-POLO-001-L',
           variant_name: 'Navy / L',
           price: 929,
@@ -210,14 +210,14 @@ export const dummyProductSeeder: Seeder = {
 
       await insertRows(transaction.execute.bind(transaction), productTableNames.variantImages, [
         {
-          id: 'product-variant-image:demo-cxnext-polo-m',
-          variant_id: 'product-variant:demo-cxnext-polo-m',
+          id: 'product-variant-image:cxnext-polo-m',
+          variant_id: 'product-variant:cxnext-polo-m',
           image_url: 'https://placehold.co/1200x1200?text=CXNext+Polo+M',
           is_primary: true,
         },
         {
-          id: 'product-variant-image:demo-cxnext-polo-l',
-          variant_id: 'product-variant:demo-cxnext-polo-l',
+          id: 'product-variant-image:cxnext-polo-l',
+          variant_id: 'product-variant:cxnext-polo-l',
           image_url: 'https://placehold.co/1200x1200?text=CXNext+Polo+L',
           is_primary: true,
         },
@@ -225,26 +225,26 @@ export const dummyProductSeeder: Seeder = {
 
       await insertRows(transaction.execute.bind(transaction), productTableNames.variantAttributes, [
         {
-          id: 'product-variant-attribute:demo-cxnext-polo-m-size',
-          variant_id: 'product-variant:demo-cxnext-polo-m',
+          id: 'product-variant-attribute:cxnext-polo-m-size',
+          variant_id: 'product-variant:cxnext-polo-m',
           attribute_name: 'Size',
           attribute_value: 'M',
         },
         {
-          id: 'product-variant-attribute:demo-cxnext-polo-m-colour',
-          variant_id: 'product-variant:demo-cxnext-polo-m',
+          id: 'product-variant-attribute:cxnext-polo-m-colour',
+          variant_id: 'product-variant:cxnext-polo-m',
           attribute_name: 'Colour',
           attribute_value: 'Navy',
         },
         {
-          id: 'product-variant-attribute:demo-cxnext-polo-l-size',
-          variant_id: 'product-variant:demo-cxnext-polo-l',
+          id: 'product-variant-attribute:cxnext-polo-l-size',
+          variant_id: 'product-variant:cxnext-polo-l',
           attribute_name: 'Size',
           attribute_value: 'L',
         },
         {
-          id: 'product-variant-attribute:demo-cxnext-polo-l-colour',
-          variant_id: 'product-variant:demo-cxnext-polo-l',
+          id: 'product-variant-attribute:cxnext-polo-l-colour',
+          variant_id: 'product-variant:cxnext-polo-l',
           attribute_name: 'Colour',
           attribute_value: 'Navy',
         },
@@ -252,25 +252,25 @@ export const dummyProductSeeder: Seeder = {
 
       await insertRows(transaction.execute.bind(transaction), productTableNames.prices, [
         {
-          id: 'product-price:demo-cxnext-polo-base',
-          product_id: demoProductId,
+          id: 'product-price:cxnext-polo-base',
+          product_id: productId,
           variant_id: null,
           mrp: 999,
           selling_price: 899,
           cost_price: 460,
         },
         {
-          id: 'product-price:demo-cxnext-polo-m',
-          product_id: demoProductId,
-          variant_id: 'product-variant:demo-cxnext-polo-m',
+          id: 'product-price:cxnext-polo-m',
+          product_id: productId,
+          variant_id: 'product-variant:cxnext-polo-m',
           mrp: 999,
           selling_price: 899,
           cost_price: 460,
         },
         {
-          id: 'product-price:demo-cxnext-polo-l',
-          product_id: demoProductId,
-          variant_id: 'product-variant:demo-cxnext-polo-l',
+          id: 'product-price:cxnext-polo-l',
+          product_id: productId,
+          variant_id: 'product-variant:cxnext-polo-l',
           mrp: 1029,
           selling_price: 929,
           cost_price: 480,
@@ -279,8 +279,8 @@ export const dummyProductSeeder: Seeder = {
 
       await insertRows(transaction.execute.bind(transaction), productTableNames.discounts, [
         {
-          id: 'product-discount:demo-cxnext-polo-launch',
-          product_id: demoProductId,
+          id: 'product-discount:cxnext-polo-launch',
+          product_id: productId,
           variant_id: null,
           discount_type: 'PERCENTAGE',
           discount_value: 10,
@@ -291,10 +291,10 @@ export const dummyProductSeeder: Seeder = {
 
       await insertRows(transaction.execute.bind(transaction), productTableNames.offers, [
         {
-          id: 'product-offer:demo-cxnext-polo-bundle',
-          product_id: demoProductId,
+          id: 'product-offer:cxnext-polo-bundle',
+          product_id: productId,
           title: 'Launch offer',
-          description: 'Seeded launch offer for catalog preview and pricing workflows.',
+          description: 'Launch offer for catalog preview and pricing workflows.',
           offer_price: 849,
           start_date: null,
           end_date: null,
@@ -303,17 +303,17 @@ export const dummyProductSeeder: Seeder = {
 
       await insertRows(transaction.execute.bind(transaction), productTableNames.seo, [
         {
-          id: 'product-seo:demo-cxnext-polo',
-          product_id: demoProductId,
-          meta_title: 'CXNext Demo Polo',
-          meta_description: 'Seeded demo polo used to validate catalog, pricing, and stock experiences.',
-          meta_keywords: 'cxnext,demo,polo,apparel',
+          id: 'product-seo:cxnext-polo',
+          product_id: productId,
+          meta_title: 'CXNext Polo',
+          meta_description: 'Seeded polo used to validate catalog, pricing, and stock experiences.',
+          meta_keywords: 'cxnext,polo,apparel',
         },
       ])
 
       const tagDefinitions = [
-        { id: 'product-tag:cxnext-demo-seed', name: 'cxnext-demo-seed' },
-        { id: 'product-tag:demo-polo', name: 'demo-polo' },
+        { id: 'product-tag:cxnext-seed', name: 'cxnext-seed' },
+        { id: 'product-tag:cxnext-polo', name: 'cxnext-polo' },
         { id: 'product-tag:catalog-bootstrap', name: 'catalog-bootstrap' },
       ] as const
 
@@ -343,34 +343,34 @@ export const dummyProductSeeder: Seeder = {
 
       await insertRows(transaction.execute.bind(transaction), productTableNames.tagMap, [
         {
-          id: 'product-tag-map:demo-cxnext-polo-demo',
-          product_id: demoProductId,
-          tag_id: tagIdByName.get('cxnext-demo-seed') ?? 'product-tag:cxnext-demo-seed',
+          id: 'product-tag-map:cxnext-polo-seed',
+          product_id: productId,
+          tag_id: tagIdByName.get('cxnext-seed') ?? 'product-tag:cxnext-seed',
         },
         {
-          id: 'product-tag-map:demo-cxnext-polo-apparel',
-          product_id: demoProductId,
-          tag_id: tagIdByName.get('demo-polo') ?? 'product-tag:demo-polo',
+          id: 'product-tag-map:cxnext-polo-apparel',
+          product_id: productId,
+          tag_id: tagIdByName.get('cxnext-polo') ?? 'product-tag:cxnext-polo',
         },
         {
-          id: 'product-tag-map:demo-cxnext-polo-featured',
-          product_id: demoProductId,
+          id: 'product-tag-map:cxnext-polo-featured',
+          product_id: productId,
           tag_id: tagIdByName.get('catalog-bootstrap') ?? 'product-tag:catalog-bootstrap',
         },
       ])
 
       await insertRows(transaction.execute.bind(transaction), productTableNames.reviews, [
         {
-          id: 'product-review:demo-cxnext-polo-1',
-          product_id: demoProductId,
+          id: 'product-review:cxnext-polo-primary',
+          product_id: productId,
           user_id: null,
           rating: 5,
           review: 'Strong seeded sample for validating the product detail layout.',
           review_date: '2026-01-12 10:00:00',
         },
         {
-          id: 'product-review:demo-cxnext-polo-2',
-          product_id: demoProductId,
+          id: 'product-review:cxnext-polo-secondary',
+          product_id: productId,
           user_id: null,
           rating: 4,
           review: 'Useful bootstrap record for testing tags, reviews, and inventory widgets.',
@@ -384,17 +384,17 @@ export const dummyProductSeeder: Seeder = {
 
       await insertRows(transaction.execute.bind(transaction), productTableNames.stockItems, [
         {
-          id: 'stock-item:demo-cxnext-polo-m',
-          product_id: demoProductId,
-          variant_id: 'product-variant:demo-cxnext-polo-m',
+          id: 'stock-item:cxnext-polo-m',
+          product_id: productId,
+          variant_id: 'product-variant:cxnext-polo-m',
           warehouse_id: warehouseId,
           quantity: 18,
           reserved_quantity: 2,
         },
         {
-          id: 'stock-item:demo-cxnext-polo-l',
-          product_id: demoProductId,
-          variant_id: 'product-variant:demo-cxnext-polo-l',
+          id: 'stock-item:cxnext-polo-l',
+          product_id: productId,
+          variant_id: 'product-variant:cxnext-polo-l',
           warehouse_id: warehouseId,
           quantity: 12,
           reserved_quantity: 1,
@@ -403,25 +403,25 @@ export const dummyProductSeeder: Seeder = {
 
       await insertRows(transaction.execute.bind(transaction), productTableNames.stockMovements, [
         {
-          id: 'stock-movement:demo-cxnext-polo-m-opening',
-          product_id: demoProductId,
-          variant_id: 'product-variant:demo-cxnext-polo-m',
+          id: 'stock-movement:cxnext-polo-m-opening',
+          product_id: productId,
+          variant_id: 'product-variant:cxnext-polo-m',
           warehouse_id: warehouseId,
           movement_type: 'OPENING_STOCK',
           quantity: 18,
           reference_type: 'SEEDER',
-          reference_id: '001-dummy-product',
+          reference_id: '001-product-bootstrap',
           movement_at: '2026-01-01 09:00:00',
         },
         {
-          id: 'stock-movement:demo-cxnext-polo-l-opening',
-          product_id: demoProductId,
-          variant_id: 'product-variant:demo-cxnext-polo-l',
+          id: 'stock-movement:cxnext-polo-l-opening',
+          product_id: productId,
+          variant_id: 'product-variant:cxnext-polo-l',
           warehouse_id: warehouseId,
           movement_type: 'OPENING_STOCK',
           quantity: 12,
           reference_type: 'SEEDER',
-          reference_id: '001-dummy-product',
+          reference_id: '001-product-bootstrap',
           movement_at: '2026-01-01 09:00:00',
         },
       ])

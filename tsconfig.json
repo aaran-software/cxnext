@@ -20,6 +20,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["apps/ecommerce/web/src/*"],
+      "@admin-web/*": ["apps/ecommerce/web/src/*"],
+      "@billing-web/*": ["apps/billing/web/src/*"],
       "@framework-core/*": ["apps/framework/src/*"],
       "@ecommerce-api/*": ["apps/ecommerce/api/src/*"],
       "@core-domain/*": ["apps/core/domain/src/*"],

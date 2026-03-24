@@ -1,6 +1,6 @@
 import type { StorefrontOrder } from '@/features/store/types/storefront'
 import { useEffect, useState } from 'react'
-import { useAuth } from '@/features/auth/components/auth-provider'
+import { useAuth } from '@framework-core/web/auth/components/auth-provider'
 import { HttpError, listCustomerOrders } from '@/shared/api/client'
 
 export type CustomerOrderNotification = {

@@ -26,7 +26,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { useAuth } from '@/features/auth/components/auth-provider'
+import { useAuth } from '@framework-core/web/auth/components/auth-provider'
 import {
   readCustomerSecurityPreferences,
   writeCustomerSecurityPreferences,
@@ -518,10 +518,10 @@ export function CustomerProfilePage() {
         <CardHeader className="gap-4 border-b border-border/60 p-8">
           <Badge className="w-fit">Customer profile</Badge>
           <CardTitle className="text-4xl tracking-tight sm:text-5xl">
-            Account, security, and delivery settings in one place.
+            Account, security, and delivery settings.
           </CardTitle>
           <CardDescription className="max-w-3xl text-base leading-7">
-            Manage your customer username, account contact, mobile number, saved delivery addresses, password updates, verification preferences, and account deletion controls without changing the existing portal flow.
+            Manage your customer portal username, account contact, mobile number, saved delivery addresses, password updates, verification preferences, and account deletion controls.
           </CardDescription>
         </CardHeader>
       </Card>

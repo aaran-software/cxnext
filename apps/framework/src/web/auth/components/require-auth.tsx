@@ -1,7 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import type { ActorType } from '@shared/index'
-import { useAuth } from './auth-provider'
-import { getDefaultPortalPath } from '../lib/portal-routing'
+import { useAuth } from '@framework-core/web/auth/components/auth-provider'
+import { getDefaultPortalPath } from '@framework-core/web/auth/lib/portal-routing'
 
 interface RequireAuthProps {
   allow?: ActorType[]

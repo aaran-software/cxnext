@@ -6,7 +6,7 @@ import { CommonList, type CommonListColumn, type CommonListFilterOption } from '
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { useAuth } from '@/features/auth/components/auth-provider'
+import { useAuth } from '@framework-core/web/auth/components/auth-provider'
 import { HttpError, listCommerceOrders } from '@/shared/api/client'
 
 function toErrorMessage(error: unknown) {

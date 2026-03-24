@@ -7,7 +7,7 @@ import {
   ShoppingCart,
   ShoppingBag,
 } from 'lucide-react'
-import { buildCustomerPortalPath } from '@/features/auth/lib/portal-routing'
+import { buildCustomerPortalPath } from '@framework-core/web/auth/lib/portal-routing'
 
 export const customerPortalLinks = [
   { title: 'Overview', href: buildCustomerPortalPath(), icon: LayoutDashboard },

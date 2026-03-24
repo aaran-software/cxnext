@@ -15,8 +15,8 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { useAuth } from "@/features/auth/components/auth-provider"
-import { buildCustomerPortalPath } from "@/features/auth/lib/portal-routing"
+import { useAuth } from "@framework-core/web/auth/components/auth-provider"
+import { buildCustomerPortalPath } from "@framework-core/web/auth/lib/portal-routing"
 import { CustomerNavUser } from "@/features/customer-portal/components/navigation/customer-nav-user"
 import { customerPortalLinks } from "@/features/customer-portal/lib/customer-portal-nav"
 import { BrandGlyph } from "@/shared/branding/brand-mark"

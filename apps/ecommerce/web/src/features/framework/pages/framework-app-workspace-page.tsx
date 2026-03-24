@@ -2,7 +2,7 @@ import type { SuiteAppId } from '@framework-core/app-suite'
 import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { useAuth } from '@/features/auth/components/auth-provider'
+import { useAuth } from '@framework-core/web/auth/components/auth-provider'
 import { getDeskApp } from '@/features/framework/desk/desk-registry'
 
 const readinessTone = {

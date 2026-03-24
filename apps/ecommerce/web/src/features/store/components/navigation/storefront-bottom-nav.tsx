@@ -2,8 +2,8 @@ import { HeartIcon, HomeIcon, SearchIcon, ShoppingCartIcon, UserCircle2Icon } fr
 import { Link, useLocation } from "react-router-dom"
 
 import { Badge } from "@/components/ui/badge"
-import { getPortalHomeHref } from "@/features/auth/lib/portal-routing"
-import { useAuth } from "@/features/auth/components/auth-provider"
+import { getPortalHomeHref } from "@framework-core/web/auth/lib/portal-routing"
+import { useAuth } from "@framework-core/web/auth/components/auth-provider"
 import { useStorefront } from "@/features/store/context/storefront-context"
 import { cn } from "@/lib/utils"
 

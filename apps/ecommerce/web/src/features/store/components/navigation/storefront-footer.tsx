@@ -90,10 +90,10 @@ export function StorefrontFooter() {
           <div className="space-y-5">
             <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Trade Information</h3>
             <ul className="grid gap-3 text-sm text-muted-foreground">
-              <li><Link to="/terms" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Terms & Conditions</Link></li>
-              <li><Link to="/privacy" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Privacy Policy</Link></li>
-              <li><Link to="/shipping" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Shipping Information</Link></li>
-              <li><Link to="/returns" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Returns & Exchanges</Link></li>
+              <li><Link to="/contact" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Terms & Conditions</Link></li>
+              <li><Link to="/contact" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Privacy Policy</Link></li>
+              <li><Link to="/contact" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Shipping Information</Link></li>
+              <li><Link to="/contact" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Returns & Exchanges</Link></li>
               <li><Link to="/contact" className="inline-block transition-transform hover:-translate-y-0.5 hover:text-primary">Compliance and Documentation</Link></li>
             </ul>
           </div>

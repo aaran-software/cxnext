@@ -2,8 +2,13 @@
 
 import * as React from "react"
 import type { SystemVersion } from "@shared/index"
-import { LayoutDashboard, Settings2, ShieldCheck } from "lucide-react"
+import { Blocks, ChevronRight, LayoutDashboard, Settings2, ShieldCheck } from "lucide-react"
 import { Link, NavLink, useLocation } from "react-router-dom"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import {
   Sidebar,
   SidebarContent,
@@ -13,15 +18,20 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { useAuth } from "@/features/auth/components/auth-provider"
-import { buildAdminPortalPath } from "@/features/auth/lib/portal-routing"
+import { useAuth } from "@framework-core/web/auth/components/auth-provider"
+import { buildAdminPortalPath } from "@framework-core/web/auth/lib/portal-routing"
 import { NavUser } from "@/features/dashboard/components/navigation/nav-user"
 import { useDesk } from "@/features/framework/desk/desk-provider"
 import { matchesDeskRoute } from "@/features/framework/desk/desk-registry"
+import { commonModuleMenuGroups, getCommonModuleHref } from "@/features/common-modules/config/common-module-navigation"
 import { getSystemVersion } from "@/shared/api/client"
 import { BrandGlyph } from "@/shared/branding/brand-mark"
 import { useBranding } from "@/shared/branding/branding-provider"
@@ -48,6 +58,54 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return () => {
       cancelled = true
     }
+  }, [])
+
+  const coreCommonGroups = React.useMemo(() => {
+    const menuGroupByKey = Object.fromEntries(commonModuleMenuGroups.map((group) => [group.key, group]))
+
+    return [
+      {
+        key: "location",
+        label: "Location",
+        items: menuGroupByKey.location?.items ?? [],
+      },
+      {
+        key: "product",
+        label: "Product",
+        items: menuGroupByKey.catalog?.items ?? [],
+      },
+      {
+        key: "contacts",
+        label: "Contacts",
+        items: menuGroupByKey.contacts?.items ?? [],
+      },
+      {
+        key: "order",
+        label: "Order",
+        items: [
+          ...(menuGroupByKey.inventory?.items ?? []),
+          ...(menuGroupByKey.commercial?.items ?? []),
+        ],
+      },
+      {
+        key: "others",
+        label: "Others",
+        items: menuGroupByKey.storefront?.items ?? [],
+      },
+      {
+        key: "unknown",
+        label: "Unknown",
+        items: [
+          {
+            key: "common-desk",
+            title: "Common Desk",
+            icon: Blocks,
+            description: "Fallback common workspace and unknown/default master entry point.",
+            href: buildAdminPortalPath("/common"),
+          },
+        ],
+      },
+    ]
   }, [])
 
   return (
@@ -121,26 +179,84 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarGroup key={group.id}>
               <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
               <SidebarGroupContent>
-                <SidebarMenu>
-                  {group.items.map((item) => {
-                    const ItemIcon = item.icon
-
-                    return (
-                      <SidebarMenuItem key={item.id}>
-                        <SidebarMenuButton
-                          asChild
-                          tooltip={item.name}
-                          isActive={matchesDeskRoute(location.pathname, item.route, item.matchRoutes)}
-                        >
-                          <Link to={item.route}>
-                            <ItemIcon />
-                            <span>{item.name}</span>
-                          </Link>
+                {currentApp.id === "core" && group.label === "Common" ? (
+                  <SidebarMenu>
+                    <Collapsible asChild defaultOpen={false}>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton tooltip="Common">
+                          <span>Common</span>
                         </SidebarMenuButton>
+                        <CollapsibleTrigger asChild>
+                          <SidebarMenuAction className="data-[state=open]:rotate-90">
+                            <ChevronRight />
+                            <span className="sr-only">Toggle common modules</span>
+                          </SidebarMenuAction>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <SidebarMenuSub>
+                            {coreCommonGroups.map((commonGroup) => (
+                              <Collapsible key={commonGroup.key} asChild defaultOpen={commonGroup.key === "location"}>
+                                <SidebarMenuSubItem>
+                                  <SidebarMenuSubButton asChild>
+                                    <button type="button" className="w-full justify-between">
+                                      <span>{commonGroup.label}</span>
+                                      <CollapsibleTrigger asChild>
+                                        <span className="ml-auto inline-flex">
+                                          <ChevronRight className="size-4 transition-transform data-[state=open]:rotate-90" />
+                                        </span>
+                                      </CollapsibleTrigger>
+                                    </button>
+                                  </SidebarMenuSubButton>
+                                  <CollapsibleContent>
+                                    <SidebarMenuSub>
+                                      {commonGroup.items.map((item) => {
+                                        const href = "href" in item ? item.href : getCommonModuleHref(item.key)
+                                        const ItemIcon = item.icon
+                                        const isActive = location.pathname === href || location.pathname.startsWith(`${href}/`)
+
+                                        return (
+                                          <SidebarMenuSubItem key={item.key}>
+                                            <SidebarMenuSubButton asChild isActive={isActive}>
+                                              <Link to={href}>
+                                                <ItemIcon />
+                                                <span>{item.title}</span>
+                                              </Link>
+                                            </SidebarMenuSubButton>
+                                          </SidebarMenuSubItem>
+                                        )
+                                      })}
+                                    </SidebarMenuSub>
+                                  </CollapsibleContent>
+                                </SidebarMenuSubItem>
+                              </Collapsible>
+                            ))}
+                          </SidebarMenuSub>
+                        </CollapsibleContent>
                       </SidebarMenuItem>
-                    )
-                  })}
-                </SidebarMenu>
+                    </Collapsible>
+                  </SidebarMenu>
+                ) : (
+                  <SidebarMenu>
+                    {group.items.map((item) => {
+                      const ItemIcon = item.icon
+
+                      return (
+                        <SidebarMenuItem key={item.id}>
+                          <SidebarMenuButton
+                            asChild
+                            tooltip={item.name}
+                            isActive={matchesDeskRoute(location.pathname, item.route, item.matchRoutes)}
+                          >
+                            <Link to={item.route}>
+                              <ItemIcon />
+                              <span>{item.name}</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )
+                    })}
+                  </SidebarMenu>
+                )}
               </SidebarGroupContent>
             </SidebarGroup>
           ))

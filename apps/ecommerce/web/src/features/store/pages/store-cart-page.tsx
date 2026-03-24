@@ -3,7 +3,7 @@ import { Link } from "react-router-dom"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { useAuth } from "@/features/auth/components/auth-provider"
+import { useAuth } from "@framework-core/web/auth/components/auth-provider"
 import { QuantitySelector } from "@/features/store/components/product/QuantitySelector"
 import { useStorefront } from "@/features/store/context/storefront-context"
 import { formatCurrency, getPrimaryProductImage } from "@/features/store/lib/storefront-utils"

@@ -28,7 +28,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { buildCustomerPortalPath } from "@/features/auth/lib/portal-routing"
+import { buildCustomerPortalPath } from "@framework-core/web/auth/lib/portal-routing"
 
 function toInitials(name: string) {
   return name

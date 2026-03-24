@@ -1,7 +1,7 @@
 import type { CommonModuleMetadata } from '@shared/index'
 import { useEffect, useState } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
-import { buildAdminPortalPath } from '@/features/auth/lib/portal-routing'
+import { buildAdminPortalPath } from '@framework-core/web/auth/lib/portal-routing'
 import { CommonList } from '@/components/forms/CommonList'
 import { CommonUpsertDialog } from '@/components/forms/CommonUpsertDialog'
 import { useCommonMasterState } from '@/components/forms/useCommonMasterState'

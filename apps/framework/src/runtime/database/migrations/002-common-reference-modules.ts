@@ -196,9 +196,8 @@ export const commonReferenceModulesMigration: Migration = {
 
     await seedRows(db.execute.bind(db), commonTableNames.countries, ['id', 'code', 'name', 'phone_code'], [
       { id: 'country:IN', code: 'IN', name: 'India', phone_code: '+91' },
-      { id: 'country:US', code: 'US', name: 'United States', phone_code: '+1' },
-      { id: 'country:AE', code: 'AE', name: 'United Arab Emirates', phone_code: '+971' },
     ])
+    await db.execute(`UPDATE ${commonTableNames.countries} SET is_active = 0 WHERE id <> 'country:IN'`)
 
     await seedRows(db.execute.bind(db), commonTableNames.states, ['id', 'country_id', 'code', 'name'], [
       { id: 'state:IN-TN', country_id: 'country:IN', code: 'TN', name: 'Tamil Nadu' },

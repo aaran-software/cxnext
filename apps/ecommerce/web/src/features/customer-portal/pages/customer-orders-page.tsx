@@ -16,9 +16,9 @@ export function CustomerOrdersPage() {
             Order History
           </Badge>
           <div className="space-y-2">
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Customer order history in a tighter ledger view.</h1>
+            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Order History.</h1>
             <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
-              Review placed orders, item lines, payment state, and delivery destination in a structured customer-facing table layout.
+              Review placed orders, item lines, payment state, and delivery destination.
             </p>
           </div>
         </div>
@@ -45,7 +45,7 @@ export function CustomerOrdersPage() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {orders.map((order) => (
+          {orders.map((order, orderIndex) => (
             <section
               key={order.id}
               className="overflow-hidden rounded-[1.9rem] border border-white/70 bg-white/78 shadow-[0_18px_44px_-36px_rgba(15,23,42,0.24)]"
@@ -53,6 +53,9 @@ export function CustomerOrdersPage() {
               <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border/60 px-5 py-4 sm:px-6">
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex min-w-10 items-center justify-center rounded-full border border-slate-900/10 bg-slate-900 px-3 py-1 text-xs font-semibold text-white shadow-sm">
+                      #{orderIndex + 1}
+                    </span>
                     <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">{order.orderNumber}</h2>
                     <Badge variant="outline">{order.status}</Badge>
                     <Badge variant="outline">{order.paymentStatus}</Badge>
@@ -99,6 +102,7 @@ export function CustomerOrdersPage() {
                     <table className="min-w-full border-collapse text-sm">
                       <thead className="bg-white/75 text-left">
                         <tr className="border-b border-border/70">
+                          <th className="px-4 py-3 font-semibold text-foreground">No.</th>
                           <th className="px-4 py-3 font-semibold text-foreground">Item</th>
                           <th className="px-4 py-3 font-semibold text-foreground">Variant</th>
                           <th className="px-4 py-3 text-right font-semibold text-foreground">Qty</th>
@@ -107,8 +111,13 @@ export function CustomerOrdersPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {order.items.map((item) => (
+                        {order.items.map((item, index) => (
                           <tr key={item.id} className="border-b border-border/60 last:border-b-0">
+                            <td className="px-4 py-3">
+                              <span className="inline-flex min-w-9 items-center justify-center rounded-full border border-border/70 bg-muted/35 px-2.5 py-1 text-xs font-semibold text-foreground">
+                                {index + 1}
+                              </span>
+                            </td>
                             <td className="px-4 py-3">
                               <div className="font-medium text-foreground">{item.productName}</div>
                               <div className="text-xs text-muted-foreground">{item.productSlug}</div>

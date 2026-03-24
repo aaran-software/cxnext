@@ -2,7 +2,6 @@ import {
   BellIcon,
   ChevronDownIcon,
   CreditCardIcon,
-  DownloadIcon,
   GiftIcon,
   HeadphonesIcon,
   HeartIcon,
@@ -17,8 +16,8 @@ import {
 } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 
-import { useAuth } from "@/features/auth/components/auth-provider"
-import { buildCustomerPortalPath, getPortalHomeHref } from "@/features/auth/lib/portal-routing"
+import { useAuth } from "@framework-core/web/auth/components/auth-provider"
+import { buildCustomerPortalPath, getPortalHomeHref } from "@framework-core/web/auth/lib/portal-routing"
 import { BrandMark } from "@/shared/branding/brand-mark"
 import { StorefrontMobileMenu } from "@/features/store/components/navigation/storefront-mobile-menu"
 import { StorefrontSearchBar } from "@/features/store/components/navigation/storefront-search-bar"
@@ -234,7 +233,7 @@ export function StorefrontHeader({ categories }: { categories: HeaderCategory[] 
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="cursor-pointer">
-                <Link to="/download">
+                <Link to="/contact">
                   <CreditCardIcon className="mr-3 size-4 text-muted-foreground" />
                   <span>Gift Cards</span>
                 </Link>
@@ -271,7 +270,7 @@ export function StorefrontHeader({ categories }: { categories: HeaderCategory[] 
               </div>
               <DropdownMenuSeparator className="mb-2" />
               <DropdownMenuItem asChild className="cursor-pointer">
-                <Link to="/vendor">
+                <Link to="/contact">
                   <StoreIcon className="mr-3 size-4 text-muted-foreground" />
                   <span>Become a Seller</span>
                 </Link>
@@ -283,21 +282,21 @@ export function StorefrontHeader({ categories }: { categories: HeaderCategory[] 
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="cursor-pointer">
-                <Link to="/support">
+                <Link to={auth.isAuthenticated ? buildCustomerPortalPath('/support') : "/contact"}>
                   <HeadphonesIcon className="mr-3 size-4 text-muted-foreground" />
                   <span>24x7 Customer Care</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="cursor-pointer">
-                <Link to="/advertise">
+                <Link to="/services">
                   <TrendingUpIcon className="mr-3 size-4 text-muted-foreground" />
                   <span>Advertise</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="cursor-pointer">
-                <Link to="/download">
-                  <DownloadIcon className="mr-3 size-4 text-muted-foreground" />
-                  <span>Download App</span>
+                <Link to="/contact">
+                  <HeadphonesIcon className="mr-3 size-4 text-muted-foreground" />
+                  <span>Contact Team</span>
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuContent>

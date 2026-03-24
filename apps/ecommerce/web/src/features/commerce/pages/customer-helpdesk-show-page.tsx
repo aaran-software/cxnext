@@ -6,7 +6,7 @@ import { DetailSection, EntityDetailHeader, formatDetailValue } from '@/componen
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { useAuth } from '@/features/auth/components/auth-provider'
+import { useAuth } from '@framework-core/web/auth/components/auth-provider'
 import {
   getCustomerHelpdeskCustomer,
   HttpError,
@@ -231,12 +231,10 @@ export function CustomerHelpdeskShowPage() {
 
     setWorkingAction('password-reset')
     try {
-      const response = await sendCustomerHelpdeskPasswordReset(token, item.customer.id)
+      await sendCustomerHelpdeskPasswordReset(token, item.customer.id)
       showSuccessToast({
         title: 'Password reset sent',
-        description: response.debugOtp
-          ? `OTP sent to ${item.customer.email}. Debug OTP: ${response.debugOtp}`
-          : `Password reset OTP sent to ${item.customer.email}.`,
+        description: `Password reset OTP sent to ${item.customer.email}.`,
       })
       await refreshCustomer()
     } catch (error) {
@@ -258,12 +256,10 @@ export function CustomerHelpdeskShowPage() {
 
     setWorkingAction('recovery')
     try {
-      const response = await sendCustomerHelpdeskRecoveryEmail(token, item.customer.id)
+      await sendCustomerHelpdeskRecoveryEmail(token, item.customer.id)
       showSuccessToast({
         title: 'Recovery email sent',
-        description: response.debugOtp
-          ? `Recovery OTP sent to ${item.customer.email}. Debug OTP: ${response.debugOtp}`
-          : `Recovery OTP sent to ${item.customer.email}.`,
+        description: `Recovery OTP sent to ${item.customer.email}.`,
       })
       await refreshCustomer()
     } catch (error) {

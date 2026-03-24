@@ -1,6 +1,6 @@
 import type { ActorType } from '@shared/index'
 import type { PropsWithChildren, ReactNode } from 'react'
-import { useAuth } from './auth-provider'
+import { useAuth } from '@framework-core/web/auth/components/auth-provider'
 
 interface RoleGateProps extends PropsWithChildren {
   allow: ActorType[]

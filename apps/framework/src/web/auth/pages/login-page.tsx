@@ -6,9 +6,9 @@ import {
   requestAccountRecoveryOtp,
   restoreAccount,
 } from '@/shared/api/client'
-import { useAuth } from '@/features/auth/components/auth-provider'
-import { getAuthNavigationState, getRequestedPath } from '@/features/auth/lib/navigation-state'
-import { resolveAuthorizedPath } from '@/features/auth/lib/portal-routing'
+import { useAuth } from '@framework-core/web/auth/components/auth-provider'
+import { getAuthNavigationState, getRequestedPath } from '@framework-core/web/auth/lib/navigation-state'
+import { resolveAuthorizedPath } from '@framework-core/web/auth/lib/portal-routing'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -28,7 +28,6 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [recoveryOtp, setRecoveryOtp] = useState('')
   const [recoveryVerificationId, setRecoveryVerificationId] = useState<string | null>(null)
-  const [recoveryDebugOtp, setRecoveryDebugOtp] = useState<string | null>(null)
   const [isRequestingRecoveryOtp, setIsRequestingRecoveryOtp] = useState(false)
   const [isRestoringAccount, setIsRestoringAccount] = useState(false)
 
@@ -77,7 +76,6 @@ export function LoginPage() {
       })
 
       setRecoveryVerificationId(recovery.verificationId)
-      setRecoveryDebugOtp(recovery.debugOtp)
       showSuccessToast({
         title: 'Recovery OTP sent',
         description: 'Check the account email for the recovery code.',
@@ -220,9 +218,6 @@ export function LoginPage() {
                     placeholder="Enter 6-digit OTP"
                   />
                 </div>
-                {recoveryDebugOtp ? (
-                  <p className="text-xs text-muted-foreground">Debug OTP: {recoveryDebugOtp}</p>
-                ) : null}
                 <Button type="button" onClick={() => void handleRestoreAccount()} disabled={isRestoringAccount}>
                   {isRestoringAccount ? 'Restoring account...' : 'Restore account'}
                 </Button>

@@ -1,13 +1,12 @@
 import { lazy, Suspense, type ComponentType, type LazyExoticComponent } from 'react'
 import { createBrowserRouter, Navigate, RouterProvider, useLocation } from 'react-router-dom'
 import { GlobalLoader } from '@/components/ui/global-loader'
-import { RequireAuth } from '@/features/auth/components/require-auth'
-import { RequireSuperAdmin } from '@/features/auth/components/require-super-admin'
+import { RequireAuth } from '@framework-core/web/auth/components/require-auth'
+import { RequireSuperAdmin } from '@framework-core/web/auth/components/require-super-admin'
 import { frontendTarget } from '@/config/frontend'
-import { buildAdminPortalPath, buildCustomerPortalPath, customerPortalRoot } from '@/features/auth/lib/portal-routing'
-import { useAuth } from '@/features/auth/components/auth-provider'
+import { buildAdminPortalPath, buildCustomerPortalPath, customerPortalRoot } from '@framework-core/web/auth/lib/portal-routing'
+import { useAuth } from '@framework-core/web/auth/components/auth-provider'
 import { NotFoundPage } from '@/features/marketing/pages/not-found-page'
-import { PlaceholderPage } from '@/features/store/pages/placeholder-page'
 
 function lazyPage<TModule extends Record<string, ComponentType<object>>>(
   loader: () => Promise<TModule>,
@@ -72,6 +71,38 @@ const CoreWorkspacePage = lazyPage(
 const BillingWorkspacePage = lazyPage(
   () => import('@/features/framework/pages/billing-workspace-page'),
   'BillingWorkspacePage',
+)
+const BillingLedgerListPage = lazyPage(
+  () => import('../../../../billing/web/src/features/billing/pages/billing-pages.tsx'),
+  'BillingLedgerListPage',
+)
+const BillingGstCenterPage = lazyPage(
+  () => import('../../../../billing/web/src/features/billing/pages/billing-pages.tsx'),
+  'BillingGstCenterPage',
+)
+const BillingSalesInvoicePage = lazyPage(
+  () => import('../../../../billing/web/src/features/billing/pages/billing-pages.tsx'),
+  'BillingSalesInvoicePage',
+)
+const BillingPurchaseVoucherPage = lazyPage(
+  () => import('../../../../billing/web/src/features/billing/pages/billing-pages.tsx'),
+  'BillingPurchaseVoucherPage',
+)
+const BillingReceiptVoucherPage = lazyPage(
+  () => import('../../../../billing/web/src/features/billing/pages/billing-pages.tsx'),
+  'BillingReceiptVoucherPage',
+)
+const BillingPaymentVoucherPage = lazyPage(
+  () => import('../../../../billing/web/src/features/billing/pages/billing-pages.tsx'),
+  'BillingPaymentVoucherPage',
+)
+const BillingJournalVoucherPage = lazyPage(
+  () => import('../../../../billing/web/src/features/billing/pages/billing-pages.tsx'),
+  'BillingJournalVoucherPage',
+)
+const BillingContraVoucherPage = lazyPage(
+  () => import('../../../../billing/web/src/features/billing/pages/billing-pages.tsx'),
+  'BillingContraVoucherPage',
 )
 const CrmWorkspacePage = lazyPage(
   () => import('@/features/framework/pages/crm-workspace-page'),
@@ -161,13 +192,13 @@ const SliderThemeShowPage = lazyPage(
   () => import('@/features/slider-themes/pages/slider-theme-show-page'),
   'SliderThemeShowPage',
 )
-const LoginPage = lazyPage(() => import('@/features/auth/pages/login-page'), 'LoginPage')
-const ForgotPasswordPage = lazyPage(() => import('@/features/auth/pages/forgot-password-page'), 'ForgotPasswordPage')
+const LoginPage = lazyPage(() => import('@framework-core/web/auth/pages/login-page'), 'LoginPage')
+const ForgotPasswordPage = lazyPage(() => import('@framework-core/web/auth/pages/forgot-password-page'), 'ForgotPasswordPage')
 const PortfolioHomePage = lazyPage(
   () => import('@/features/marketing/pages/portfolio-home-page'),
   'PortfolioHomePage',
 )
-const RegisterPage = lazyPage(() => import('@/features/auth/pages/register-page'), 'RegisterPage')
+const RegisterPage = lazyPage(() => import('@framework-core/web/auth/pages/register-page'), 'RegisterPage')
 const ServicesPage = lazyPage(() => import('@/features/marketing/pages/services-page'), 'ServicesPage')
 const StoreCartPage = lazyPage(() => import('@/features/store/pages/store-cart-page'), 'StoreCartPage')
 const StoreCatalogPage = lazyPage(() => import('@/features/store/pages/store-catalog-page'), 'StoreCatalogPage')
@@ -205,6 +236,14 @@ const adminRoutes = {
         { path: 'core', element: renderLazy(CoreWorkspacePage) },
         { path: 'ecommerce', element: renderLazy(EcommerceWorkspacePage) },
         { path: 'billing', element: renderLazy(BillingWorkspacePage) },
+        { path: 'billing/ledgers', element: renderLazy(BillingLedgerListPage) },
+        { path: 'billing/invoices', element: renderLazy(BillingSalesInvoicePage) },
+        { path: 'billing/purchases', element: renderLazy(BillingPurchaseVoucherPage) },
+        { path: 'billing/receipts', element: renderLazy(BillingReceiptVoucherPage) },
+        { path: 'billing/payments', element: renderLazy(BillingPaymentVoucherPage) },
+        { path: 'billing/journals', element: renderLazy(BillingJournalVoucherPage) },
+        { path: 'billing/contra', element: renderLazy(BillingContraVoucherPage) },
+        { path: 'billing/gst', element: renderLazy(BillingGstCenterPage) },
         { path: 'crm', element: renderLazy(CrmWorkspacePage) },
         { path: 'site', element: renderLazy(SiteWorkspacePage) },
         { path: 'orders', element: renderLazy(OrderOperationsPage) },
@@ -352,21 +391,6 @@ const shopRoutes = [
         ],
       },
       { path: 'product/:slug', element: renderLazy(StoreProductPage) },
-      { path: 'support', element: <PlaceholderPage /> },
-      { path: 'vendor', element: <PlaceholderPage /> },
-      { path: 'advertise', element: <PlaceholderPage /> },
-      { path: 'download', element: <PlaceholderPage /> },
-      { path: 'help', element: <PlaceholderPage /> },
-      { path: 'returns', element: <PlaceholderPage /> },
-      { path: 'shipping', element: <PlaceholderPage /> },
-      { path: 'careers', element: <PlaceholderPage /> },
-      { path: 'press', element: <PlaceholderPage /> },
-      { path: 'investors', element: <PlaceholderPage /> },
-      { path: 'terms', element: <PlaceholderPage /> },
-      { path: 'privacy', element: <PlaceholderPage /> },
-      { path: 'cookie-policy', element: <PlaceholderPage /> },
-      { path: 'accessibility', element: <PlaceholderPage /> },
-      { path: 'shipping-carriers', element: <PlaceholderPage /> },
       { path: 'category/:slug', element: renderLazy(StoreCatalogPage) },
     ],
   },

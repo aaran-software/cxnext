@@ -1,7 +1,7 @@
-import type { ProductSummary } from '@shared/index'
+import type { Product, ProductSummary, ProductUpsertPayload } from '@shared/index'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { EditIcon, MoreHorizontalIcon, PowerIcon } from 'lucide-react'
+import { CopyIcon, EditIcon, MoreHorizontalIcon, PowerIcon } from 'lucide-react'
 import { CommonList } from '@/components/forms/CommonList'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -12,8 +12,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ActiveStatusBadge, StatusBadge } from '@/components/ui/status-badge'
-import { deactivateProduct, HttpError, listProducts, restoreProduct } from '@/shared/api/client'
-import { showFailedActionToast, showStatusChangeToast } from '@/shared/notifications/toast'
+import { createProduct, deactivateProduct, getProduct, HttpError, listProducts, restoreProduct } from '@/shared/api/client'
+import { showFailedActionToast, showSavedToast, showStatusChangeToast } from '@/shared/notifications/toast'
 
 function toErrorMessage(error: unknown) {
   if (error instanceof HttpError) return error.message
@@ -46,6 +46,7 @@ export function ProductListPage() {
   })
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(100)
+  const [processingId, setProcessingId] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -145,6 +146,34 @@ export function ProductListPage() {
         action: item.isActive ? 'deactivate' : 'restore',
         detail: message,
       })
+    }
+  }
+
+  async function handleDuplicate(item: ProductSummary) {
+    setErrorMessage(null)
+    setProcessingId(item.id)
+
+    try {
+      const product = await getProduct(item.id)
+      const duplicatedProduct = await createProduct(buildDuplicatePayload(product))
+
+      setItems((current) => [duplicatedProduct, ...current])
+      showSavedToast({
+        entityLabel: 'product',
+        recordName: duplicatedProduct.name,
+        referenceId: duplicatedProduct.id,
+        mode: 'create',
+      })
+    } catch (error) {
+      const message = toErrorMessage(error)
+      setErrorMessage(message)
+      showFailedActionToast({
+        entityLabel: 'product',
+        action: 'duplicate',
+        detail: message,
+      })
+    } finally {
+      setProcessingId(null)
     }
   }
 
@@ -350,13 +379,17 @@ export function ProductListPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild>
+                      <DropdownMenuItem className="gap-2" asChild>
                         <Link to={`/admin/dashboard/products/${item.id}/edit`}>
                           <EditIcon className="size-4" />
                           <span>Edit</span>
                         </Link>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => void handleToggleActive(item)}>
+                      <DropdownMenuItem className="gap-2" onClick={() => void handleDuplicate(item)} disabled={processingId === item.id}>
+                        <CopyIcon className="size-4" />
+                        <span>{processingId === item.id ? 'Duplicating...' : 'Duplicate'}</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="gap-2" onClick={() => void handleToggleActive(item)}>
                         <PowerIcon className="size-4" />
                         <span>{item.isActive ? 'Deactivate' : 'Restore'}</span>
                       </DropdownMenuItem>
@@ -396,5 +429,138 @@ export function ProductListPage() {
       />
     </div>
   )
+}
+
+function buildDuplicatePayload(product: Product): ProductUpsertPayload {
+  const duplicateName = `${product.name}-copy`
+  const variantClientKeyById = new Map<string, string>()
+
+  product.variants.forEach((variant) => {
+    variantClientKeyById.set(variant.id, variant.id)
+  })
+
+  return {
+    name: duplicateName,
+    slug: '',
+    description: product.description ?? '-',
+    shortDescription: product.shortDescription ?? '-',
+    brandId: product.brandId ?? '1',
+    categoryId: product.categoryId ?? '1',
+    productGroupId: product.productGroupId ?? '1',
+    productTypeId: product.productTypeId ?? '1',
+    unitId: product.unitId ?? '1',
+    hsnCodeId: product.hsnCodeId ?? '1',
+    styleId: product.styleId ?? '1',
+    sku: '',
+    hasVariants: product.hasVariants,
+    basePrice: product.basePrice,
+    costPrice: product.costPrice,
+    taxId: product.taxId ?? '1',
+    isFeatured: product.isFeatured,
+    isActive: product.isActive,
+    images: product.images.map((image) => ({
+      imageUrl: image.imageUrl,
+      isPrimary: image.isPrimary,
+      sortOrder: image.sortOrder,
+    })),
+    variants: product.variants.map((variant) => ({
+      clientKey: variant.id,
+      sku: variant.sku,
+      variantName: variant.variantName,
+      price: variant.price,
+      costPrice: variant.costPrice,
+      stockQuantity: variant.stockQuantity,
+      openingStock: variant.openingStock,
+      weight: variant.weight,
+      barcode: variant.barcode,
+      isActive: variant.isActive,
+      images: variant.images.map((image) => ({
+        imageUrl: image.imageUrl,
+        isPrimary: image.isPrimary,
+      })),
+      attributes: variant.attributes.map((attribute) => ({
+        attributeName: attribute.attributeName,
+        attributeValue: attribute.attributeValue,
+      })),
+    })),
+    prices: product.prices.map((price) => ({
+      variantClientKey: price.variantId ? variantClientKeyById.get(price.variantId) ?? null : null,
+      mrp: price.mrp,
+      sellingPrice: price.sellingPrice,
+      costPrice: price.costPrice,
+    })),
+    discounts: product.discounts.map((discount) => ({
+      variantClientKey: discount.variantId ? variantClientKeyById.get(discount.variantId) ?? null : null,
+      discountType: discount.discountType,
+      discountValue: discount.discountValue,
+      startDate: discount.startDate,
+      endDate: discount.endDate,
+    })),
+    offers: product.offers.map((offer) => ({
+      title: offer.title,
+      description: offer.description,
+      offerPrice: offer.offerPrice,
+      startDate: offer.startDate,
+      endDate: offer.endDate,
+    })),
+    attributes: product.attributes.map((attribute) => ({
+      clientKey: attribute.id,
+      name: attribute.name,
+    })),
+    attributeValues: product.attributeValues.map((value) => ({
+      clientKey: value.id,
+      attributeClientKey: value.attributeId,
+      value: value.value,
+    })),
+    stockItems: product.stockItems.map((item) => ({
+      variantClientKey: item.variantId ? variantClientKeyById.get(item.variantId) ?? null : null,
+      warehouseId: item.warehouseId,
+      quantity: item.quantity,
+      reservedQuantity: item.reservedQuantity,
+    })),
+    stockMovements: product.stockMovements.map((movement) => ({
+      variantClientKey: movement.variantId ? variantClientKeyById.get(movement.variantId) ?? null : null,
+      warehouseId: movement.warehouseId,
+      movementType: movement.movementType,
+      quantity: movement.quantity,
+      referenceType: movement.referenceType,
+      referenceId: movement.referenceId,
+      movementAt: movement.movementAt.slice(0, 16),
+    })),
+    seo: product.seo
+      ? {
+          metaTitle: product.seo.metaTitle,
+          metaDescription: product.seo.metaDescription,
+          metaKeywords: product.seo.metaKeywords,
+        }
+      : null,
+    storefront: product.storefront
+      ? {
+          department: product.storefront.department,
+          homeSliderEnabled: product.storefront.homeSliderEnabled,
+          homeSliderOrder: product.storefront.homeSliderOrder,
+          promoSliderEnabled: product.storefront.promoSliderEnabled,
+          promoSliderOrder: product.storefront.promoSliderOrder,
+          featureSectionEnabled: product.storefront.featureSectionEnabled,
+          featureSectionOrder: product.storefront.featureSectionOrder,
+          isNewArrival: product.storefront.isNewArrival,
+          isBestSeller: product.storefront.isBestSeller,
+          isFeaturedLabel: product.storefront.isFeaturedLabel,
+          catalogBadge: product.storefront.catalogBadge,
+          fabric: product.storefront.fabric,
+          fit: product.storefront.fit,
+          sleeve: product.storefront.sleeve,
+          occasion: product.storefront.occasion,
+          shippingNote: product.storefront.shippingNote,
+        }
+      : null,
+    tags: product.tags.map((tag) => ({ name: tag.name })),
+    reviews: product.reviews.map((review) => ({
+      userId: review.userId,
+      rating: review.rating,
+      review: review.review,
+      reviewDate: review.reviewDate.slice(0, 16),
+    })),
+  }
 }
 

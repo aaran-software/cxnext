@@ -26,6 +26,7 @@ import type { FrameworkServiceDefinition, SuiteAppDefinition, SuiteAppId } from 
 import { frameworkServices, suiteApps } from '@framework-core/index'
 import { coreWorkspaceItems } from '@core-domain/index'
 import { ecommerceWorkspaceItems } from '@ecommerce-domain/index'
+import { commonModuleMenuGroups, getCommonModuleHref } from '@/features/common-modules/config/common-module-navigation'
 
 export interface DeskWorkspaceLink {
   id: string
@@ -135,24 +136,66 @@ const placeholderModules: Record<Exclude<SuiteAppId, 'core' | 'ecommerce'>, Desk
   billing: [
     {
       id: 'billing-overview',
-      name: 'Billing Overview',
+      name: 'Billing Desk',
       route: '/admin/dashboard/billing',
-      summary: 'Accounts, inventory, vouchers, and reporting workspace shell.',
+      summary: 'Accounts, GST, voucher entry, and billing operations in one desk.',
       icon: Wallet,
     },
     {
-      id: 'accounts',
-      name: 'Accounts',
-      route: '/admin/dashboard/billing',
-      summary: 'Ledger, voucher, and book-oriented workflows will live here.',
+      id: 'billing-ledgers',
+      name: 'Ledgers',
+      route: '/admin/dashboard/billing/ledgers',
+      summary: 'Ledger masters for customers, suppliers, bank, cash, and tax accounts.',
       icon: BookOpenText,
     },
     {
-      id: 'inventory',
-      name: 'Inventory',
-      route: '/admin/dashboard/billing',
-      summary: 'Stock movement and valuation will stay billing-owned.',
+      id: 'billing-invoices',
+      name: 'Sales Invoices',
+      route: '/admin/dashboard/billing/invoices',
+      summary: 'GST-ready invoice list and compact item-row entry surface.',
+      icon: Receipt,
+    },
+    {
+      id: 'billing-purchases',
+      name: 'Purchases',
+      route: '/admin/dashboard/billing/purchases',
+      summary: 'Supplier purchase vouchers with item rows and tax breakup.',
       icon: Package,
+    },
+    {
+      id: 'billing-receipts',
+      name: 'Receipts',
+      route: '/admin/dashboard/billing/receipts',
+      summary: 'Customer collection entries with cash and bank posting.',
+      icon: Wallet,
+    },
+    {
+      id: 'billing-payments',
+      name: 'Payments',
+      route: '/admin/dashboard/billing/payments',
+      summary: 'Supplier and expense payments posted from cash or bank.',
+      icon: Wallet,
+    },
+    {
+      id: 'billing-journals',
+      name: 'Journals',
+      route: '/admin/dashboard/billing/journals',
+      summary: 'Balanced debit-credit journal adjustments and accrual entries.',
+      icon: ClipboardList,
+    },
+    {
+      id: 'billing-contra',
+      name: 'Contra',
+      route: '/admin/dashboard/billing/contra',
+      summary: 'Cash-to-bank and bank-to-bank transfer vouchers.',
+      icon: Zap,
+    },
+    {
+      id: 'billing-gst',
+      name: 'GST Center',
+      route: '/admin/dashboard/billing/gst',
+      summary: 'Rates, compliance checkpoints, and filing-oriented tax totals.',
+      icon: ShieldCheck,
     },
   ],
   crm: [
@@ -321,18 +364,32 @@ function getHeroSummary(app: SuiteAppDefinition) {
 
 function getMenuGroups(appId: SuiteAppId, modules: DeskWorkspaceLink[]): DeskMenuGroup[] {
   if (appId === 'core') {
+    const commonItems = commonModuleMenuGroups.flatMap((group) =>
+      group.items.map((item) =>
+        createSharedMenuItem(
+          item.key,
+          item.title,
+          getCommonModuleHref(item.key),
+          item.description,
+          item.icon,
+        ),
+      ),
+    )
+
     return [
       {
         id: 'core-workspace',
         label: 'Core',
         shared: false,
-        items: modules.map((item) => createMenuItem(item)),
+        items: modules
+          .filter((item) => item.id !== 'common-modules')
+          .map((item) => createMenuItem(item)),
       },
       {
-        id: 'core-shared',
-        label: 'Shared',
-        shared: true,
-        items: [],
+        id: 'core-common',
+        label: 'Common',
+        shared: false,
+        items: commonItems,
       },
     ]
   }

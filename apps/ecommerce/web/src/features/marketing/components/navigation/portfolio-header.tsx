@@ -1,8 +1,8 @@
 import { LogInIcon } from "lucide-react"
 import { Link } from "react-router-dom"
 
-import { useAuth } from "@/features/auth/components/auth-provider"
-import { getPortalHomeHref } from "@/features/auth/lib/portal-routing"
+import { useAuth } from "@framework-core/web/auth/components/auth-provider"
+import { getPortalHomeHref } from "@framework-core/web/auth/lib/portal-routing"
 import { BrandMark } from "@/shared/branding/brand-mark"
 import { Navbar } from "@/features/marketing/components/navigation/navbar"
 import { PortfolioMobileMenu } from "@/features/marketing/components/navigation/portfolio-mobile-menu"

@@ -5,8 +5,8 @@ import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { useAuth } from '@/features/auth/components/auth-provider'
-import { buildAdminPortalPath } from '@/features/auth/lib/portal-routing'
+import { useAuth } from '@framework-core/web/auth/components/auth-provider'
+import { buildAdminPortalPath } from '@framework-core/web/auth/lib/portal-routing'
 import {
   getSystemSettings,
   getSystemUpdateCheck,
