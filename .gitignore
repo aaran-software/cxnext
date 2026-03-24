@@ -28,3 +28,4 @@ dist-ssr
 /storage/public/uploads/
 /storage/config/runtime-config.json
 /test-results/.last-run.json
+/public/storage/uploads/
