@@ -12,7 +12,6 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY apps ./apps
-COPY packages ./packages
 COPY public ./public
 COPY ASSIST ./ASSIST
 COPY .container ./.container
@@ -21,17 +20,14 @@ COPY eslint.config.js ./
 COPY index.html ./
 COPY playwright.config.ts ./
 COPY README.md ./
-COPY tsconfig.app.json ./
-COPY tsconfig.base.json ./
 COPY tsconfig.json ./
-COPY tsconfig.node.json ./
 COPY vite.config.ts ./
 COPY .env.example ./
 
 RUN cp .env.example .env
-RUN rm -rf ./apps/web/public/storage && mkdir -p ./apps/web/public/storage
+RUN rm -rf ./public/storage && mkdir -p ./public/storage
 RUN chmod +x ./.container/entrypoint.sh
-RUN npm run build:server
+RUN npm run build:api && npm run build:web
 
 EXPOSE 4000
 

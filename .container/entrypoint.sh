@@ -27,9 +27,9 @@ prepare_source_layout() {
   rm -rf "$target_root/storage"
   ln -sfn "$RUNTIME_STORAGE_ROOT" "$target_root/storage"
 
-  mkdir -p "$target_root/apps/web/public"
-  rm -rf "$target_root/apps/web/public/storage"
-  ln -sfn "$RUNTIME_STORAGE_ROOT/public" "$target_root/apps/web/public/storage"
+  mkdir -p "$target_root/public"
+  rm -rf "$target_root/public/storage"
+  ln -sfn "$RUNTIME_STORAGE_ROOT/public" "$target_root/public/storage"
 
   rm -f "$target_root/.env"
   ln -sfn "$RUNTIME_ENV_FILE" "$target_root/.env"
@@ -104,7 +104,8 @@ run_npm_install() {
 }
 
 build_source() {
-  npm run build:server
+  npm run build:api
+  npm run build:web
 }
 
 sync_from_git() {
@@ -153,7 +154,7 @@ sync_from_git() {
     run_npm_install
   fi
 
-  if [ "$should_refresh_source" != "true" ] && { [ ! -f apps/api/dist/server.js ] || [ ! -f apps/web/dist/index.html ]; }; then
+  if [ "$should_refresh_source" != "true" ] && { [ ! -f apps/core/api/dist/server.js ] || [ ! -f apps/ecommerce/web/dist/index.html ]; }; then
     build_source
   fi
 
@@ -184,4 +185,4 @@ fi
 
 cd "$SOURCE_ROOT"
 log "Starting CXNext API and static web server..."
-exec node apps/api/dist/server.js
+exec node apps/core/api/dist/server.js
