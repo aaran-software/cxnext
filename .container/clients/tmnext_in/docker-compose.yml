@@ -9,8 +9,8 @@ services:
       dockerfile: .container/Dockerfile
     container_name: tmnext-in-app
     ports:
-      - "4006:4000"
-      - "5006:4000"
+      - "4007:4000"
+      - "5007:4000"
     restart: unless-stopped
     volumes:
       - tmnext_in_runtime:/opt/cxnext/runtime
