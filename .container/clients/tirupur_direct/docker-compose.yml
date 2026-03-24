@@ -3,6 +3,7 @@ name: tirupur-direct
 services:
   app:
     image: cxnext-app:v1
+    pull_policy: never
     build:
       context: ../../..
       dockerfile: .container/Dockerfile

@@ -13,6 +13,23 @@ const optionalNonEmptyString = z
     return normalized ? normalized : undefined
   })
 
+const optionalPositiveInteger = z
+  .string()
+  .optional()
+  .transform((value) => {
+    const normalized = value?.trim()
+    if (!normalized) {
+      return undefined
+    }
+
+    const parsed = Number(normalized)
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      throw new Error('Expected a positive integer.')
+    }
+
+    return parsed
+  })
+
 const optionalBooleanFlag = z
   .string()
   .transform((value) => {
@@ -31,11 +48,11 @@ const environmentSchema = z.object({
   JWT_EXPIRES_IN_SECONDS: z.coerce.number().int().positive(),
   VITE_FRONTEND_TARGET: frontendTargetSchema,
   DB_ENABLED: requiredBooleanFlag,
-  DB_HOST: z.string().min(1).optional(),
-  DB_PORT: z.coerce.number().int().positive().optional(),
-  DB_USER: z.string().min(1).optional(),
-  DB_PASSWORD: z.string().optional(),
-  DB_NAME: z.string().min(1).optional(),
+  DB_HOST: optionalNonEmptyString,
+  DB_PORT: optionalPositiveInteger,
+  DB_USER: optionalNonEmptyString,
+  DB_PASSWORD: z.string().optional().transform((value) => value ?? ''),
+  DB_NAME: optionalNonEmptyString,
   WEB_DIST_ROOT: z.string().min(1),
   SEED_DEFAULT_USER: z
     .string()

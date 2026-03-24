@@ -3,6 +3,7 @@ name: cxnext
 services:
   app:
     image: cxnext-app:v1
+    pull_policy: never
     container_name: cxnext-app
     ports:
       - "4000:4000"
@@ -10,6 +11,7 @@ services:
     restart: unless-stopped
     volumes:
       - cxnext_runtime:/opt/cxnext/runtime
+      - ./.env:/opt/cxnext/runtime/.env
     networks:
       - codexion-network
 
