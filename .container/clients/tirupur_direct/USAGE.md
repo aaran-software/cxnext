@@ -28,6 +28,10 @@ docker build -t cxnext-app:v1 -f .container/Dockerfile .
 docker compose -f .container/clients/tirupur_direct/docker-compose.yml up -d
 ```
 
+docker compose -f .container/clients/tirupur_direct/docker-compose.yml down
+
+docker logs --tail 100 tirupur-direct-app
+
 On first start, the container creates `/opt/cxnext/runtime/.env` automatically from the app template if it does not already exist.
 
 MariaDB is not started by this compose file. Point `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, and `DB_NAME` in `/opt/cxnext/runtime/.env` to your existing or separately installed database.

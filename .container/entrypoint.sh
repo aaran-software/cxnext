@@ -14,6 +14,10 @@ log() {
 ensure_runtime_env_file() {
   mkdir -p "$RUNTIME_ROOT"
 
+  if [ -d "$RUNTIME_ENV_FILE" ]; then
+    rm -rf "$RUNTIME_ENV_FILE"
+  fi
+
   if [ ! -f "$RUNTIME_ENV_FILE" ]; then
     cp "$APP_ROOT/.env.example" "$RUNTIME_ENV_FILE"
     return

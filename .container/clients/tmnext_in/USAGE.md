@@ -14,6 +14,10 @@ docker network create codexion-network
 cp .container/clients/tmnext_in/tmnext-in.env.example .container/clients/tmnext_in/tmnext-in.env
 ```
 
+docker compose -f .container/clients/tmnext_in/docker-compose.yml down
+
+docker logs --tail 100 tmnext-in-app
+
 This file is a local reference template only. The active runtime `.env` is created inside the Docker volume at `/opt/cxnext/runtime/.env`.
 
 ## 3. Build the shared app image
