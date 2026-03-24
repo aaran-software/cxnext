@@ -45,7 +45,7 @@ export function ProductListPage() {
     isFeaturedLabel: false,
   })
   const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
+  const [pageSize, setPageSize] = useState(100)
 
   useEffect(() => {
     let cancelled = false
@@ -386,6 +386,7 @@ export function ProductListPage() {
           currentPage: safeCurrentPage,
           pageSize,
           totalRecords,
+          pageSizeOptions: [10, 25, 50, 100, 200, 500],
           onPageChange: setCurrentPage,
           onPageSizeChange: (value) => {
             setPageSize(value)

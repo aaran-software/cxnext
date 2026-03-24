@@ -125,6 +125,64 @@ function writeStoredBranding(snapshot: BrandingSnapshot) {
   window.sessionStorage.setItem(sessionStorageKey, JSON.stringify(snapshot))
 }
 
+function updateMetaTag(
+  selector: string,
+  content: string,
+  attribute: 'name' | 'property' = 'name',
+) {
+  if (typeof document === 'undefined') {
+    return
+  }
+
+  let element = document.head.querySelector<HTMLMetaElement>(selector)
+
+  if (!element) {
+    element = document.createElement('meta')
+    element.setAttribute(attribute, selector.match(/="([^"]+)"/)?.[1] ?? '')
+    document.head.appendChild(element)
+  }
+
+  element.setAttribute('content', content)
+}
+
+function updateCanonicalLink(href: string | null) {
+  if (typeof document === 'undefined') {
+    return
+  }
+
+  let link = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]')
+  if (!link) {
+    link = document.createElement('link')
+    link.setAttribute('rel', 'canonical')
+    document.head.appendChild(link)
+  }
+
+  if (href) {
+    link.setAttribute('href', href)
+    return
+  }
+
+  link.removeAttribute('href')
+}
+
+function syncDocumentMetadata(snapshot: BrandingSnapshot) {
+  const title = snapshot.brandName
+  const description = snapshot.summary
+  const canonicalUrl = snapshot.website ?? (typeof window !== 'undefined' ? window.location.href : null)
+
+  document.title = title
+
+  updateMetaTag('meta[name="application-name"]', snapshot.brandName)
+  updateMetaTag('meta[name="description"]', description)
+  updateMetaTag('meta[property="og:title"]', title, 'property')
+  updateMetaTag('meta[property="og:description"]', description, 'property')
+  updateMetaTag('meta[property="og:site_name"]', snapshot.brandName, 'property')
+  updateMetaTag('meta[property="og:url"]', canonicalUrl ?? '', 'property')
+  updateMetaTag('meta[name="twitter:title"]', title)
+  updateMetaTag('meta[name="twitter:description"]', description)
+  updateCanonicalLink(canonicalUrl)
+}
+
 export function BrandingProvider({ children }: PropsWithChildren) {
   const { status } = useSetup()
   const [snapshot, setSnapshot] = useState<BrandingSnapshot>(() => readStoredBranding() ?? defaultBrandingSnapshot)
@@ -132,8 +190,8 @@ export function BrandingProvider({ children }: PropsWithChildren) {
   const [isLoaded, setIsLoaded] = useState(false)
 
   useEffect(() => {
-    document.title = snapshot.brandName
-  }, [snapshot.brandName])
+    syncDocumentMetadata(snapshot)
+  }, [snapshot])
 
   useEffect(() => {
     if (status?.status !== 'ready') {

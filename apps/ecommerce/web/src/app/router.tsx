@@ -69,6 +69,18 @@ const CoreWorkspacePage = lazyPage(
   () => import('@/features/core/pages/core-workspace-page'),
   'CoreWorkspacePage',
 )
+const BillingWorkspacePage = lazyPage(
+  () => import('@/features/framework/pages/billing-workspace-page'),
+  'BillingWorkspacePage',
+)
+const CrmWorkspacePage = lazyPage(
+  () => import('@/features/framework/pages/crm-workspace-page'),
+  'CrmWorkspacePage',
+)
+const SiteWorkspacePage = lazyPage(
+  () => import('@/features/framework/pages/site-workspace-page'),
+  'SiteWorkspacePage',
+)
 const EcommerceWorkspacePage = lazyPage(
   () => import('@/features/ecommerce/pages/ecommerce-workspace-page'),
   'EcommerceWorkspacePage',
@@ -192,6 +204,9 @@ const adminRoutes = {
         { index: true, element: renderLazy(DashboardPage) },
         { path: 'core', element: renderLazy(CoreWorkspacePage) },
         { path: 'ecommerce', element: renderLazy(EcommerceWorkspacePage) },
+        { path: 'billing', element: renderLazy(BillingWorkspacePage) },
+        { path: 'crm', element: renderLazy(CrmWorkspacePage) },
+        { path: 'site', element: renderLazy(SiteWorkspacePage) },
         { path: 'orders', element: renderLazy(OrderOperationsPage) },
         { path: 'orders/:orderId', element: renderLazy(OrderShowPage) },
         { path: 'customers', element: renderLazy(CustomerHelpdeskPage) },

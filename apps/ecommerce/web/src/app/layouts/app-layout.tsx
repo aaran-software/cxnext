@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom"
 import { AppSidebar } from "@/features/dashboard/components/navigation/app-sidebar"
 import { AppHeader } from "@/features/dashboard/components/navigation/app-header"
+import { DeskProvider } from "@/features/framework/desk/desk-provider"
 import {
   SidebarInset,
   SidebarProvider,
@@ -8,6 +9,7 @@ import {
 
 export function AppLayout() {
   return (
+    <DeskProvider>
       <SidebarProvider defaultOpen={false}>
         <AppSidebar />
         <SidebarInset>
@@ -17,6 +19,6 @@ export function AppLayout() {
           </div>
         </SidebarInset>
       </SidebarProvider>
+    </DeskProvider>
   )
 }
-
