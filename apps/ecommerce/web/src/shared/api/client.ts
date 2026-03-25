@@ -71,6 +71,8 @@ import type {
   DatabaseSetupPayload,
   FrappeConnectionVerificationResponse,
   FrappeItemManagerResponse,
+  FrappeItemProductSyncPayload,
+  FrappeItemProductSyncResponse,
   FrappeItemResponse,
   FrappeItemUpsertPayload,
   FrappeSettingsResponse,
@@ -445,6 +447,15 @@ export async function updateFrappeItem(token: string, itemId: string, payload: F
     body: JSON.stringify(payload),
   })
   return response.item
+}
+
+export async function syncFrappeItemsToProducts(token: string, payload: FrappeItemProductSyncPayload) {
+  const response = await request<FrappeItemProductSyncResponse>('/admin/frappe/items/sync-products', {
+    method: 'POST',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
+  })
+  return response.sync
 }
 
 export async function createFrappeTodo(token: string, payload: FrappeTodoUpsertPayload) {

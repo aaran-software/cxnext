@@ -1,12 +1,13 @@
 import type {
   FrappeItem,
   FrappeItemManager,
+  FrappeItemProductSyncResult,
   FrappeItemUpsertPayload,
   FrappeReferenceOption,
 } from '@shared/index'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { EditIcon, MoreHorizontalIcon, PowerIcon, RefreshCcw } from 'lucide-react'
+import { CheckIcon, EditIcon, MoreHorizontalIcon, PowerIcon, RefreshCcw } from 'lucide-react'
 import { useAuth } from '@framework-core/web/auth/components/auth-provider'
 import { CommonList } from '@/components/forms/CommonList'
 import { Badge } from '@/components/ui/badge'
@@ -45,6 +46,7 @@ import {
   getFrappeItem,
   HttpError,
   listFrappeItems,
+  syncFrappeItemsToProducts,
   updateFrappeItem,
 } from '@/shared/api/client'
 import {
@@ -178,6 +180,7 @@ export function FrappeItemPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [syncing, setSyncing] = useState(false)
+  const [syncingProducts, setSyncingProducts] = useState(false)
   const [editing, setEditing] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -188,6 +191,7 @@ export function FrappeItemPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'disabled'>('all')
   const [stockFilter, setStockFilter] = useState<'all' | 'stock' | 'service'>('all')
   const [variantsOnly, setVariantsOnly] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
   const [lastSyncedAt, setLastSyncedAt] = useState('')
@@ -272,6 +276,10 @@ export function FrappeItemPage() {
     })
   }, [dialogOpen, editingId, references])
 
+  useEffect(() => {
+    setSelectedIds((current) => current.filter((id) => items.some((item) => item.id === id)))
+  }, [items])
+
   const filteredItems = useMemo(() => {
     const normalizedSearch = searchValue.trim().toLowerCase()
 
@@ -285,6 +293,8 @@ export function FrappeItemPage() {
           item.stockUom,
           item.brand,
           item.gstHsnCode,
+          item.syncedProductName,
+          item.syncedProductSlug,
         ]
           .filter(Boolean)
           .some((value) => value.toLowerCase().includes(normalizedSearch))
@@ -307,6 +317,8 @@ export function FrappeItemPage() {
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize))
   const safeCurrentPage = Math.min(currentPage, totalPages)
   const paginatedItems = filteredItems.slice((safeCurrentPage - 1) * pageSize, safeCurrentPage * pageSize)
+  const pageIds = paginatedItems.map((item) => item.id)
+  const allCurrentPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id))
 
   function resetDialogState() {
     setDialogOpen(false)
@@ -430,6 +442,66 @@ export function FrappeItemPage() {
     }
   }
 
+  function toggleSelected(itemId: string, checked: boolean) {
+    setSelectedIds((current) => {
+      if (checked) {
+        return current.includes(itemId) ? current : [...current, itemId]
+      }
+
+      return current.filter((entry) => entry !== itemId)
+    })
+  }
+
+  function toggleCurrentPageSelection(checked: boolean) {
+    const pageIds = paginatedItems.map((item) => item.id)
+    setSelectedIds((current) => {
+      if (checked) {
+        return [...new Set([...current, ...pageIds])]
+      }
+
+      return current.filter((id) => !pageIds.includes(id))
+    })
+  }
+
+  async function handleSyncProducts(itemIds?: string[]) {
+    if (!isSuperAdmin || typeof accessToken !== 'string') {
+      return
+    }
+
+    const targetIds = (itemIds ?? selectedIds).filter(Boolean)
+    if (targetIds.length === 0) {
+      showValidationToast('frappe item sync')
+      return
+    }
+
+    setSyncingProducts(true)
+    setErrorMessage(null)
+
+    try {
+      const sync = await syncFrappeItemsToProducts(accessToken, { itemIds: targetIds })
+      const syncedNames = sync.items.map((item: FrappeItemProductSyncResult) => item.productName).join(', ')
+
+      showSuccessToast({
+        title: 'Products synced from Frappe',
+        description: sync.items.length === 1
+          ? `${syncedNames} is now synced to ecommerce and visible in the storefront.`
+          : `${sync.items.length} products were synced to ecommerce and are storefront-visible.`,
+      })
+
+      setSelectedIds([])
+      await loadItemsWithToken(accessToken)
+    } catch (error) {
+      const message = toErrorMessage(error)
+      setErrorMessage(message)
+      showErrorToast({
+        title: 'Unable to sync Frappe Items to ecommerce',
+        description: message,
+      })
+    } finally {
+      setSyncingProducts(false)
+    }
+  }
+
   async function handleToggleDisabled(item: FrappeItem) {
     if (!isSuperAdmin || typeof accessToken !== 'string') {
       return
@@ -486,7 +558,7 @@ export function FrappeItemPage() {
               <div>
                 <CardTitle className="text-3xl">ERPNext Item manager</CardTitle>
                 <CardDescription className="mt-2 max-w-3xl text-sm leading-6">
-                  Sync Item documents from ERPNext, review core dependencies, and create or update inventory masters from a common-list style workspace.
+                  Sync Item documents from ERPNext, review core dependencies, and push selected records into ecommerce products with storefront visibility defaults.
                 </CardDescription>
               </div>
             </div>
@@ -505,14 +577,28 @@ export function FrappeItemPage() {
             <span>Active: <span className="font-medium text-foreground">{items.filter((item) => !item.disabled).length}</span></span>
             <span>Stock items: <span className="font-medium text-foreground">{items.filter((item) => item.isStockItem).length}</span></span>
             <span>Variants: <span className="font-medium text-foreground">{items.filter((item) => item.hasVariants).length}</span></span>
+            {isSuperAdmin ? (
+              <span>Selected: <span className="font-medium text-foreground">{selectedIds.length}</span></span>
+            ) : null}
           </div>
           {isSuperAdmin ? (
-            <Button type="button" variant="outline" onClick={() => void handleManualSync()} disabled={syncing || saving || editing}>
-              <RefreshCcw className="size-4" />
-              {syncing ? 'Syncing...' : 'Sync now'}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void handleSyncProducts()}
+                disabled={syncingProducts || saving || editing || selectedIds.length === 0}
+              >
+                <CheckIcon className="size-4" />
+                {syncingProducts ? 'Syncing products...' : 'Sync selected to ecommerce'}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => void handleManualSync()} disabled={syncing || saving || editing || syncingProducts}>
+                <RefreshCcw className="size-4" />
+                {syncing ? 'Syncing...' : 'Refresh frappe list'}
+              </Button>
+            </div>
           ) : (
-            <span className="text-sm text-muted-foreground">Sync and edits are available only to super-admin users.</span>
+            <span className="text-sm text-muted-foreground">Product sync and edits are available only to super-admin users.</span>
           )}
         </CardContent>
       </Card>
@@ -521,7 +607,7 @@ export function FrappeItemPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base">References and dependencies</CardTitle>
           <CardDescription>
-            The form loads ERPNext Item Groups, Warehouses, UOMs, Brands, and sample GST HSN codes. Default company and warehouse come from the saved Frappe connection.
+            The form loads ERPNext Item Groups, Warehouses, UOMs, Brands, and GST HSN codes. Product sync maps these to ecommerce masters, creates missing references when needed, and falls back to system defaults for any remaining gaps.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3 text-sm text-muted-foreground">
@@ -560,7 +646,7 @@ export function FrappeItemPage() {
       <CommonList
         header={{
           pageTitle: 'Frappe Items',
-          pageDescription: 'List, search, filter, and upsert ERPNext Item documents from one manager.',
+          pageDescription: 'List, search, filter, sync to ecommerce products, and upsert ERPNext Item documents from one manager.',
           addLabel: isSuperAdmin ? 'New Item' : undefined,
           onAddClick: isSuperAdmin ? openCreateDialog : undefined,
         }}
@@ -657,13 +743,29 @@ export function FrappeItemPage() {
         }}
         table={{
           columns: [
+            ...(isSuperAdmin ? [{
+              id: 'select',
+              header: 'Select',
+              className: 'w-14 min-w-14 px-2 text-center',
+              headerClassName: 'w-14 min-w-14 px-2 text-center',
+              sticky: 'left' as const,
+              cell: (item: FrappeItem) => (
+                <div className="flex justify-center">
+                  <Checkbox
+                    checked={selectedIds.includes(item.id)}
+                    onCheckedChange={(checked) => toggleSelected(item.id, Boolean(checked))}
+                    aria-label={`Select ${item.itemName}`}
+                  />
+                </div>
+              ),
+            }] : []),
             {
               id: 'serial',
               header: 'Sl.No',
               cell: (item) => ((safeCurrentPage - 1) * pageSize) + paginatedItems.findIndex((entry) => entry.id === item.id) + 1,
               className: 'w-12 min-w-12 px-2 text-center',
               headerClassName: 'w-12 min-w-12 px-2 text-center',
-              sticky: 'left',
+              sticky: isSuperAdmin ? undefined : 'left',
             },
             {
               id: 'item',
@@ -708,6 +810,24 @@ export function FrappeItemPage() {
               cell: (item) => <span>{item.defaultWarehouse || references?.defaults.warehouse || 'Not set'}</span>,
             },
             {
+              id: 'productSync',
+              header: 'Ecommerce Product',
+              accessor: (item) => item.syncedProductName || item.syncedProductSlug || item.syncedProductId,
+              cell: (item) => item.isSyncedToProduct ? (
+                <div>
+                  <Link
+                    to={`/admin/dashboard/products/${item.syncedProductId}`}
+                    className="font-medium text-foreground underline-offset-4 hover:underline"
+                  >
+                    {item.syncedProductName}
+                  </Link>
+                  <p className="text-sm text-muted-foreground">/{item.syncedProductSlug}</p>
+                </div>
+              ) : (
+                <StatusBadge tone="manual">Not synced</StatusBadge>
+              ),
+            },
+            {
               id: 'status',
               header: 'Status',
               accessor: (item) => item.disabled,
@@ -741,6 +861,10 @@ export function FrappeItemPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem className="gap-2" onClick={() => void handleSyncProducts([item.id])}>
+                        <CheckIcon className="size-4" />
+                        <span>Sync to ecommerce</span>
+                      </DropdownMenuItem>
                       <DropdownMenuItem className="gap-2" onClick={() => void startEdit(item.id)}>
                         <EditIcon className="size-4" />
                         <span>Edit</span>
@@ -768,6 +892,17 @@ export function FrappeItemPage() {
               <span>Active records: <span className="font-medium text-foreground">{filteredItems.filter((item) => !item.disabled).length}</span></span>
               <span>Stock records: <span className="font-medium text-foreground">{filteredItems.filter((item) => item.isStockItem).length}</span></span>
               <span>Variant records: <span className="font-medium text-foreground">{filteredItems.filter((item) => item.hasVariants).length}</span></span>
+              <span>Synced products: <span className="font-medium text-foreground">{filteredItems.filter((item) => item.isSyncedToProduct).length}</span></span>
+              {isSuperAdmin ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="h-8 px-2"
+                  onClick={() => toggleCurrentPageSelection(!allCurrentPageSelected)}
+                >
+                  {allCurrentPageSelected ? 'Clear page selection' : 'Select page'}
+                </Button>
+              ) : null}
             </div>
           ),
         }}

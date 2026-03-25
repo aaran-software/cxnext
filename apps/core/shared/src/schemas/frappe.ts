@@ -104,6 +104,10 @@ export const frappeItemSchema = z.object({
   isStockItem: z.boolean(),
   hasVariants: z.boolean(),
   modifiedAt: z.string().trim(),
+  syncedProductId: z.string().trim(),
+  syncedProductName: z.string().trim(),
+  syncedProductSlug: z.string().trim(),
+  isSyncedToProduct: z.boolean(),
 })
 
 export const frappeItemReferencesSchema = z.object({
@@ -147,6 +151,26 @@ export const frappeItemResponseSchema = z.object({
   item: frappeItemSchema,
 })
 
+export const frappeItemProductSyncPayloadSchema = z.object({
+  itemIds: z.array(z.string().trim().min(1)).min(1),
+})
+
+export const frappeItemProductSyncResultSchema = z.object({
+  frappeItemId: z.string().trim().min(1),
+  frappeItemCode: z.string().trim().min(1),
+  productId: z.string().trim().min(1),
+  productName: z.string().trim().min(1),
+  productSlug: z.string().trim().min(1),
+  mode: z.enum(['create', 'update']),
+})
+
+export const frappeItemProductSyncResponseSchema = z.object({
+  sync: z.object({
+    items: z.array(frappeItemProductSyncResultSchema),
+    syncedAt: z.string().trim().min(1),
+  }),
+})
+
 export type FrappeSettings = z.infer<typeof frappeSettingsSchema>
 export type FrappeSettingsResponse = z.infer<typeof frappeSettingsResponseSchema>
 export type FrappeSettingsUpdatePayload = z.infer<typeof frappeSettingsUpdatePayloadSchema>
@@ -166,3 +190,6 @@ export type FrappeItemManager = z.infer<typeof frappeItemManagerSchema>
 export type FrappeItemManagerResponse = z.infer<typeof frappeItemManagerResponseSchema>
 export type FrappeItemUpsertPayload = z.infer<typeof frappeItemUpsertPayloadSchema>
 export type FrappeItemResponse = z.infer<typeof frappeItemResponseSchema>
+export type FrappeItemProductSyncPayload = z.infer<typeof frappeItemProductSyncPayloadSchema>
+export type FrappeItemProductSyncResult = z.infer<typeof frappeItemProductSyncResultSchema>
+export type FrappeItemProductSyncResponse = z.infer<typeof frappeItemProductSyncResponseSchema>

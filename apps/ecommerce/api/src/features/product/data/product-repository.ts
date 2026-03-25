@@ -1031,6 +1031,21 @@ export class ProductRepository {
     }
   }
 
+  async findBySku(sku: string) {
+    await ensureDatabaseSchema()
+
+    const row = await db.first<{ id: string } & RowDataPacket>(
+      `SELECT id FROM ${productTableNames.products} WHERE sku = ? LIMIT 1`,
+      [sku],
+    )
+
+    if (!row) {
+      return null
+    }
+
+    return this.findById(row.id)
+  }
+
   private async replaceAttributes(
     execute: SqlExecutor,
     first: SqlFirst,

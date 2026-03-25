@@ -30,6 +30,7 @@ import {
   createFrappeItem,
   getFrappeItem,
   listFrappeItems,
+  syncFrappeItemsToProducts,
   updateFrappeItem,
 } from '../../features/frappe/application/frappe-item-service'
 import {
@@ -278,6 +279,15 @@ export async function routeRequest(
         response,
         201,
         await createFrappeItem(await requireAuthenticatedUser(request), await readJsonBody(request)),
+      )
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/admin/frappe/items/sync-products') {
+      writeJson(
+        response,
+        200,
+        await syncFrappeItemsToProducts(await requireAuthenticatedUser(request), await readJsonBody(request)),
       )
       return
     }

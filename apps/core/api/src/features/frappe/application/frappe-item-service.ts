@@ -1,17 +1,85 @@
 import {
   frappeItemManagerResponseSchema,
+  frappeItemProductSyncPayloadSchema,
+  frappeItemProductSyncResponseSchema,
   frappeItemResponseSchema,
   frappeItemSchema,
   frappeItemUpsertPayloadSchema,
   frappeReferenceOptionSchema,
   type AuthUser,
+  type Product,
+  type ProductUpsertPayload,
+  type StorefrontDepartment,
 } from '@shared/index'
+import { randomUUID } from 'node:crypto'
+import type { RowDataPacket } from 'mysql2'
 import { ApplicationError } from '@framework-core/runtime/errors/application-error'
 import { environment } from '@framework-core/runtime/config/environment'
+import { ensureDatabaseSchema } from '@framework-core/runtime/database/database'
+import { commonTableNames, productTableNames } from '@framework-core/runtime/database/table-names'
+import { db } from '@framework-core/runtime/database/orm'
+import { ProductService } from '@ecommerce-api/features/product/application/product-service'
+import { ProductRepository } from '@ecommerce-api/features/product/data/product-repository'
 import { assertFrappeViewer, assertSuperAdmin, requestFrappeJson } from './frappe-client'
 
 function toStringValue(value: unknown) {
   return typeof value === 'string' ? value : ''
+}
+
+const productService = new ProductService(new ProductRepository())
+const productRepository = new ProductRepository()
+
+interface ProductSyncRow extends RowDataPacket {
+  id: string
+  name: string
+  slug: string
+  sku: string
+}
+
+interface CommonNameRow extends RowDataPacket {
+  id: string
+  code?: string | null
+  name?: string | null
+}
+
+function slugify(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+function normalizeMatchValue(value: string) {
+  return value.trim().toLowerCase()
+}
+
+function toLookupCode(value: string, fallback: string) {
+  const normalized = value
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+
+  return normalized || fallback
+}
+
+function stripHtml(value: string) {
+  const trimmedValue = value.trim()
+  if (!trimmedValue.includes('<')) {
+    return trimmedValue
+  }
+
+  return trimmedValue
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&#39;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 function toBooleanValue(value: unknown) {
@@ -62,7 +130,7 @@ function readItemDefault(record: Record<string, unknown>, field: 'company' | 'de
   return toStringValue(itemDefaults[0]?.[field])
 }
 
-function toFrappeItem(record: Record<string, unknown>) {
+function toFrappeItem(record: Record<string, unknown>, syncedProduct?: ProductSyncRow | null) {
   return frappeItemSchema.parse({
     id: toStringValue(record.name),
     itemCode: toStringValue(record.item_code || record.name),
@@ -78,10 +146,14 @@ function toFrappeItem(record: Record<string, unknown>) {
     isStockItem: toBooleanValue(record.is_stock_item),
     hasVariants: toBooleanValue(record.has_variants),
     modifiedAt: toStringValue(record.modified),
+    syncedProductId: syncedProduct?.id ?? '',
+    syncedProductName: syncedProduct?.name ?? '',
+    syncedProductSlug: syncedProduct?.slug ?? '',
+    isSyncedToProduct: Boolean(syncedProduct?.id),
   })
 }
 
-async function readFrappeItemById(itemId: string) {
+async function readFrappeItemRecordById(itemId: string) {
   const payload = await requestFrappeJson(`/api/resource/Item/${encodeURIComponent(itemId)}`)
   const record = payload && typeof payload.data === 'object' && payload.data
     ? payload.data as Record<string, unknown>
@@ -91,7 +163,478 @@ async function readFrappeItemById(itemId: string) {
     throw new ApplicationError('Frappe Item could not be loaded.', { itemId }, 502)
   }
 
-  return toFrappeItem(record)
+  return record
+}
+
+async function listSyncedProductsBySku(itemCodes: string[]) {
+  await ensureDatabaseSchema()
+
+  const uniqueItemCodes = [...new Set(itemCodes.map((value) => value.trim()).filter(Boolean))]
+  if (uniqueItemCodes.length === 0) {
+    return new Map<string, ProductSyncRow>()
+  }
+
+  const placeholders = uniqueItemCodes.map(() => '?').join(', ')
+  const rows = await db.query<ProductSyncRow>(
+    `SELECT id, name, slug, sku FROM ${productTableNames.products} WHERE sku IN (${placeholders})`,
+    uniqueItemCodes,
+  )
+
+  return new Map(rows.map((row) => [row.sku.trim(), row] as const))
+}
+
+async function findCommonRecordIdByCodeOrName(
+  tableName: string,
+  primaryValue: string,
+  secondaryValue?: string,
+) {
+  await ensureDatabaseSchema()
+
+  const normalizedPrimary = normalizeMatchValue(primaryValue)
+  const normalizedSecondary = secondaryValue ? normalizeMatchValue(secondaryValue) : null
+
+  if (!normalizedPrimary) {
+    return null
+  }
+
+  const row = await db.first<CommonNameRow>(
+    `SELECT id, code, name FROM ${tableName} WHERE LOWER(code) = ? OR LOWER(name) = ? OR LOWER(name) = ? LIMIT 1`,
+    [normalizedPrimary, normalizedPrimary, normalizedSecondary ?? normalizedPrimary],
+  )
+
+  return row?.id ?? null
+}
+
+async function ensureCommonRecord(
+  tableName: string,
+  idPrefix: string,
+  values: Record<string, string | number | null>,
+  matchValue: string,
+  secondaryMatchValue?: string,
+) {
+  const existingId = await findCommonRecordIdByCodeOrName(tableName, matchValue, secondaryMatchValue)
+  if (existingId) {
+    return existingId
+  }
+
+  if (!matchValue.trim()) {
+    return '1'
+  }
+
+  const id = `${idPrefix}:${randomUUID()}`
+  const columns = ['id', ...Object.keys(values)]
+  const params = [id, ...Object.values(values)]
+  await db.execute(
+    `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`,
+    params,
+  )
+  return id
+}
+
+function inferStorefrontDepartment(itemGroup: string, itemName: string): StorefrontDepartment {
+  const content = `${itemGroup} ${itemName}`.toLowerCase()
+  if (content.includes('women') || content.includes('ladies') || content.includes('girls')) {
+    return 'women'
+  }
+  if (content.includes('men') || content.includes('gents') || content.includes('boys')) {
+    return 'men'
+  }
+  if (content.includes('kids') || content.includes('kid') || content.includes('baby') || content.includes('child')) {
+    return 'kids'
+  }
+  return 'accessories'
+}
+
+function truncateText(value: string, length: number) {
+  const trimmed = value.trim()
+  if (trimmed.length <= length) {
+    return trimmed
+  }
+  return `${trimmed.slice(0, Math.max(0, length - 3)).trimEnd()}...`
+}
+
+function productToUpsertPayload(product: Product): ProductUpsertPayload {
+  const variantClientKeyById = new Map<string, string>()
+
+  product.variants.forEach((variant) => {
+    variantClientKeyById.set(variant.id, variant.id)
+  })
+
+  return {
+    name: product.name,
+    slug: product.slug,
+    description: product.description ?? '-',
+    shortDescription: product.shortDescription ?? '-',
+    brandId: product.brandId ?? '1',
+    categoryId: product.categoryId ?? '1',
+    productGroupId: product.productGroupId ?? '1',
+    productTypeId: product.productTypeId ?? '1',
+    unitId: product.unitId ?? '1',
+    hsnCodeId: product.hsnCodeId ?? '1',
+    styleId: product.styleId ?? '1',
+    sku: product.sku,
+    hasVariants: product.hasVariants,
+    basePrice: product.basePrice,
+    costPrice: product.costPrice,
+    taxId: product.taxId ?? '1',
+    isFeatured: product.isFeatured,
+    isActive: product.isActive,
+    images: product.images.map((image) => ({
+      imageUrl: image.imageUrl,
+      isPrimary: image.isPrimary,
+      sortOrder: image.sortOrder,
+    })),
+    variants: product.variants.map((variant) => ({
+      clientKey: variant.id,
+      sku: variant.sku,
+      variantName: variant.variantName,
+      price: variant.price,
+      costPrice: variant.costPrice,
+      stockQuantity: variant.stockQuantity,
+      openingStock: variant.openingStock,
+      weight: variant.weight,
+      barcode: variant.barcode,
+      isActive: variant.isActive,
+      images: variant.images.map((image) => ({
+        imageUrl: image.imageUrl,
+        isPrimary: image.isPrimary,
+      })),
+      attributes: variant.attributes.map((attribute) => ({
+        attributeName: attribute.attributeName,
+        attributeValue: attribute.attributeValue,
+      })),
+    })),
+    prices: product.prices.map((price) => ({
+      variantClientKey: price.variantId ? variantClientKeyById.get(price.variantId) ?? null : null,
+      mrp: price.mrp,
+      sellingPrice: price.sellingPrice,
+      costPrice: price.costPrice,
+    })),
+    discounts: product.discounts.map((discount) => ({
+      variantClientKey: discount.variantId ? variantClientKeyById.get(discount.variantId) ?? null : null,
+      discountType: discount.discountType,
+      discountValue: discount.discountValue,
+      startDate: discount.startDate,
+      endDate: discount.endDate,
+    })),
+    offers: product.offers.map((offer) => ({
+      title: offer.title,
+      description: offer.description,
+      offerPrice: offer.offerPrice,
+      startDate: offer.startDate,
+      endDate: offer.endDate,
+    })),
+    attributes: product.attributes.map((attribute) => ({
+      clientKey: attribute.id,
+      name: attribute.name,
+    })),
+    attributeValues: product.attributeValues.map((value) => ({
+      clientKey: value.id,
+      attributeClientKey: value.attributeId,
+      value: value.value,
+    })),
+    stockItems: product.stockItems.map((item) => ({
+      variantClientKey: item.variantId ? variantClientKeyById.get(item.variantId) ?? null : null,
+      warehouseId: item.warehouseId,
+      quantity: item.quantity,
+      reservedQuantity: item.reservedQuantity,
+    })),
+    stockMovements: product.stockMovements.map((movement) => ({
+      variantClientKey: movement.variantId ? variantClientKeyById.get(movement.variantId) ?? null : null,
+      warehouseId: movement.warehouseId,
+      movementType: movement.movementType,
+      quantity: movement.quantity,
+      referenceType: movement.referenceType,
+      referenceId: movement.referenceId,
+      movementAt: movement.movementAt.slice(0, 16),
+    })),
+    seo: product.seo
+      ? {
+          metaTitle: product.seo.metaTitle,
+          metaDescription: product.seo.metaDescription,
+          metaKeywords: product.seo.metaKeywords,
+        }
+      : null,
+    storefront: product.storefront
+      ? {
+          department: product.storefront.department,
+          homeSliderEnabled: product.storefront.homeSliderEnabled,
+          homeSliderOrder: product.storefront.homeSliderOrder,
+          promoSliderEnabled: product.storefront.promoSliderEnabled,
+          promoSliderOrder: product.storefront.promoSliderOrder,
+          featureSectionEnabled: product.storefront.featureSectionEnabled,
+          featureSectionOrder: product.storefront.featureSectionOrder,
+          isNewArrival: product.storefront.isNewArrival,
+          isBestSeller: product.storefront.isBestSeller,
+          isFeaturedLabel: product.storefront.isFeaturedLabel,
+          catalogBadge: product.storefront.catalogBadge,
+          fabric: product.storefront.fabric,
+          fit: product.storefront.fit,
+          sleeve: product.storefront.sleeve,
+          occasion: product.storefront.occasion,
+          shippingNote: product.storefront.shippingNote,
+        }
+      : null,
+    tags: product.tags.map((tag) => ({ name: tag.name })),
+    reviews: product.reviews.map((review) => ({
+      userId: review.userId,
+      rating: review.rating,
+      review: review.review,
+      reviewDate: review.reviewDate.slice(0, 16),
+    })),
+  }
+}
+
+async function ensureProductReferenceIds(record: Record<string, unknown>) {
+  const itemGroup = toStringValue(record.item_group)
+  const stockUom = toStringValue(record.stock_uom)
+  const brand = toStringValue(record.brand)
+  const gstHsnCode = toStringValue(record.gst_hsn_code)
+  const defaultWarehouse = readItemDefault(record, 'default_warehouse')
+
+  const categoryId = itemGroup
+    ? await ensureCommonRecord(
+        commonTableNames.productCategories,
+        'product-category',
+        {
+          code: toLookupCode(itemGroup, 'FRAPPE-CATEGORY'),
+          name: itemGroup,
+          description: 'Imported from Frappe Item Group.',
+        },
+        itemGroup,
+      )
+    : '1'
+
+  const productGroupId = itemGroup
+    ? await ensureCommonRecord(
+        commonTableNames.productGroups,
+        'product-group',
+        {
+          code: toLookupCode(itemGroup, 'FRAPPE-GROUP'),
+          name: itemGroup,
+          description: 'Imported from Frappe Item Group.',
+        },
+        itemGroup,
+      )
+    : '1'
+
+  const unitId = stockUom
+    ? await ensureCommonRecord(
+        commonTableNames.units,
+        'unit',
+        {
+          code: toLookupCode(stockUom, 'FRAPPE-UOM'),
+          name: stockUom,
+          symbol: stockUom,
+          description: 'Imported from Frappe UOM.',
+        },
+        stockUom,
+      )
+    : '1'
+
+  const brandId = brand
+    ? await ensureCommonRecord(
+        commonTableNames.brands,
+        'brand',
+        {
+          code: toLookupCode(brand, 'FRAPPE-BRAND'),
+          name: brand,
+          description: 'Imported from Frappe Brand.',
+        },
+        brand,
+      )
+    : '1'
+
+  const hsnCodeId = gstHsnCode
+    ? await ensureCommonRecord(
+        commonTableNames.hsnCodes,
+        'hsn',
+        {
+          code: gstHsnCode,
+          name: `HSN ${gstHsnCode}`,
+          description: 'Imported from Frappe GST HSN Code.',
+        },
+        gstHsnCode,
+      )
+    : '1'
+
+  const warehouseId = defaultWarehouse
+    ? await ensureCommonRecord(
+        commonTableNames.warehouses,
+        'warehouse',
+        {
+          code: toLookupCode(defaultWarehouse, 'FRAPPE-WAREHOUSE'),
+          name: defaultWarehouse,
+          country_id: '1',
+          state_id: '1',
+          district_id: '1',
+          city_id: '1',
+          pincode_id: '1',
+          address_line1: '-',
+          address_line2: '-',
+          description: 'Imported from Frappe default warehouse.',
+        },
+        defaultWarehouse,
+      )
+    : '1'
+
+  return {
+    brandId,
+    categoryId,
+    productGroupId,
+    unitId,
+    hsnCodeId,
+    warehouseId,
+  }
+}
+
+function buildTagInputs(record: Record<string, unknown>, existingTags: ProductUpsertPayload['tags']) {
+  const tagNames = new Set<string>(
+    existingTags
+      .map((tag) => tag.name.trim())
+      .filter(Boolean),
+  )
+
+  tagNames.add('frappe')
+
+  const itemGroup = toStringValue(record.item_group).trim()
+  const brand = toStringValue(record.brand).trim()
+  const itemCode = toStringValue(record.item_code || record.name).trim()
+
+  if (itemGroup) {
+    tagNames.add(itemGroup)
+  }
+  if (brand) {
+    tagNames.add(brand)
+  }
+  if (itemCode) {
+    tagNames.add(`frappe:${itemCode}`)
+  }
+
+  return [...tagNames].map((name) => ({ name }))
+}
+
+function buildProductPayloadFromFrappe(
+  record: Record<string, unknown>,
+  refs: Awaited<ReturnType<typeof ensureProductReferenceIds>>,
+  existingProduct?: Product | null,
+) {
+  const basePayload = existingProduct ? productToUpsertPayload(existingProduct) : {
+    name: '',
+    slug: '',
+    description: '-',
+    shortDescription: '-',
+    brandId: '1',
+    categoryId: '1',
+    productGroupId: '1',
+    productTypeId: '1',
+    unitId: '1',
+    hsnCodeId: '1',
+    styleId: '1',
+    sku: '',
+    hasVariants: false,
+    basePrice: 0,
+    costPrice: 0,
+    taxId: '1',
+    isFeatured: false,
+    isActive: true,
+    images: [],
+    variants: [],
+    prices: [],
+    discounts: [],
+    offers: [],
+    attributes: [],
+    attributeValues: [],
+    stockItems: [],
+    stockMovements: [],
+    seo: null,
+    storefront: null,
+    tags: [],
+    reviews: [],
+  } satisfies ProductUpsertPayload
+
+  const itemName = toStringValue(record.item_name || record.name).trim() || 'Frappe Item'
+  const itemCode = toStringValue(record.item_code || record.name).trim() || slugify(itemName).toUpperCase() || 'FRAPPE-ITEM'
+  const description = stripHtml(toStringValue(record.description)) || itemName
+  const basePrice = Number(record.standard_rate ?? basePayload.basePrice ?? 0) || 0
+  const costPrice = Number(record.valuation_rate ?? basePayload.costPrice ?? 0) || 0
+  const stockQuantity = Number(record.opening_stock ?? 0) || 0
+  const department = inferStorefrontDepartment(toStringValue(record.item_group), itemName)
+  const shouldPreserveVariantStructure = Boolean(existingProduct?.hasVariants)
+
+  return {
+    ...basePayload,
+    name: itemName,
+    slug: basePayload.slug || slugify(itemName),
+    description,
+    shortDescription: truncateText(description, 160) || itemName,
+    brandId: refs.brandId,
+    categoryId: refs.categoryId,
+    productGroupId: refs.productGroupId,
+    productTypeId: basePayload.productTypeId || '1',
+    unitId: refs.unitId,
+    hsnCodeId: refs.hsnCodeId,
+    styleId: basePayload.styleId || '1',
+    sku: itemCode,
+    hasVariants: shouldPreserveVariantStructure,
+    basePrice,
+    costPrice,
+    taxId: basePayload.taxId || '1',
+    isFeatured: basePayload.isFeatured,
+    isActive: !toBooleanValue(record.disabled),
+    prices: shouldPreserveVariantStructure
+      ? basePayload.prices
+      : [{
+          variantClientKey: null,
+          mrp: basePrice,
+          sellingPrice: basePrice,
+          costPrice,
+        }],
+    stockItems: shouldPreserveVariantStructure
+      ? basePayload.stockItems
+      : [{
+          variantClientKey: null,
+          warehouseId: refs.warehouseId,
+          quantity: stockQuantity,
+          reservedQuantity: 0,
+        }],
+    stockMovements: shouldPreserveVariantStructure
+      ? basePayload.stockMovements
+      : stockQuantity > 0 ? [{
+          variantClientKey: null,
+          warehouseId: refs.warehouseId,
+          movementType: 'frappe-sync',
+          quantity: stockQuantity,
+          referenceType: 'frappe-item',
+          referenceId: itemCode,
+          movementAt: new Date().toISOString().slice(0, 16),
+        }] : [],
+    seo: {
+      metaTitle: existingProduct?.seo?.metaTitle ?? itemName,
+      metaDescription: existingProduct?.seo?.metaDescription ?? (truncateText(description, 160) || description),
+      metaKeywords: existingProduct?.seo?.metaKeywords ?? [toStringValue(record.brand), toStringValue(record.item_group), itemCode].filter(Boolean).join(', '),
+    },
+    storefront: {
+      department: existingProduct?.storefront?.department ?? department,
+      homeSliderEnabled: existingProduct?.storefront?.homeSliderEnabled ?? false,
+      homeSliderOrder: existingProduct?.storefront?.homeSliderOrder ?? 0,
+      promoSliderEnabled: existingProduct?.storefront?.promoSliderEnabled ?? false,
+      promoSliderOrder: existingProduct?.storefront?.promoSliderOrder ?? 0,
+      featureSectionEnabled: existingProduct?.storefront?.featureSectionEnabled ?? false,
+      featureSectionOrder: existingProduct?.storefront?.featureSectionOrder ?? 0,
+      isNewArrival: existingProduct?.storefront?.isNewArrival ?? true,
+      isBestSeller: existingProduct?.storefront?.isBestSeller ?? false,
+      isFeaturedLabel: existingProduct?.storefront?.isFeaturedLabel ?? false,
+      catalogBadge: existingProduct?.storefront?.catalogBadge ?? 'ERP',
+      fabric: existingProduct?.storefront?.fabric ?? null,
+      fit: existingProduct?.storefront?.fit ?? null,
+      sleeve: existingProduct?.storefront?.sleeve ?? null,
+      occasion: existingProduct?.storefront?.occasion ?? null,
+      shippingNote: existingProduct?.storefront?.shippingNote ?? 'Synced from Frappe ERPNext.',
+    },
+    tags: buildTagInputs(record, basePayload.tags),
+    reviews: basePayload.reviews,
+  } satisfies ProductUpsertPayload
 }
 
 function buildItemDefaults(defaultWarehouse: string) {
@@ -209,10 +752,16 @@ export async function listFrappeItems(user: AuthUser) {
     ),
     readFrappeItemReferences(),
   ])
+  const productsBySku = await listSyncedProductsBySku(
+    items.map((record) => toStringValue(record.item_code || record.name)),
+  )
 
   return frappeItemManagerResponseSchema.parse({
     manager: {
-      items: items.map((record) => toFrappeItem(record)),
+      items: items.map((record) => toFrappeItem(
+        record,
+        productsBySku.get(toStringValue(record.item_code || record.name).trim()) ?? null,
+      )),
       references,
       syncedAt: new Date().toISOString(),
     },
@@ -222,8 +771,14 @@ export async function listFrappeItems(user: AuthUser) {
 export async function getFrappeItem(user: AuthUser, itemId: string) {
   assertSuperAdmin(user)
 
+  const record = await readFrappeItemRecordById(itemId)
+  const productsBySku = await listSyncedProductsBySku([toStringValue(record.item_code || record.name)])
+
   return frappeItemResponseSchema.parse({
-    item: await readFrappeItemById(itemId),
+    item: toFrappeItem(
+      record,
+      productsBySku.get(toStringValue(record.item_code || record.name).trim()) ?? null,
+    ),
   })
 }
 
@@ -244,9 +799,7 @@ export async function createFrappeItem(user: AuthUser, payload: unknown) {
     throw new ApplicationError('Frappe Item create response did not include a document id.', {}, 502)
   }
 
-  return frappeItemResponseSchema.parse({
-    item: await readFrappeItemById(itemId),
-  })
+  return getFrappeItem(user, itemId)
 }
 
 export async function updateFrappeItem(user: AuthUser, itemId: string, payload: unknown) {
@@ -258,7 +811,46 @@ export async function updateFrappeItem(user: AuthUser, itemId: string, payload: 
     body: toItemRequestBody(parsedPayload),
   })
 
-  return frappeItemResponseSchema.parse({
-    item: await readFrappeItemById(itemId),
+  return getFrappeItem(user, itemId)
+}
+
+export async function syncFrappeItemsToProducts(user: AuthUser, payload: unknown) {
+  assertSuperAdmin(user)
+
+  const parsedPayload = frappeItemProductSyncPayloadSchema.parse(payload)
+  const results: Array<{
+    frappeItemId: string
+    frappeItemCode: string
+    productId: string
+    productName: string
+    productSlug: string
+    mode: 'create' | 'update'
+  }> = []
+
+  for (const itemId of parsedPayload.itemIds) {
+    const record = await readFrappeItemRecordById(itemId)
+    const itemCode = toStringValue(record.item_code || record.name).trim()
+    const existingProduct = await productRepository.findBySku(itemCode)
+    const refs = await ensureProductReferenceIds(record)
+    const productPayload = buildProductPayloadFromFrappe(record, refs, existingProduct)
+    const response = existingProduct
+      ? await productService.update(existingProduct.id, productPayload)
+      : await productService.create(productPayload)
+
+    results.push({
+      frappeItemId: itemId,
+      frappeItemCode: itemCode,
+      productId: response.item.id,
+      productName: response.item.name,
+      productSlug: response.item.slug,
+      mode: existingProduct ? 'update' : 'create',
+    })
+  }
+
+  return frappeItemProductSyncResponseSchema.parse({
+    sync: {
+      items: results,
+      syncedAt: new Date().toISOString(),
+    },
   })
 }
