@@ -57,3 +57,8 @@ cat /opt/cxnext/runtime/.env
 - Database server: external or separately installed MariaDB
 - Compose file path from root: `.container/clients/tirupur_direct/docker-compose.yml`
 - Shared app image: `cxnext-app:v1`
+
+
+docker volume rm tirupur-direct_tirupur_direct_runtime
+docker volume rm cxnext_cxnext_runtime
+docker volume rm tmnext-in_tmnext_in_runtime

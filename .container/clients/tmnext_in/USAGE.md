@@ -57,3 +57,25 @@ cat /opt/cxnext/runtime/.env
 - Database server: external or separately installed MariaDB
 - Compose file path from root: `.container/clients/tmnext_in/docker-compose.yml`
 - Shared app image: `cxnext-app:v1`
+
+
+```
+sudo nano tmnext.in
+```
+
+```
+server {
+    listen 80;
+    server_name tmnext.in;
+
+    location / {
+        proxy_pass http://127.0.0.1:4007;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+sudo ln -s /etc/nginx/sites-available/tmnext.in /etc/nginx/sites-enabled/
