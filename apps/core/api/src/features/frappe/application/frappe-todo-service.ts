@@ -6,7 +6,7 @@ import {
   type AuthUser,
 } from '@shared/index'
 import { ApplicationError } from '@framework-core/runtime/errors/application-error'
-import { assertSuperAdmin, requestFrappeJson } from './frappe-client'
+import { assertFrappeViewer, assertSuperAdmin, requestFrappeJson } from './frappe-client'
 
 function toTodoItem(record: Record<string, unknown>) {
   return frappeTodoSchema.parse({
@@ -41,7 +41,7 @@ function toTodoRequestBody(payload: { description: string; status: string; prior
 }
 
 export async function listFrappeTodos(user: AuthUser) {
-  assertSuperAdmin(user)
+  assertFrappeViewer(user)
 
   const query = new URLSearchParams({
     fields: JSON.stringify(['name', 'description', 'status', 'priority', 'date', 'allocated_to', 'owner', 'modified']),

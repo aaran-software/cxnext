@@ -196,7 +196,7 @@ export function FrappeTodoPage() {
   }
 
   useEffect(() => {
-    if (!isSuperAdmin || typeof accessToken !== 'string') {
+    if (typeof accessToken !== 'string') {
       setLoading(false)
       return
     }
@@ -214,18 +214,22 @@ export function FrappeTodoPage() {
 
     void loadInitial()
 
-    const intervalId = window.setInterval(() => {
-      const token = accessToken
-      if (!token || cancelled) {
-        return
-      }
+    const intervalId = isSuperAdmin
+      ? window.setInterval(() => {
+          const token = accessToken
+          if (!token || cancelled) {
+            return
+          }
 
-      void loadTodosWithToken(token, { silent: true })
-    }, AUTO_REFRESH_MS)
+          void loadTodosWithToken(token, { silent: true })
+        }, AUTO_REFRESH_MS)
+      : null
 
     return () => {
       cancelled = true
-      window.clearInterval(intervalId)
+      if (intervalId != null) {
+        window.clearInterval(intervalId)
+      }
     }
   }, [accessToken, isSuperAdmin])
 
@@ -383,16 +387,6 @@ export function FrappeTodoPage() {
     }
   }
 
-  if (!isSuperAdmin) {
-    return (
-      <Card>
-        <CardContent className="p-6 text-sm text-muted-foreground">
-          Frappe ToDo sync is available only to super-admin users.
-        </CardContent>
-      </Card>
-    )
-  }
-
   return (
     <div className="space-y-4">
       <Card className="mesh-panel overflow-hidden">
@@ -408,7 +402,7 @@ export function FrappeTodoPage() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">Auto refresh 15s</Badge>
+              <Badge variant="outline">{isSuperAdmin ? 'Auto refresh 15s' : 'Read only'}</Badge>
               <Badge variant="outline">{lastSyncedAt ? `Last sync ${formatDateTime(lastSyncedAt)}` : 'Waiting for first sync'}</Badge>
             </div>
           </div>
@@ -423,10 +417,14 @@ export function FrappeTodoPage() {
             <span>Closed: <span className="font-medium text-foreground">{items.filter((item) => item.status === 'Closed').length}</span></span>
             <span>High priority: <span className="font-medium text-foreground">{items.filter((item) => item.priority === 'High').length}</span></span>
           </div>
-          <Button type="button" variant="outline" onClick={() => void handleManualSync()} disabled={syncing || saving}>
-            <RefreshCcw className="size-4" />
-            {syncing ? 'Syncing...' : 'Sync now'}
-          </Button>
+          {isSuperAdmin ? (
+            <Button type="button" variant="outline" onClick={() => void handleManualSync()} disabled={syncing || saving}>
+              <RefreshCcw className="size-4" />
+              {syncing ? 'Syncing...' : 'Sync now'}
+            </Button>
+          ) : (
+            <span className="text-sm text-muted-foreground">Sync and edits are available only to super-admin users.</span>
+          )}
         </CardContent>
       </Card>
 
@@ -452,8 +450,8 @@ export function FrappeTodoPage() {
         header={{
           pageTitle: 'Frappe ToDo',
           pageDescription: 'Manage ERPNext ToDo records from a common-list style screen with popup create and edit.',
-          addLabel: 'New ToDo',
-          onAddClick: openCreateDialog,
+          addLabel: isSuperAdmin ? 'New ToDo' : undefined,
+          onAddClick: isSuperAdmin ? openCreateDialog : undefined,
         }}
         search={{
           value: searchValue,
@@ -572,13 +570,13 @@ export function FrappeTodoPage() {
               accessor: (item) => item.modifiedAt,
               cell: (item) => <span>{formatDateTime(item.modifiedAt)}</span>,
             },
-            {
+            ...(isSuperAdmin ? [{
               id: 'actions',
               header: 'Actions',
               className: 'w-12 min-w-12 px-2 text-center',
               headerClassName: 'w-12 min-w-12 px-2 text-center',
-              sticky: 'right',
-              cell: (item) => (
+              sticky: 'right' as const,
+              cell: (item: FrappeTodo) => (
                 <div className="flex justify-center">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -599,7 +597,7 @@ export function FrappeTodoPage() {
                   </DropdownMenu>
                 </div>
               ),
-            },
+            }] : []),
           ],
           data: paginatedItems,
           loading,

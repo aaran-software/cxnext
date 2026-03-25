@@ -8,6 +8,12 @@ export function assertSuperAdmin(user: AuthUser) {
   }
 }
 
+export function assertFrappeViewer(user: AuthUser) {
+  if (user.actorType === 'customer') {
+    throw new ApplicationError('Frappe routes are available only to backoffice users.', { actorType: user.actorType }, 403)
+  }
+}
+
 export function getConfiguredFrappeConnection() {
   if (!environment.frappe.enabled || !environment.frappe.baseUrl || !environment.frappe.apiKey || !environment.frappe.apiSecret) {
     throw new ApplicationError(

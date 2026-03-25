@@ -221,7 +221,7 @@ export function FrappeItemPage() {
   }
 
   useEffect(() => {
-    if (!isSuperAdmin || typeof accessToken !== 'string') {
+    if (typeof accessToken !== 'string') {
       setLoading(false)
       return
     }
@@ -239,18 +239,22 @@ export function FrappeItemPage() {
 
     void loadInitial()
 
-    const intervalId = window.setInterval(() => {
-      const token = accessToken
-      if (!token || cancelled) {
-        return
-      }
+    const intervalId = isSuperAdmin
+      ? window.setInterval(() => {
+          const token = accessToken
+          if (!token || cancelled) {
+            return
+          }
 
-      void loadItemsWithToken(token, { silent: true })
-    }, AUTO_REFRESH_MS)
+          void loadItemsWithToken(token, { silent: true })
+        }, AUTO_REFRESH_MS)
+      : null
 
     return () => {
       cancelled = true
-      window.clearInterval(intervalId)
+      if (intervalId != null) {
+        window.clearInterval(intervalId)
+      }
     }
   }, [accessToken, isSuperAdmin])
 
@@ -472,16 +476,6 @@ export function FrappeItemPage() {
     }
   }
 
-  if (!isSuperAdmin) {
-    return (
-      <Card>
-        <CardContent className="p-6 text-sm text-muted-foreground">
-          Frappe Item sync is available only to super-admin users.
-        </CardContent>
-      </Card>
-    )
-  }
-
   return (
     <div className="space-y-4">
       <Card className="mesh-panel overflow-hidden">
@@ -497,7 +491,7 @@ export function FrappeItemPage() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">Auto refresh 30s</Badge>
+              <Badge variant="outline">{isSuperAdmin ? 'Auto refresh 30s' : 'Read only'}</Badge>
               <Badge variant="outline">{lastSyncedAt ? `Last sync ${formatDateTime(lastSyncedAt)}` : 'Waiting for first sync'}</Badge>
             </div>
           </div>
@@ -512,10 +506,14 @@ export function FrappeItemPage() {
             <span>Stock items: <span className="font-medium text-foreground">{items.filter((item) => item.isStockItem).length}</span></span>
             <span>Variants: <span className="font-medium text-foreground">{items.filter((item) => item.hasVariants).length}</span></span>
           </div>
-          <Button type="button" variant="outline" onClick={() => void handleManualSync()} disabled={syncing || saving || editing}>
-            <RefreshCcw className="size-4" />
-            {syncing ? 'Syncing...' : 'Sync now'}
-          </Button>
+          {isSuperAdmin ? (
+            <Button type="button" variant="outline" onClick={() => void handleManualSync()} disabled={syncing || saving || editing}>
+              <RefreshCcw className="size-4" />
+              {syncing ? 'Syncing...' : 'Sync now'}
+            </Button>
+          ) : (
+            <span className="text-sm text-muted-foreground">Sync and edits are available only to super-admin users.</span>
+          )}
         </CardContent>
       </Card>
 
@@ -563,8 +561,8 @@ export function FrappeItemPage() {
         header={{
           pageTitle: 'Frappe Items',
           pageDescription: 'List, search, filter, and upsert ERPNext Item documents from one manager.',
-          addLabel: 'New Item',
-          onAddClick: openCreateDialog,
+          addLabel: isSuperAdmin ? 'New Item' : undefined,
+          onAddClick: isSuperAdmin ? openCreateDialog : undefined,
         }}
         search={{
           value: searchValue,
@@ -728,13 +726,13 @@ export function FrappeItemPage() {
               accessor: (item) => item.modifiedAt,
               cell: (item) => <span>{formatDateTime(item.modifiedAt)}</span>,
             },
-            {
+            ...(isSuperAdmin ? [{
               id: 'actions',
               header: 'Actions',
               className: 'w-12 min-w-12 px-2 text-center',
               headerClassName: 'w-12 min-w-12 px-2 text-center',
-              sticky: 'right',
-              cell: (item) => (
+              sticky: 'right' as const,
+              cell: (item: FrappeItem) => (
                 <div className="flex justify-center">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -755,7 +753,7 @@ export function FrappeItemPage() {
                   </DropdownMenu>
                 </div>
               ),
-            },
+            }] : []),
           ],
           data: paginatedItems,
           loading,

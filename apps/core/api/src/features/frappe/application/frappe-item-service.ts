@@ -8,7 +8,7 @@ import {
 } from '@shared/index'
 import { ApplicationError } from '@framework-core/runtime/errors/application-error'
 import { environment } from '@framework-core/runtime/config/environment'
-import { assertSuperAdmin, requestFrappeJson } from './frappe-client'
+import { assertFrappeViewer, assertSuperAdmin, requestFrappeJson } from './frappe-client'
 
 function toStringValue(value: unknown) {
   return typeof value === 'string' ? value : ''
@@ -196,7 +196,7 @@ async function readFrappeItemReferences() {
 }
 
 export async function listFrappeItems(user: AuthUser) {
-  assertSuperAdmin(user)
+  assertFrappeViewer(user)
 
   const [items, references] = await Promise.all([
     listFrappeDoctype(
