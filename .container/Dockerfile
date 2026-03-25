@@ -26,6 +26,7 @@ COPY .env.example ./
 
 RUN cp .env.example .env
 RUN rm -rf ./public/storage && mkdir -p ./public/storage
+RUN mkdir -p /opt/cxnext/runtime/storage/backups/database
 RUN chmod +x ./.container/entrypoint.sh
 RUN npm run build:api && npm run build:web
 

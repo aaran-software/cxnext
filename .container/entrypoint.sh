@@ -58,7 +58,10 @@ NODE
 prepare_source_layout() {
   target_root="$1"
 
-  mkdir -p "$RUNTIME_STORAGE_ROOT/public" "$RUNTIME_STORAGE_ROOT/private"
+  mkdir -p \
+    "$RUNTIME_STORAGE_ROOT/public" \
+    "$RUNTIME_STORAGE_ROOT/private" \
+    "$RUNTIME_STORAGE_ROOT/backups/database"
 
   rm -rf "$target_root/storage"
   ln -sfn "$RUNTIME_STORAGE_ROOT" "$target_root/storage"
