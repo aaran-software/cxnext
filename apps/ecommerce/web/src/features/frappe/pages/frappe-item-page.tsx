@@ -1,7 +1,6 @@
 import type {
   FrappeItem,
   FrappeItemManager,
-  FrappeItemProductSyncResult,
   FrappeItemUpsertPayload,
   FrappeReferenceOption,
 } from '@shared/index'
@@ -171,6 +170,8 @@ function getActiveOptions(options: FrappeReferenceOption[]) {
   return options.filter((option) => !option.disabled)
 }
 
+type SyncDuplicateMode = 'overwrite' | 'skip'
+
 export function FrappeItemPage() {
   const { session } = useAuth()
   const accessToken = session?.accessToken ?? null
@@ -192,6 +193,9 @@ export function FrappeItemPage() {
   const [stockFilter, setStockFilter] = useState<'all' | 'stock' | 'service'>('all')
   const [variantsOnly, setVariantsOnly] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false)
+  const [syncDuplicateMode, setSyncDuplicateMode] = useState<SyncDuplicateMode>('overwrite')
+  const [syncTargetIds, setSyncTargetIds] = useState<string[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
   const [lastSyncedAt, setLastSyncedAt] = useState('')
@@ -201,6 +205,7 @@ export function FrappeItemPage() {
   const stockUomOptions = useMemo(() => getActiveOptions(references?.stockUoms ?? []), [references])
   const brandOptions = useMemo(() => getActiveOptions(references?.brands ?? []), [references])
   const gstHsnOptions = useMemo(() => getActiveOptions(references?.gstHsnCodes ?? []), [references])
+  const itemById = useMemo(() => new Map(items.map((item) => [item.id, item])), [items])
 
   async function loadItemsWithToken(token: string, options?: { silent?: boolean }) {
     if (!options?.silent) {
@@ -318,7 +323,19 @@ export function FrappeItemPage() {
   const safeCurrentPage = Math.min(currentPage, totalPages)
   const paginatedItems = filteredItems.slice((safeCurrentPage - 1) * pageSize, safeCurrentPage * pageSize)
   const pageIds = paginatedItems.map((item) => item.id)
+  const selectedItemCount = selectedIds.length
+  const syncTargetItems = useMemo(
+    () => syncTargetIds.map((id) => itemById.get(id)).filter((item): item is FrappeItem => Boolean(item)),
+    [itemById, syncTargetIds],
+  )
+  const syncDuplicateItems = useMemo(
+    () => syncTargetItems.filter((item) => item.isSyncedToProduct),
+    [syncTargetItems],
+  )
+  const selectedOnPageCount = paginatedItems.filter((item) => selectedIds.includes(item.id)).length
   const allCurrentPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id))
+  const allFilteredSelected = filteredItems.length > 0 && filteredItems.every((item) => selectedIds.includes(item.id))
+  const hasSyncDuplicates = syncDuplicateItems.length > 0
 
   function resetDialogState() {
     setDialogOpen(false)
@@ -463,7 +480,45 @@ export function FrappeItemPage() {
     })
   }
 
-  async function handleSyncProducts(itemIds?: string[]) {
+  function toggleFilteredSelection(checked: boolean) {
+    const filteredIds = filteredItems.map((item) => item.id)
+    setSelectedIds((current) => {
+      if (checked) {
+        return [...new Set([...current, ...filteredIds])]
+      }
+
+      return current.filter((id) => !filteredIds.includes(id))
+    })
+  }
+
+  function clearSelection() {
+    setSelectedIds([])
+  }
+
+  function openSyncDialog(itemIds?: string[]) {
+    if (!isSuperAdmin || typeof accessToken !== 'string') {
+      return
+    }
+
+    const targetIds = (itemIds ?? selectedIds).filter(Boolean)
+    if (targetIds.length === 0) {
+      showValidationToast('frappe item sync')
+      return
+    }
+
+    setSyncTargetIds(targetIds)
+    setSyncDuplicateMode('overwrite')
+
+    const hasDuplicates = targetIds.some((id) => itemById.get(id)?.isSyncedToProduct)
+    if (hasDuplicates) {
+      setSyncDialogOpen(true)
+      return
+    }
+
+    void handleSyncProducts(targetIds, 'overwrite')
+  }
+
+  async function handleSyncProducts(itemIds?: string[], duplicateMode: SyncDuplicateMode = 'overwrite') {
     if (!isSuperAdmin || typeof accessToken !== 'string') {
       return
     }
@@ -478,17 +533,27 @@ export function FrappeItemPage() {
     setErrorMessage(null)
 
     try {
-      const sync = await syncFrappeItemsToProducts(accessToken, { itemIds: targetIds })
-      const syncedNames = sync.items.map((item: FrappeItemProductSyncResult) => item.productName).join(', ')
+      const sync = await syncFrappeItemsToProducts(accessToken, {
+        itemIds: targetIds,
+        duplicateMode,
+      })
+      const createCount = sync.items.filter((item) => item.mode === 'create').length
+      const updateCount = sync.items.filter((item) => item.mode === 'update').length
+      const skippedCount = sync.items.filter((item) => item.mode === 'skipped').length
+      const syncedCount = createCount + updateCount
 
       showSuccessToast({
         title: 'Products synced from Frappe',
-        description: sync.items.length === 1
-          ? `${syncedNames} is now synced to ecommerce and visible in the storefront.`
-          : `${sync.items.length} products were synced to ecommerce and are storefront-visible.`,
+        description: skippedCount > 0
+          ? `${syncedCount} products synced, ${skippedCount} duplicates skipped.`
+          : sync.items.length === 1
+            ? `${sync.items[0].productName} is now synced to ecommerce and visible in the storefront.`
+            : `${sync.items.length} products were synced to ecommerce and are storefront-visible.`,
       })
 
       setSelectedIds([])
+      setSyncTargetIds([])
+      setSyncDialogOpen(false)
       await loadItemsWithToken(accessToken)
     } catch (error) {
       const message = toErrorMessage(error)
@@ -578,7 +643,7 @@ export function FrappeItemPage() {
             <span>Stock items: <span className="font-medium text-foreground">{items.filter((item) => item.isStockItem).length}</span></span>
             <span>Variants: <span className="font-medium text-foreground">{items.filter((item) => item.hasVariants).length}</span></span>
             {isSuperAdmin ? (
-              <span>Selected: <span className="font-medium text-foreground">{selectedIds.length}</span></span>
+              <span>Selected: <span className="font-medium text-foreground">{selectedItemCount}</span></span>
             ) : null}
           </div>
           {isSuperAdmin ? (
@@ -586,7 +651,7 @@ export function FrappeItemPage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => void handleSyncProducts()}
+                onClick={() => openSyncDialog()}
                 disabled={syncingProducts || saving || editing || selectedIds.length === 0}
               >
                 <CheckIcon className="size-4" />
@@ -602,6 +667,41 @@ export function FrappeItemPage() {
           )}
         </CardContent>
       </Card>
+
+      {isSuperAdmin ? (
+        <Card className="rounded-md">
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+              <span>Selected on this page: <span className="font-medium text-foreground">{selectedOnPageCount}</span></span>
+              <span>Selected across all filters: <span className="font-medium text-foreground">{selectedItemCount}</span></span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => toggleCurrentPageSelection(!allCurrentPageSelected)}
+              >
+                {allCurrentPageSelected ? 'Clear page selection' : 'Select page'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => toggleFilteredSelection(!allFilteredSelected)}
+              >
+                {allFilteredSelected ? 'Clear filtered selection' : 'Select all filtered'}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={clearSelection}
+                disabled={selectedItemCount === 0}
+              >
+                Clear selection
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card className="rounded-md">
         <CardHeader className="pb-3">
@@ -753,7 +853,7 @@ export function FrappeItemPage() {
                 <div className="flex justify-center">
                   <Checkbox
                     checked={selectedIds.includes(item.id)}
-                    onCheckedChange={(checked) => toggleSelected(item.id, Boolean(checked))}
+                    onCheckedChange={(checked) => toggleSelected(item.id, checked === true)}
                     aria-label={`Select ${item.itemName}`}
                   />
                 </div>
@@ -861,7 +961,7 @@ export function FrappeItemPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem className="gap-2" onClick={() => void handleSyncProducts([item.id])}>
+                      <DropdownMenuItem className="gap-2" onClick={() => openSyncDialog([item.id])}>
                         <CheckIcon className="size-4" />
                         <span>Sync to ecommerce</span>
                       </DropdownMenuItem>
@@ -893,16 +993,6 @@ export function FrappeItemPage() {
               <span>Stock records: <span className="font-medium text-foreground">{filteredItems.filter((item) => item.isStockItem).length}</span></span>
               <span>Variant records: <span className="font-medium text-foreground">{filteredItems.filter((item) => item.hasVariants).length}</span></span>
               <span>Synced products: <span className="font-medium text-foreground">{filteredItems.filter((item) => item.isSyncedToProduct).length}</span></span>
-              {isSuperAdmin ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="h-8 px-2"
-                  onClick={() => toggleCurrentPageSelection(!allCurrentPageSelected)}
-                >
-                  {allCurrentPageSelected ? 'Clear page selection' : 'Select page'}
-                </Button>
-              ) : null}
             </div>
           ),
         }}
@@ -918,6 +1008,111 @@ export function FrappeItemPage() {
           },
         }}
       />
+
+      <Dialog open={syncDialogOpen} onOpenChange={setSyncDialogOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Sync selected items</DialogTitle>
+            <DialogDescription>
+              {syncTargetItems.length} selected item{syncTargetItems.length === 1 ? '' : 's'} will be sent to ecommerce.
+              {hasSyncDuplicates ? ` ${syncDuplicateItems.length} already have linked products, so choose overwrite or skip before continuing.` : ' These items will create new ecommerce products.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4">
+            <div className="grid gap-3 md:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setSyncDuplicateMode('overwrite')}
+                className={`rounded-2xl border p-4 text-left transition ${
+                  syncDuplicateMode === 'overwrite'
+                    ? 'border-primary bg-primary/5 shadow-sm'
+                    : 'border-border/70 bg-background hover:border-primary/40'
+                }`}
+              >
+                <p className="font-medium text-foreground">Overwrite duplicates</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Update existing ecommerce products with the latest ERPNext values.
+                </p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSyncDuplicateMode('skip')}
+                className={`rounded-2xl border p-4 text-left transition ${
+                  syncDuplicateMode === 'skip'
+                    ? 'border-primary bg-primary/5 shadow-sm'
+                    : 'border-border/70 bg-background hover:border-primary/40'
+                }`}
+              >
+                <p className="font-medium text-foreground">Skip duplicates</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Leave existing ecommerce products unchanged and only create new ones.
+                </p>
+              </button>
+            </div>
+
+            <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
+              <p className="text-sm font-medium text-foreground">Sync field mapping</p>
+              <div className="mt-3 grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
+                <p><span className="font-medium text-foreground">Product name:</span> ERPNext item name</p>
+                <p><span className="font-medium text-foreground">Slug:</span> generated from item name</p>
+                <p><span className="font-medium text-foreground">SKU:</span> ERPNext item code</p>
+                <p><span className="font-medium text-foreground">Group:</span> ERPNext item group</p>
+                <p><span className="font-medium text-foreground">Brand:</span> ERPNext brand</p>
+                <p><span className="font-medium text-foreground">HSN:</span> ERPNext GST HSN code</p>
+              </div>
+            </div>
+
+            <div className="max-h-[20rem] overflow-y-auto rounded-2xl border border-border/70 bg-card/60 p-3">
+              <div className="grid gap-3">
+                {syncTargetItems.map((item) => (
+                  <div key={item.id} className="rounded-xl border border-border/60 bg-background/80 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="font-medium text-foreground">{item.itemName}</p>
+                        <p className="text-sm text-muted-foreground">{item.itemCode}</p>
+                      </div>
+                      <Badge variant={item.isSyncedToProduct ? 'outline' : 'secondary'}>
+                        {item.isSyncedToProduct ? 'Duplicate' : 'New'}
+                      </Badge>
+                    </div>
+                    <div className="mt-3 grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
+                      <p><span className="font-medium text-foreground">Group:</span> {item.itemGroup || 'Not set'}</p>
+                      <p><span className="font-medium text-foreground">Brand:</span> {item.brand || 'Not set'}</p>
+                      <p><span className="font-medium text-foreground">HSN:</span> {item.gstHsnCode || 'Not set'}</p>
+                      <p><span className="font-medium text-foreground">Product:</span> {item.syncedProductName || 'Will be created'}</p>
+                      <p className="md:col-span-2">
+                        <span className="font-medium text-foreground">Slug:</span> {item.syncedProductSlug || 'Will be generated from the item name'}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row sm:items-center">
+            <Button type="button" variant="ghost" onClick={() => setSyncDialogOpen(false)} disabled={syncingProducts}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void handleSyncProducts(syncTargetIds, 'skip')}
+              disabled={syncingProducts || !hasSyncDuplicates}
+            >
+              Skip duplicates and sync
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void handleSyncProducts(syncTargetIds, syncDuplicateMode)}
+              disabled={syncingProducts}
+            >
+              {syncDuplicateMode === 'skip' ? 'Sync without overwriting' : 'Overwrite and sync'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={dialogOpen} onOpenChange={(open) => {
         if (!open && !saving && !editing) {
@@ -1122,14 +1317,14 @@ export function FrappeItemPage() {
                 <label className="flex items-center gap-3">
                   <Checkbox
                     checked={!values.disabled}
-                    onCheckedChange={(checked) => setValues((current) => ({ ...current, disabled: !Boolean(checked) }))}
+                    onCheckedChange={(checked) => setValues((current) => ({ ...current, disabled: checked !== true }))}
                   />
                   <span className="text-sm font-medium">Active Item</span>
                 </label>
                 <label className="flex items-center gap-3">
                   <Checkbox
                     checked={values.isStockItem}
-                    onCheckedChange={(checked) => setValues((current) => ({ ...current, isStockItem: Boolean(checked) }))}
+                    onCheckedChange={(checked) => setValues((current) => ({ ...current, isStockItem: checked === true }))}
                   />
                   <span className="text-sm font-medium">Stock Item</span>
                 </label>

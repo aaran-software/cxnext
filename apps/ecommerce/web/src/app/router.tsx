@@ -3,6 +3,7 @@ import { createBrowserRouter, Navigate, RouterProvider, useLocation } from 'reac
 import { GlobalLoader } from '@/components/ui/global-loader'
 import { RequireAuth } from '@framework-core/web/auth/components/require-auth'
 import { RequireSuperAdmin } from '@framework-core/web/auth/components/require-super-admin'
+import { rememberRequestedPath } from '@framework-core/web/auth/lib/navigation-state'
 import { frontendTarget } from '@/config/frontend'
 import { buildAdminPortalPath, buildCustomerPortalPath, customerPortalRoot } from '@framework-core/web/auth/lib/portal-routing'
 import { useAuth } from '@framework-core/web/auth/components/auth-provider'
@@ -216,11 +217,13 @@ const StoreWishlistPage = lazyPage(() => import('@/features/store/pages/store-wi
 const FrappeConnectionPage = lazyPage(() => import('@/features/frappe/pages/frappe-connection-page'), 'FrappeConnectionPage')
 const FrappeItemPage = lazyPage(() => import('@/features/frappe/pages/frappe-item-page'), 'FrappeItemPage')
 const FrappePurchaseReceiptPage = lazyPage(() => import('@/features/frappe/pages/frappe-purchase-receipt-page'), 'FrappePurchaseReceiptPage')
+const FrappePurchaseReceiptShowPage = lazyPage(() => import('@/features/frappe/pages/frappe-purchase-receipt-show-page'), 'FrappePurchaseReceiptShowPage')
 const FrappeTodoPage = lazyPage(() => import('@/features/frappe/pages/frappe-todo-page'), 'FrappeTodoPage')
 const SystemEnvironmentPage = lazyPage(() => import('@/features/settings/pages/system-environment-page'), 'SystemEnvironmentPage')
 const DatabaseManagerPage = lazyPage(() => import('@/features/settings/pages/database-manager-page'), 'DatabaseManagerPage')
 const SystemSettingsPage = lazyPage(() => import('@/features/settings/pages/system-settings-page'), 'SystemSettingsPage')
 const SystemVersionPage = lazyPage(() => import('@/features/settings/pages/system-version-page'), 'SystemVersionPage')
+const EcommerceSettingsPage = lazyPage(() => import('@/features/settings/pages/ecommerce-settings-page'), 'EcommerceSettingsPage')
 const UserFormPage = lazyPage(() => import('@/features/users/pages/user-form-page'), 'UserFormPage')
 const UserListPage = lazyPage(() => import('@/features/users/pages/user-list-page'), 'UserListPage')
 
@@ -229,7 +232,8 @@ function LegacyAdminDashboardRedirect() {
   const { session } = useAuth()
 
   if (!session) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />
+    rememberRequestedPath(`${location.pathname}${location.search}${location.hash}`)
+    return <Navigate to="/login" replace state={{ from: location }} />
   }
 
   if (session.user.actorType === 'customer') {
@@ -264,6 +268,7 @@ const adminRoutes = {
         { path: 'frappe/connection', element: renderLazy(FrappeConnectionPage) },
         { path: 'frappe/items', element: renderLazy(FrappeItemPage) },
         { path: 'frappe/purchase-receipts', element: renderLazy(FrappePurchaseReceiptPage) },
+        { path: 'frappe/purchase-receipts/:receiptId', element: renderLazy(FrappePurchaseReceiptShowPage) },
         { path: 'frappe/todos', element: renderLazy(FrappeTodoPage) },
         { path: 'site', element: renderLazy(SiteWorkspacePage) },
         { path: 'orders', element: renderLazy(OrderOperationsPage) },
@@ -302,6 +307,7 @@ const adminRoutes = {
         { path: 'slider-themes/new', element: renderLazy(SliderThemeFormPage) },
         { path: 'slider-themes/:themeId', element: renderLazy(SliderThemeShowPage) },
         { path: 'slider-themes/:themeId/edit', element: renderLazy(SliderThemeFormPage) },
+        { path: 'ecommerce/settings', element: renderLazy(EcommerceSettingsPage) },
         { path: 'system-update', element: renderLazy(SystemVersionPage) },
         { path: 'version', element: renderLazy(SystemVersionPage) },
         {

@@ -30,19 +30,30 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { AutocompleteLookup } from '@/components/lookups/AutocompleteLookup'
+import { useAuth } from '@framework-core/web/auth/components/auth-provider'
 import { createFieldErrors, inputErrorClassName, isBlank, setFieldError, summarizeFieldErrors, type FieldErrors, warningCardClassName } from '@/shared/forms/validation'
 import { createCommonLookupOption, toLookupOption } from '@/shared/forms/common-lookup'
 import { showFailedActionToast, showSavedToast, showValidationToast } from '@/shared/notifications/toast'
 import {
   createProduct,
+  getEcommerceSettings,
   getProduct,
   HttpError,
   listCommonModuleItems,
   uploadMediaImage,
   updateProduct,
 } from '@/shared/api/client'
+import {
+  calculatePricingFromPurchase,
+  type PricingFormulaSettings,
+} from '../lib/pricing-formula'
 
 type ProductFormValues = ProductUpsertPayload
+type VariantPricingDraft = {
+  purchase: number
+  sellPercent: number
+  mrpPercent: number
+}
 
 const storefrontDepartmentOptions = [
   { value: 'women', label: 'Women' },
@@ -89,6 +100,15 @@ const emptyOffer = (): ProductOfferInput => ({ title: '', description: null, off
 const emptyStockItem = (): ProductStockItemInput => ({ variantClientKey: null, warehouseId: '', quantity: 0, reservedQuantity: 0 })
 const emptyTag = (): ProductTagInput => ({ name: '' })
 const emptyReview = (): ProductReviewInput => ({ userId: null, rating: 5, review: null, reviewDate: null })
+const defaultPricingFormulaSettings: PricingFormulaSettings = {
+  purchaseToSellPercent: 75,
+  purchaseToMrpPercent: 150,
+}
+const emptyVariantPricingDraft = (): VariantPricingDraft => ({
+  purchase: 0,
+  sellPercent: defaultPricingFormulaSettings.purchaseToSellPercent,
+  mrpPercent: defaultPricingFormulaSettings.purchaseToMrpPercent,
+})
 const createDefaultStorefront = () => ({
   department: 'women' as const,
   homeSliderEnabled: false,
@@ -535,7 +555,9 @@ function toFormValues(product: Product): ProductFormValues {
 export function ProductFormPage() {
   const navigate = useNavigate()
   const { productId } = useParams()
+  const { session } = useAuth()
   const isEditMode = Boolean(productId)
+  const accessToken = session?.accessToken ?? null
   const [values, setValues] = useState<ProductFormValues>(createDefaultValues())
   const [loading, setLoading] = useState(isEditMode)
   const [saving, setSaving] = useState(false)
@@ -558,6 +580,7 @@ export function ProductFormPage() {
   const [skuPrefix, setSkuPrefix] = useState('PRD')
   const [skuNextNumber, setSkuNextNumber] = useState('1')
   const [skuDigits, setSkuDigits] = useState(4)
+  const [variantPricingDraft, setVariantPricingDraft] = useState<VariantPricingDraft>(emptyVariantPricingDraft())
 
   useEffect(() => {
     let cancelled = false
@@ -591,6 +614,43 @@ export function ProductFormPage() {
     void loadLookups()
     return () => { cancelled = true }
   }, [])
+
+  useEffect(() => {
+    if (!accessToken) {
+      return
+    }
+    const authToken = accessToken
+
+    let cancelled = false
+
+    async function loadPricingSettings() {
+      try {
+        const settings = await getEcommerceSettings(authToken)
+        if (cancelled) {
+          return
+        }
+
+        const nextSettings = {
+          purchaseToSellPercent: settings.purchaseToSellPercent,
+          purchaseToMrpPercent: settings.purchaseToMrpPercent,
+        }
+
+        setVariantPricingDraft((current) => ({
+          ...current,
+          sellPercent: nextSettings.purchaseToSellPercent,
+          mrpPercent: nextSettings.purchaseToMrpPercent,
+        }))
+      } catch {
+        // Keep the local default formula when settings cannot be loaded.
+      }
+    }
+
+    void loadPricingSettings()
+
+    return () => {
+      cancelled = true
+    }
+  }, [accessToken])
 
   useEffect(() => {
     if (loading) {
@@ -756,6 +816,109 @@ export function ProductFormPage() {
       setUploadingImages(false)
     }
   }
+
+  function applyPricingToVariantRows() {
+    setValues((current) => {
+      const variantKeys = current.variants.map((variant) => variant.clientKey)
+      const nextPrices = [...current.prices]
+      const purchasePrice = variantPricingDraft.purchase
+      const formula = calculatePricingFromPurchase(purchasePrice, {
+        purchaseToSellPercent: variantPricingDraft.sellPercent,
+        purchaseToMrpPercent: variantPricingDraft.mrpPercent,
+      })
+
+      const upsertPriceRow = (variantClientKey: string | null) => {
+        const rowIndex = nextPrices.findIndex((entry) => entry.variantClientKey === variantClientKey)
+        const nextRow: ProductPriceInput = {
+          variantClientKey,
+          costPrice: formula.purchasePrice,
+          sellingPrice: formula.sellingPrice,
+          mrp: formula.mrp,
+        }
+
+        if (rowIndex >= 0) {
+          nextPrices[rowIndex] = {
+            ...nextPrices[rowIndex],
+            ...nextRow,
+          }
+          return
+        }
+
+        nextPrices.push(nextRow)
+      }
+
+      upsertPriceRow(null)
+
+      variantKeys.forEach((variantKey) => {
+        upsertPriceRow(variantKey)
+      })
+
+      return {
+        ...current,
+        basePrice: formula.sellingPrice,
+        costPrice: formula.purchasePrice,
+        prices: nextPrices,
+      }
+    })
+  }
+
+  useEffect(() => {
+    if (isEditMode) {
+      return
+    }
+
+    if (variantPricingDraft.purchase <= 0) {
+      return
+    }
+
+    const formula = calculatePricingFromPurchase(variantPricingDraft.purchase, {
+      purchaseToSellPercent: variantPricingDraft.sellPercent,
+      purchaseToMrpPercent: variantPricingDraft.mrpPercent,
+    })
+
+    setValues((current) => {
+      const variantKeys = current.variants.map((variant) => variant.clientKey)
+      const nextPrices = [...current.prices]
+
+      const upsertPriceRow = (variantClientKey: string | null) => {
+        const rowIndex = nextPrices.findIndex((entry) => entry.variantClientKey === variantClientKey)
+        const nextRow: ProductPriceInput = {
+          variantClientKey,
+          costPrice: formula.purchasePrice,
+          sellingPrice: formula.sellingPrice,
+          mrp: formula.mrp,
+        }
+
+        if (rowIndex >= 0) {
+          nextPrices[rowIndex] = {
+            ...nextPrices[rowIndex],
+            ...nextRow,
+          }
+          return
+        }
+
+        nextPrices.push(nextRow)
+      }
+
+      upsertPriceRow(null)
+
+      variantKeys.forEach((variantKey) => {
+        upsertPriceRow(variantKey)
+      })
+
+      return {
+        ...current,
+        basePrice: formula.sellingPrice,
+        costPrice: formula.purchasePrice,
+        prices: nextPrices,
+      }
+    })
+  }, [
+    isEditMode,
+    variantPricingDraft.mrpPercent,
+    variantPricingDraft.sellPercent,
+    variantPricingDraft.purchase,
+  ])
 
   const overviewTab: AnimatedContentTab = {
     label: 'Overview',
@@ -1162,6 +1325,45 @@ export function ProductFormPage() {
     value: 'pricing',
     content: (
       <>
+        <Section title="Apply Pricing" description="Set a purchase price and formula percentages once, then apply the computed sell and MRP to every variant scope." className="rounded-md border-border/70 shadow-none" contentClassName="grid gap-3 px-4 pb-4 pt-3">
+          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
+            <div className="grid gap-2">
+              <Label>Purchase</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={variantPricingDraft.purchase}
+                onChange={(event) => setVariantPricingDraft((current) => ({ ...current, purchase: Number(event.target.value || 0) }))}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Sell %</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={variantPricingDraft.sellPercent}
+                onChange={(event) => setVariantPricingDraft((current) => ({ ...current, sellPercent: Number(event.target.value || 0) }))}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>MRP %</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={variantPricingDraft.mrpPercent}
+                onChange={(event) => setVariantPricingDraft((current) => ({ ...current, mrpPercent: Number(event.target.value || 0) }))}
+              />
+            </div>
+            <div className="flex items-end">
+              <Button type="button" className="w-full md:w-auto" onClick={() => applyPricingToVariantRows()}>
+                Calculate all product prices
+              </Button>
+            </div>
+          </div>
+          <div className="rounded-md border border-dashed border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+            Preview: 100 to {calculatePricingFromPurchase(100, { purchaseToSellPercent: variantPricingDraft.sellPercent, purchaseToMrpPercent: variantPricingDraft.mrpPercent }).sellingPrice} sell and {calculatePricingFromPurchase(100, { purchaseToSellPercent: variantPricingDraft.sellPercent, purchaseToMrpPercent: variantPricingDraft.mrpPercent }).mrp} MRP, rounded up.
+          </div>
+        </Section>
         <Section title="Product Pricing" description="Keep product-level pricing separate from variant identity." className="rounded-md border-border/70 shadow-none" contentClassName="grid gap-3 px-4 pb-4 pt-3">
           <div className="overflow-hidden rounded-md border border-border/60 bg-white">
             <div className="grid grid-cols-[132px_minmax(0,1fr)] border-b border-border/60 text-sm lg:grid-cols-[132px_minmax(0,1fr)_132px_minmax(0,1fr)]">
@@ -1171,7 +1373,19 @@ export function ProductFormPage() {
               </div>
               <div className="flex items-center border-r border-border/60 bg-muted/30 px-3 py-1.5 font-medium text-muted-foreground lg:border-l lg:border-border/60">Purchase Price</div>
               <div className="bg-white px-2 py-1.5">
-                <Input className="h-8 w-full border-0 bg-white px-2 shadow-none focus-visible:ring-0" type="number" step="0.01" value={values.costPrice} onChange={(event) => setValues((current) => ({ ...current, costPrice: Number(event.target.value || 0) }))} />
+                <Input
+                  className="h-8 w-full border-0 bg-white px-2 shadow-none focus-visible:ring-0"
+                  type="number"
+                  step="0.01"
+                  value={values.costPrice}
+                  onChange={(event) => {
+                    const nextPurchase = Number(event.target.value || 0)
+                    setValues((current) => ({ ...current, costPrice: nextPurchase }))
+                    if (!isEditMode) {
+                      setVariantPricingDraft((current) => ({ ...current, purchase: nextPurchase }))
+                    }
+                  }}
+                />
               </div>
             </div>
           </div>

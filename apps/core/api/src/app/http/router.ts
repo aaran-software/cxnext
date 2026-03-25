@@ -34,6 +34,7 @@ import {
   updateFrappeItem,
 } from '../../features/frappe/application/frappe-item-service'
 import {
+  getFrappePurchaseReceipt,
   listFrappePurchaseReceipts,
   syncFrappePurchaseReceipts,
 } from '../../features/frappe/application/frappe-purchase-receipt-service'
@@ -51,6 +52,10 @@ import {
   saveSystemEnvironmentAndUpdate,
   saveSystemSettings,
 } from '../../features/settings/application/system-settings-service'
+import {
+  readEcommerceSettings,
+  saveEcommerceSettings,
+} from '../../features/settings/application/ecommerce-settings-service'
 import {
   backupDatabase,
   deleteDatabaseBackup,
@@ -294,6 +299,11 @@ export async function routeRequest(
       return
     }
 
+    if (method === 'GET' && url.pathname === '/admin/ecommerce/settings') {
+      writeJson(response, 200, readEcommerceSettings(await requireAuthenticatedUser(request)))
+      return
+    }
+
     if (method === 'GET' && url.pathname === '/admin/settings/environment') {
       writeJson(response, 200, readSystemEnvironment(await requireAuthenticatedUser(request)))
       return
@@ -319,6 +329,19 @@ export async function routeRequest(
       return
     }
 
+    const frappePurchaseReceiptRecordMatch = url.pathname.match(/^\/admin\/frappe\/purchase-receipts\/([^/]+)$/)
+    if (frappePurchaseReceiptRecordMatch && method === 'GET') {
+      writeJson(
+        response,
+        200,
+        await getFrappePurchaseReceipt(
+          await requireAuthenticatedUser(request),
+          decodeURIComponent(frappePurchaseReceiptRecordMatch[1]),
+        ),
+      )
+      return
+    }
+
     if (method === 'GET' && url.pathname === '/admin/database-manager') {
       writeJson(response, 200, await readDatabaseManager(await requireAuthenticatedUser(request)))
       return
@@ -329,6 +352,15 @@ export async function routeRequest(
         response,
         200,
         saveSystemSettings(await requireAuthenticatedUser(request), await readJsonBody(request)),
+      )
+      return
+    }
+
+    if (method === 'PATCH' && url.pathname === '/admin/ecommerce/settings') {
+      writeJson(
+        response,
+        200,
+        saveEcommerceSettings(await requireAuthenticatedUser(request), await readJsonBody(request)),
       )
       return
     }

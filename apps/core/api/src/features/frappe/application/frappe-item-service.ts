@@ -824,7 +824,7 @@ export async function syncFrappeItemsToProducts(user: AuthUser, payload: unknown
     productId: string
     productName: string
     productSlug: string
-    mode: 'create' | 'update'
+    mode: 'create' | 'update' | 'skipped'
   }> = []
 
   for (const itemId of parsedPayload.itemIds) {
@@ -833,6 +833,18 @@ export async function syncFrappeItemsToProducts(user: AuthUser, payload: unknown
     const existingProduct = await productRepository.findBySku(itemCode)
     const refs = await ensureProductReferenceIds(record)
     const productPayload = buildProductPayloadFromFrappe(record, refs, existingProduct)
+    if (existingProduct && parsedPayload.duplicateMode === 'skip') {
+      results.push({
+        frappeItemId: itemId,
+        frappeItemCode: itemCode,
+        productId: existingProduct.id,
+        productName: existingProduct.name,
+        productSlug: existingProduct.slug,
+        mode: 'skipped',
+      })
+      continue
+    }
+
     const response = existingProduct
       ? await productService.update(existingProduct.id, productPayload)
       : await productService.create(productPayload)

@@ -1,0 +1,2793 @@
+{
+  "generatedAt": "2026-03-25T20:22:47.388Z",
+  "databaseName": "tirupur_direct_db",
+  "tableCount": 84,
+  "tables": [
+    {
+      "name": "accounting_vouchers",
+      "rowCount": 0,
+      "createStatement": "CREATE TABLE `accounting_vouchers` (\n  `id` varchar(64) NOT NULL,\n  `source_type` varchar(64) NOT NULL,\n  `source_id` varchar(64) NOT NULL,\n  `voucher_type` varchar(64) NOT NULL,\n  `voucher_number` varchar(64) NOT NULL,\n  `posting_date` datetime NOT NULL,\n  `effective_date` datetime NOT NULL,\n  `memo` text DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `voucher_number` (`voucher_number`),\n  KEY `idx_accounting_vouchers_source` (`source_type`,`source_id`),\n  KEY `idx_accounting_vouchers_type` (`voucher_type`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": []
+    },
+    {
+      "name": "accounting_voucher_lines",
+      "rowCount": 0,
+      "createStatement": "CREATE TABLE `accounting_voucher_lines` (\n  `id` varchar(64) NOT NULL,\n  `voucher_id` varchar(64) NOT NULL,\n  `ledger_code` varchar(64) NOT NULL,\n  `ledger_name` varchar(160) NOT NULL,\n  `debit_amount` decimal(12,2) NOT NULL DEFAULT 0.00,\n  `credit_amount` decimal(12,2) NOT NULL DEFAULT 0.00,\n  `narration` varchar(255) DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `idx_accounting_voucher_lines_voucher` (`voucher_id`),\n  CONSTRAINT `fk_accounting_voucher_lines_voucher` FOREIGN KEY (`voucher_id`) REFERENCES `accounting_vouchers` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": []
+    },
+    {
+      "name": "auth_contact_verifications",
+      "rowCount": 0,
+      "createStatement": "CREATE TABLE `auth_contact_verifications` (\n  `id` varchar(64) NOT NULL,\n  `purpose` varchar(64) NOT NULL,\n  `actor_type` varchar(32) NOT NULL,\n  `channel` varchar(16) NOT NULL,\n  `destination` varchar(320) NOT NULL,\n  `otp_hash` varchar(255) NOT NULL,\n  `expires_at` datetime NOT NULL,\n  `verified_at` datetime DEFAULT NULL,\n  `consumed_at` datetime DEFAULT NULL,\n  `attempts_count` int(11) NOT NULL DEFAULT 0,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `idx_auth_contact_verifications_lookup` (`purpose`,`actor_type`,`channel`,`destination`),\n  KEY `idx_auth_contact_verifications_expires_at` (`expires_at`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": []
+    },
+    {
+      "name": "auth_permissions",
+      "rowCount": 6,
+      "createStatement": "CREATE TABLE `auth_permissions` (\n  `id` varchar(64) NOT NULL,\n  `permission_key` varchar(64) NOT NULL,\n  `name` varchar(120) NOT NULL,\n  `summary` varchar(255) NOT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `permission_key` (`permission_key`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "customers:view",
+          "permission_key": "customers:view",
+          "name": "Customer Access",
+          "summary": "View customer-facing records.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "dashboard:view",
+          "permission_key": "dashboard:view",
+          "name": "Dashboard View",
+          "summary": "View dashboard surfaces.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "permissions:manage",
+          "permission_key": "permissions:manage",
+          "name": "Permission Management",
+          "summary": "Manage permission mappings.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "roles:manage",
+          "permission_key": "roles:manage",
+          "name": "Role Management",
+          "summary": "Manage roles and assignments.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "users:manage",
+          "permission_key": "users:manage",
+          "name": "User Management",
+          "summary": "Manage platform users.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "vendors:view",
+          "permission_key": "vendors:view",
+          "name": "Vendor Access",
+          "summary": "View vendor-facing records.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "auth_roles",
+      "rowCount": 4,
+      "createStatement": "CREATE TABLE `auth_roles` (\n  `id` varchar(64) NOT NULL,\n  `role_key` varchar(64) NOT NULL,\n  `name` varchar(120) NOT NULL,\n  `summary` varchar(255) NOT NULL,\n  `actor_type` varchar(32) NOT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `role_key` (`role_key`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "admin_owner",
+          "role_key": "admin_owner",
+          "name": "Admin Owner",
+          "summary": "Full platform administration for bootstrap.",
+          "actor_type": "admin",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "customer_portal",
+          "role_key": "customer_portal",
+          "name": "Customer Portal",
+          "summary": "Customer-facing authenticated access.",
+          "actor_type": "customer",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "staff_operator",
+          "role_key": "staff_operator",
+          "name": "Staff Operator",
+          "summary": "Operational staff access to the shared workspace.",
+          "actor_type": "staff",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "vendor_portal",
+          "role_key": "vendor_portal",
+          "name": "Vendor Portal",
+          "summary": "Vendor-facing authenticated access.",
+          "actor_type": "vendor",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "auth_role_permissions",
+      "rowCount": 13,
+      "createStatement": "CREATE TABLE `auth_role_permissions` (\n  `id` varchar(64) NOT NULL,\n  `role_id` varchar(64) NOT NULL,\n  `permission_id` varchar(64) NOT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `uq_auth_role_permissions_role_permission` (`role_id`,`permission_id`),\n  KEY `fk_auth_role_permissions_permission` (`permission_id`),\n  CONSTRAINT `fk_auth_role_permissions_permission` FOREIGN KEY (`permission_id`) REFERENCES `auth_permissions` (`id`),\n  CONSTRAINT `fk_auth_role_permissions_role` FOREIGN KEY (`role_id`) REFERENCES `auth_roles` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "admin_owner:customers:view",
+          "role_id": "admin_owner",
+          "permission_id": "customers:view",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "admin_owner:dashboard:view",
+          "role_id": "admin_owner",
+          "permission_id": "dashboard:view",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "admin_owner:permissions:manage",
+          "role_id": "admin_owner",
+          "permission_id": "permissions:manage",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "admin_owner:roles:manage",
+          "role_id": "admin_owner",
+          "permission_id": "roles:manage",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "admin_owner:users:manage",
+          "role_id": "admin_owner",
+          "permission_id": "users:manage",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "admin_owner:vendors:view",
+          "role_id": "admin_owner",
+          "permission_id": "vendors:view",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "customer_portal:customers:view",
+          "role_id": "customer_portal",
+          "permission_id": "customers:view",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "customer_portal:dashboard:view",
+          "role_id": "customer_portal",
+          "permission_id": "dashboard:view",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "staff_operator:customers:view",
+          "role_id": "staff_operator",
+          "permission_id": "customers:view",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "staff_operator:dashboard:view",
+          "role_id": "staff_operator",
+          "permission_id": "dashboard:view",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "staff_operator:vendors:view",
+          "role_id": "staff_operator",
+          "permission_id": "vendors:view",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "vendor_portal:dashboard:view",
+          "role_id": "vendor_portal",
+          "permission_id": "dashboard:view",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "vendor_portal:vendors:view",
+          "role_id": "vendor_portal",
+          "permission_id": "vendors:view",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "auth_users",
+      "rowCount": 1,
+      "createStatement": "CREATE TABLE `auth_users` (\n  `id` varchar(64) NOT NULL,\n  `email` varchar(320) NOT NULL,\n  `phone_number` varchar(20) DEFAULT NULL,\n  `display_name` varchar(120) NOT NULL,\n  `avatar_url` varchar(500) DEFAULT NULL,\n  `actor_type` varchar(32) NOT NULL,\n  `password_hash` varchar(255) NOT NULL,\n  `organization_name` varchar(120) DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `deletion_requested_at` datetime DEFAULT NULL,\n  `purge_after_at` datetime DEFAULT NULL,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `email` (`email`),\n  UNIQUE KEY `uq_auth_users_phone_number` (`phone_number`),\n  KEY `idx_auth_users_purge_after_at` (`purge_after_at`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "e15ba2f4-ce68-4d60-8d82-8fe47b5be121",
+          "email": "sundar@sundar.com",
+          "phone_number": null,
+          "display_name": "Sundar",
+          "avatar_url": "https://ui-avatars.com/api/?name=Platform+Admin&background=1f2937&color=ffffff",
+          "actor_type": "admin",
+          "password_hash": "$2b$10$.e1xaT.m7qgKO6sHHdLnk.G4rue02suIDEH0IMC.njzFj/Ky2mb/W",
+          "organization_name": "CODEXSUN",
+          "is_active": 1,
+          "deletion_requested_at": null,
+          "purge_after_at": null,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "auth_user_roles",
+      "rowCount": 1,
+      "createStatement": "CREATE TABLE `auth_user_roles` (\n  `id` varchar(64) NOT NULL,\n  `user_id` varchar(64) NOT NULL,\n  `role_id` varchar(64) NOT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `uq_auth_user_roles_user_role` (`user_id`,`role_id`),\n  KEY `fk_auth_user_roles_role` (`role_id`),\n  CONSTRAINT `fk_auth_user_roles_role` FOREIGN KEY (`role_id`) REFERENCES `auth_roles` (`id`),\n  CONSTRAINT `fk_auth_user_roles_user` FOREIGN KEY (`user_id`) REFERENCES `auth_users` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "e15ba2f4-ce68-4d60-8d82-8fe47b5be121:admin_owner",
+          "user_id": "e15ba2f4-ce68-4d60-8d82-8fe47b5be121",
+          "role_id": "admin_owner",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "common_brands",
+      "rowCount": 3,
+      "createStatement": "CREATE TABLE `common_brands` (\n  `id` varchar(64) NOT NULL,\n  `code` varchar(32) NOT NULL,\n  `name` varchar(120) NOT NULL,\n  `description` varchar(255) DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `code` (`code`),\n  UNIQUE KEY `name` (`name`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "1",
+          "code": "-",
+          "name": "-",
+          "description": "Default or unknown brand.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "brand:codexsun",
+          "code": "CODEXSUN",
+          "name": "CODEXSUN",
+          "description": "Default internal brand.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "brand:generic",
+          "code": "GENERIC",
+          "name": "Generic",
+          "description": "Unbranded merchandise.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "common_cities",
+      "rowCount": 4,
+      "createStatement": "CREATE TABLE `common_cities` (\n  `id` varchar(64) NOT NULL,\n  `state_id` varchar(64) NOT NULL,\n  `district_id` varchar(64) NOT NULL,\n  `code` varchar(32) NOT NULL,\n  `name` varchar(120) NOT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `uq_common_cities_district_code` (`district_id`,`code`),\n  UNIQUE KEY `uq_common_cities_district_name` (`district_id`,`name`),\n  KEY `fk_common_cities_state` (`state_id`),\n  CONSTRAINT `fk_common_cities_district` FOREIGN KEY (`district_id`) REFERENCES `common_districts` (`id`),\n  CONSTRAINT `fk_common_cities_state` FOREIGN KEY (`state_id`) REFERENCES `common_states` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "1",
+          "state_id": "1",
+          "district_id": "1",
+          "code": "-",
+          "name": "-",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "city:IN-KA-BENGALURU",
+          "state_id": "state:IN-KA",
+          "district_id": "district:IN-KA-BLR",
+          "code": "BENGALURU",
+          "name": "Bengaluru",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "city:IN-MH-MUMBAI",
+          "state_id": "state:IN-MH",
+          "district_id": "district:IN-MH-MUM",
+          "code": "MUMBAI",
+          "name": "Mumbai",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "city:IN-TN-CHENNAI",
+          "state_id": "state:IN-TN",
+          "district_id": "district:IN-TN-CHN",
+          "code": "CHENNAI",
+          "name": "Chennai",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "common_colours",
+      "rowCount": 5,
+      "createStatement": "CREATE TABLE `common_colours` (\n  `id` varchar(64) NOT NULL,\n  `code` varchar(32) NOT NULL,\n  `name` varchar(120) NOT NULL,\n  `hex_code` varchar(12) DEFAULT NULL,\n  `description` varchar(255) DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `code` (`code`),\n  UNIQUE KEY `name` (`name`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "1",
+          "code": "-",
+          "name": "-",
+          "hex_code": "#000000",
+          "description": "Default or unknown colour.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "colour:black",
+          "code": "BLACK",
+          "name": "Black",
+          "hex_code": "#000000",
+          "description": "Black tone.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "colour:blue",
+          "code": "BLUE",
+          "name": "Blue",
+          "hex_code": "#2563EB",
+          "description": "Blue tone.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "colour:red",
+          "code": "RED",
+          "name": "Red",
+          "hex_code": "#DC2626",
+          "description": "Red tone.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "colour:white",
+          "code": "WHITE",
+          "name": "White",
+          "hex_code": "#FFFFFF",
+          "description": "White tone.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "common_contact_groups",
+      "rowCount": 5,
+      "createStatement": "CREATE TABLE `common_contact_groups` (\n  `id` varchar(64) NOT NULL,\n  `code` varchar(32) NOT NULL,\n  `name` varchar(120) NOT NULL,\n  `description` varchar(255) DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `code` (`code`),\n  UNIQUE KEY `name` (`name`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "1",
+          "code": "-",
+          "name": "-",
+          "description": "Default or unknown contact group.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "contact-group:customer",
+          "code": "CUSTOMER",
+          "name": "Customer",
+          "description": "Retail or wholesale buyers.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "contact-group:logistics",
+          "code": "LOGISTICS",
+          "name": "Logistics Partner",
+          "description": "Transport and fulfilment partners.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "contact-group:supplier",
+          "code": "SUPPLIER",
+          "name": "Supplier",
+          "description": "Raw material and merchandise suppliers.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "contact-group:vendor",
+          "code": "VENDOR",
+          "name": "Vendor",
+          "description": "Marketplace vendors.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "common_contact_types",
+      "rowCount": 5,
+      "createStatement": "CREATE TABLE `common_contact_types` (\n  `id` varchar(64) NOT NULL,\n  `code` varchar(32) NOT NULL,\n  `name` varchar(120) NOT NULL,\n  `description` varchar(255) DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `code` (`code`),\n  UNIQUE KEY `name` (`name`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "1",
+          "code": "-",
+          "name": "-",
+          "description": "Default or unknown contact type.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "contact-type:billing",
+          "code": "BILLING",
+          "name": "Billing",
+          "description": "Billing contact role.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "contact-type:company",
+          "code": "COMPANY",
+          "name": "Company",
+          "description": "Organization or legal entity contact.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "contact-type:individual",
+          "code": "INDIVIDUAL",
+          "name": "Individual",
+          "description": "Personal contact.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "contact-type:shipping",
+          "code": "SHIPPING",
+          "name": "Shipping",
+          "description": "Shipping contact role.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "common_countries",
+      "rowCount": 2,
+      "createStatement": "CREATE TABLE `common_countries` (\n  `id` varchar(64) NOT NULL,\n  `code` varchar(8) NOT NULL,\n  `name` varchar(120) NOT NULL,\n  `phone_code` varchar(8) DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `code` (`code`),\n  UNIQUE KEY `name` (`name`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "1",
+          "code": "-",
+          "name": "-",
+          "phone_code": "-",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "country:IN",
+          "code": "IN",
+          "name": "India",
+          "phone_code": "+91",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "common_currencies",
+      "rowCount": 4,
+      "createStatement": "CREATE TABLE `common_currencies` (\n  `id` varchar(64) NOT NULL,\n  `code` varchar(8) NOT NULL,\n  `name` varchar(120) NOT NULL,\n  `symbol` varchar(8) NOT NULL,\n  `decimal_places` int(11) NOT NULL DEFAULT 2,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `code` (`code`),\n  UNIQUE KEY `name` (`name`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "1",
+          "code": "-",
+          "name": "-",
+          "symbol": "-",
+          "decimal_places": 2,
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "currency:AED",
+          "code": "AED",
+          "name": "UAE Dirham",
+          "symbol": "AED",
+          "decimal_places": 2,
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "currency:INR",
+          "code": "INR",
+          "name": "Indian Rupee",
+          "symbol": "Rs",
+          "decimal_places": 2,
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "currency:USD",
+          "code": "USD",
+          "name": "US Dollar",
+          "symbol": "$",
+          "decimal_places": 2,
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "common_destinations",
+      "rowCount": 4,
+      "createStatement": "CREATE TABLE `common_destinations` (\n  `id` varchar(64) NOT NULL,\n  `code` varchar(32) NOT NULL,\n  `name` varchar(120) NOT NULL,\n  `description` varchar(255) DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `code` (`code`),\n  UNIQUE KEY `name` (`name`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "1",
+          "code": "-",
+          "name": "-",
+          "description": "Default or unknown destination.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "destination:domestic",
+          "code": "DOMESTIC",
+          "name": "Domestic",
+          "description": "Domestic destination.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "destination:international",
+          "code": "INTERNATIONAL",
+          "name": "International",
+          "description": "International destination.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "destination:warehouse-transfer",
+          "code": "WAREHOUSE_TRANSFER",
+          "name": "Warehouse Transfer",
+          "description": "Internal warehouse movement destination.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "common_districts",
+      "rowCount": 4,
+      "createStatement": "CREATE TABLE `common_districts` (\n  `id` varchar(64) NOT NULL,\n  `state_id` varchar(64) NOT NULL,\n  `code` varchar(32) NOT NULL,\n  `name` varchar(120) NOT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `uq_common_districts_state_code` (`state_id`,`code`),\n  UNIQUE KEY `uq_common_districts_state_name` (`state_id`,`name`),\n  CONSTRAINT `fk_common_districts_state` FOREIGN KEY (`state_id`) REFERENCES `common_states` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "1",
+          "state_id": "1",
+          "code": "-",
+          "name": "-",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "district:IN-KA-BLR",
+          "state_id": "state:IN-KA",
+          "code": "BLR",
+          "name": "Bengaluru Urban",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "district:IN-MH-MUM",
+          "state_id": "state:IN-MH",
+          "code": "MUM",
+          "name": "Mumbai",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "district:IN-TN-CHN",
+          "state_id": "state:IN-TN",
+          "code": "CHN",
+          "name": "Chennai",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "common_hsn_codes",
+      "rowCount": 4,
+      "createStatement": "CREATE TABLE `common_hsn_codes` (\n  `id` varchar(64) NOT NULL,\n  `code` varchar(16) NOT NULL,\n  `name` varchar(120) NOT NULL,\n  `description` varchar(255) NOT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `code` (`code`),\n  UNIQUE KEY `name` (`name`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "1",
+          "code": "-",
+          "name": "-",
+          "description": "Default or unknown HSN code.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "hsn:420221",
+          "code": "420221",
+          "name": "Handbags",
+          "description": "Handbags with outer surface of leather.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "hsn:610910",
+          "code": "610910",
+          "name": "Cotton T-Shirts",
+          "description": "Knitted or crocheted T-shirts of cotton.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "hsn:851712",
+          "code": "851712",
+          "name": "Smartphones",
+          "description": "Telephones for cellular networks or other wireless networks.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "common_order_types",
+      "rowCount": 5,
+      "createStatement": "CREATE TABLE `common_order_types` (\n  `id` varchar(64) NOT NULL,\n  `code` varchar(32) NOT NULL,\n  `name` varchar(120) NOT NULL,\n  `description` varchar(255) DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `code` (`code`),\n  UNIQUE KEY `name` (`name`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "1",
+          "code": "-",
+          "name": "-",
+          "description": "Default or unknown order type.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "order-type:purchase",
+          "code": "PURCHASE_ORDER",
+          "name": "Purchase Order",
+          "description": "Supplier purchase order.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "order-type:purchase-return",
+          "code": "PURCHASE_RETURN",
+          "name": "Purchase Return",
+          "description": "Supplier return order.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "order-type:sales",
+          "code": "SALES_ORDER",
+          "name": "Sales Order",
+          "description": "Customer sales order.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "order-type:sales-return",
+          "code": "SALES_RETURN",
+          "name": "Sales Return",
+          "description": "Customer return order.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "common_payment_terms",
+      "rowCount": 5,
+      "createStatement": "CREATE TABLE `common_payment_terms` (\n  `id` varchar(64) NOT NULL,\n  `code` varchar(32) NOT NULL,\n  `name` varchar(120) NOT NULL,\n  `due_days` int(11) NOT NULL DEFAULT 0,\n  `description` varchar(255) DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `code` (`code`),\n  UNIQUE KEY `name` (`name`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "1",
+          "code": "-",
+          "name": "-",
+          "due_days": 0,
+          "description": "Default or unknown payment term.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "payment-term:immediate",
+          "code": "IMMEDIATE",
+          "name": "Immediate",
+          "due_days": 0,
+          "description": "Payment due immediately.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "payment-term:net-15",
+          "code": "NET_15",
+          "name": "Net 15",
+          "due_days": 15,
+          "description": "Payment due in 15 days.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "payment-term:net-30",
+          "code": "NET_30",
+          "name": "Net 30",
+          "due_days": 30,
+          "description": "Payment due in 30 days.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "payment-term:net-7",
+          "code": "NET_7",
+          "name": "Net 7",
+          "due_days": 7,
+          "description": "Payment due in 7 days.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "common_pincodes",
+      "rowCount": 4,
+      "createStatement": "CREATE TABLE `common_pincodes` (\n  `id` varchar(64) NOT NULL,\n  `country_id` varchar(64) NOT NULL,\n  `state_id` varchar(64) NOT NULL,\n  `district_id` varchar(64) NOT NULL,\n  `city_id` varchar(64) NOT NULL,\n  `code` varchar(16) NOT NULL,\n  `area_name` varchar(160) DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `code` (`code`),\n  KEY `fk_common_pincodes_country` (`country_id`),\n  KEY `fk_common_pincodes_state` (`state_id`),\n  KEY `fk_common_pincodes_district` (`district_id`),\n  KEY `fk_common_pincodes_city` (`city_id`),\n  CONSTRAINT `fk_common_pincodes_city` FOREIGN KEY (`city_id`) REFERENCES `common_cities` (`id`),\n  CONSTRAINT `fk_common_pincodes_country` FOREIGN KEY (`country_id`) REFERENCES `common_countries` (`id`),\n  CONSTRAINT `fk_common_pincodes_district` FOREIGN KEY (`district_id`) REFERENCES `common_districts` (`id`),\n  CONSTRAINT `fk_common_pincodes_state` FOREIGN KEY (`state_id`) REFERENCES `common_states` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "1",
+          "country_id": "1",
+          "state_id": "1",
+          "district_id": "1",
+          "city_id": "1",
+          "code": "-",
+          "area_name": "-",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "pincode:400001",
+          "country_id": "country:IN",
+          "state_id": "state:IN-MH",
+          "district_id": "district:IN-MH-MUM",
+          "city_id": "city:IN-MH-MUMBAI",
+          "code": "400001",
+          "area_name": "Fort",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "pincode:560001",
+          "country_id": "country:IN",
+          "state_id": "state:IN-KA",
+          "district_id": "district:IN-KA-BLR",
+          "city_id": "city:IN-KA-BENGALURU",
+          "code": "560001",
+          "area_name": "MG Road",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "pincode:600001",
+          "country_id": "country:IN",
+          "state_id": "state:IN-TN",
+          "district_id": "district:IN-TN-CHN",
+          "city_id": "city:IN-TN-CHENNAI",
+          "code": "600001",
+          "area_name": "Parrys",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "common_product_categories",
+      "rowCount": 5,
+      "createStatement": "CREATE TABLE `common_product_categories` (\n  `id` varchar(64) NOT NULL,\n  `code` varchar(32) NOT NULL,\n  `name` varchar(120) NOT NULL,\n  `description` varchar(255) DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `code` (`code`),\n  UNIQUE KEY `name` (`name`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "1",
+          "code": "-",
+          "name": "-",
+          "description": "Default or unknown product category.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "product-category:accessories",
+          "code": "ACCESSORIES",
+          "name": "Accessories",
+          "description": "Accessory category.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "product-category:footwear",
+          "code": "FOOTWEAR",
+          "name": "Footwear",
+          "description": "Footwear category.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "product-category:menswear",
+          "code": "MENSWEAR",
+          "name": "Menswear",
+          "description": "Menswear catalog category.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "product-category:womenswear",
+          "code": "WOMENSWEAR",
+          "name": "Womenswear",
+          "description": "Womenswear catalog category.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "common_product_groups",
+      "rowCount": 5,
+      "createStatement": "CREATE TABLE `common_product_groups` (\n  `id` varchar(64) NOT NULL,\n  `code` varchar(32) NOT NULL,\n  `name` varchar(120) NOT NULL,\n  `description` varchar(255) DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `code` (`code`),\n  UNIQUE KEY `name` (`name`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "1",
+          "code": "-",
+          "name": "-",
+          "description": "Default or unknown product group.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "product-group:apparel",
+          "code": "APPAREL",
+          "name": "Apparel",
+          "description": "Fashion and garment products.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "product-group:electronics",
+          "code": "ELECTRONICS",
+          "name": "Electronics",
+          "description": "Consumer electronics and accessories.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "product-group:grocery",
+          "code": "GROCERY",
+          "name": "Grocery",
+          "description": "Grocery and essentials.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "product-group:home",
+          "code": "HOME",
+          "name": "Home & Living",
+          "description": "Home and living products.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "common_product_types",
+      "rowCount": 4,
+      "createStatement": "CREATE TABLE `common_product_types` (\n  `id` varchar(64) NOT NULL,\n  `code` varchar(32) NOT NULL,\n  `name` varchar(120) NOT NULL,\n  `description` varchar(255) DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `code` (`code`),\n  UNIQUE KEY `name` (`name`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "1",
+          "code": "-",
+          "name": "-",
+          "description": "Default or unknown product type.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "product-type:bundle",
+          "code": "BUNDLE",
+          "name": "Bundle",
+          "description": "Composite product bundle.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "product-type:finished-goods",
+          "code": "FINISHED_GOODS",
+          "name": "Finished Goods",
+          "description": "Sellable finished inventory.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "product-type:service",
+          "code": "SERVICE",
+          "name": "Service",
+          "description": "Service or non-stock item.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "common_sizes",
+      "rowCount": 7,
+      "createStatement": "CREATE TABLE `common_sizes` (\n  `id` varchar(64) NOT NULL,\n  `code` varchar(16) NOT NULL,\n  `name` varchar(120) NOT NULL,\n  `sort_order` int(11) NOT NULL DEFAULT 0,\n  `description` varchar(255) DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `code` (`code`),\n  UNIQUE KEY `name` (`name`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "1",
+          "code": "-",
+          "name": "-",
+          "sort_order": 0,
+          "description": "Default or unknown size.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "size:free",
+          "code": "FREE",
+          "name": "Free Size",
+          "sort_order": 99,
+          "description": "Universal size.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "size:l",
+          "code": "L",
+          "name": "Large",
+          "sort_order": 4,
+          "description": "L size.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "size:m",
+          "code": "M",
+          "name": "Medium",
+          "sort_order": 3,
+          "description": "M size.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "size:s",
+          "code": "S",
+          "name": "Small",
+          "sort_order": 2,
+          "description": "S size.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "size:xl",
+          "code": "XL",
+          "name": "Extra Large",
+          "sort_order": 5,
+          "description": "XL size.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "size:xs",
+          "code": "XS",
+          "name": "Extra Small",
+          "sort_order": 1,
+          "description": "XS size.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "common_slider_themes",
+      "rowCount": 10,
+      "createStatement": "CREATE TABLE `common_slider_themes` (\n  `id` varchar(64) NOT NULL,\n  `code` varchar(64) NOT NULL,\n  `name` varchar(160) NOT NULL,\n  `sort_order` int(11) NOT NULL DEFAULT 0,\n  `add_to_cart_label` varchar(120) DEFAULT NULL,\n  `view_details_label` varchar(120) DEFAULT NULL,\n  `background_from` varchar(16) NOT NULL,\n  `background_via` varchar(16) NOT NULL,\n  `background_to` varchar(16) NOT NULL,\n  `text_color` varchar(16) DEFAULT NULL,\n  `muted_text_color` varchar(16) DEFAULT NULL,\n  `badge_background` varchar(16) DEFAULT NULL,\n  `badge_text_color` varchar(16) DEFAULT NULL,\n  `primary_button_background` varchar(16) DEFAULT NULL,\n  `primary_button_text_color` varchar(16) DEFAULT NULL,\n  `secondary_button_background` varchar(16) DEFAULT NULL,\n  `secondary_button_text_color` varchar(16) DEFAULT NULL,\n  `nav_background` varchar(16) DEFAULT NULL,\n  `nav_text_color` varchar(16) DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `code` (`code`),\n  UNIQUE KEY `name` (`name`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "slider-theme:signature-01",
+          "code": "signature-01",
+          "name": "Signature Ember",
+          "sort_order": 10,
+          "add_to_cart_label": "Add to cart",
+          "view_details_label": "View details",
+          "background_from": "#2b1a14",
+          "background_via": "#6b4633",
+          "background_to": "#f2ddc8",
+          "text_color": "#ffffff",
+          "muted_text_color": "#eadfd5",
+          "badge_background": "#ffffff33",
+          "badge_text_color": "#ffffff",
+          "primary_button_background": "#ffffff",
+          "primary_button_text_color": "#1a120f",
+          "secondary_button_background": "#a78f82",
+          "secondary_button_text_color": "#ffffff",
+          "nav_background": "#ffffffcc",
+          "nav_text_color": "#1a120f",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "slider-theme:signature-02",
+          "code": "signature-02",
+          "name": "Espresso Sand",
+          "sort_order": 20,
+          "add_to_cart_label": "Add to cart",
+          "view_details_label": "View details",
+          "background_from": "#241913",
+          "background_via": "#7a523d",
+          "background_to": "#f0dcc8",
+          "text_color": "#ffffff",
+          "muted_text_color": "#efe3d7",
+          "badge_background": "#ffffff30",
+          "badge_text_color": "#ffffff",
+          "primary_button_background": "#ffffff",
+          "primary_button_text_color": "#1b120f",
+          "secondary_button_background": "#b59f93",
+          "secondary_button_text_color": "#ffffff",
+          "nav_background": "#ffffffcc",
+          "nav_text_color": "#1b120f",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "slider-theme:signature-03",
+          "code": "signature-03",
+          "name": "Walnut Glow",
+          "sort_order": 30,
+          "add_to_cart_label": "Add to cart",
+          "view_details_label": "View details",
+          "background_from": "#201611",
+          "background_via": "#5f4334",
+          "background_to": "#e9d6c3",
+          "text_color": "#ffffff",
+          "muted_text_color": "#e9ded4",
+          "badge_background": "#ffffff30",
+          "badge_text_color": "#ffffff",
+          "primary_button_background": "#ffffff",
+          "primary_button_text_color": "#18100c",
+          "secondary_button_background": "#927567",
+          "secondary_button_text_color": "#ffffff",
+          "nav_background": "#ffffffcc",
+          "nav_text_color": "#18100c",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "slider-theme:signature-04",
+          "code": "signature-04",
+          "name": "Mocha Bronze",
+          "sort_order": 40,
+          "add_to_cart_label": "Add to cart",
+          "view_details_label": "View details",
+          "background_from": "#2f1e18",
+          "background_via": "#8a5a40",
+          "background_to": "#efcfac",
+          "text_color": "#ffffff",
+          "muted_text_color": "#f0e4d8",
+          "badge_background": "#ffffff36",
+          "badge_text_color": "#ffffff",
+          "primary_button_background": "#ffffff",
+          "primary_button_text_color": "#201612",
+          "secondary_button_background": "#c1a18d",
+          "secondary_button_text_color": "#201612",
+          "nav_background": "#ffffffd9",
+          "nav_text_color": "#201612",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "slider-theme:signature-05",
+          "code": "signature-05",
+          "name": "Cocoa Linen",
+          "sort_order": 50,
+          "add_to_cart_label": "Add to cart",
+          "view_details_label": "View details",
+          "background_from": "#311f19",
+          "background_via": "#7a503c",
+          "background_to": "#f6e6d3",
+          "text_color": "#ffffff",
+          "muted_text_color": "#efe5dd",
+          "badge_background": "#ffffff33",
+          "badge_text_color": "#ffffff",
+          "primary_button_background": "#ffffff",
+          "primary_button_text_color": "#201613",
+          "secondary_button_background": "#f6e6d3",
+          "secondary_button_text_color": "#2c1d17",
+          "nav_background": "#ffffffd9",
+          "nav_text_color": "#201613",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "slider-theme:signature-06",
+          "code": "signature-06",
+          "name": "Sienna Cream",
+          "sort_order": 60,
+          "add_to_cart_label": "Add to cart",
+          "view_details_label": "View details",
+          "background_from": "#3b241b",
+          "background_via": "#965f43",
+          "background_to": "#f7dcc0",
+          "text_color": "#ffffff",
+          "muted_text_color": "#f6e8dc",
+          "badge_background": "#ffffff38",
+          "badge_text_color": "#ffffff",
+          "primary_button_background": "#1d1511",
+          "primary_button_text_color": "#ffffff",
+          "secondary_button_background": "#ffffff55",
+          "secondary_button_text_color": "#ffffff",
+          "nav_background": "#ffffffd6",
+          "nav_text_color": "#241712",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "slider-theme:signature-07",
+          "code": "signature-07",
+          "name": "Toffee Mist",
+          "sort_order": 70,
+          "add_to_cart_label": "Add to cart",
+          "view_details_label": "View details",
+          "background_from": "#4b2f22",
+          "background_via": "#9e684c",
+          "background_to": "#f3e3d4",
+          "text_color": null,
+          "muted_text_color": null,
+          "badge_background": null,
+          "badge_text_color": null,
+          "primary_button_background": null,
+          "primary_button_text_color": null,
+          "secondary_button_background": null,
+          "secondary_button_text_color": null,
+          "nav_background": null,
+          "nav_text_color": null,
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "slider-theme:signature-08",
+          "code": "signature-08",
+          "name": "Roast Almond",
+          "sort_order": 80,
+          "add_to_cart_label": "Add to cart",
+          "view_details_label": "View details",
+          "background_from": "#352119",
+          "background_via": "#8f5a41",
+          "background_to": "#eed4ba",
+          "text_color": "#ffffff",
+          "muted_text_color": "#f5e7dc",
+          "badge_background": "#ffffff30",
+          "badge_text_color": "#ffffff",
+          "primary_button_background": "#ffffff",
+          "primary_button_text_color": "#1b120f",
+          "secondary_button_background": "#ffffff30",
+          "secondary_button_text_color": "#ffffff",
+          "nav_background": "#ffffffd4",
+          "nav_text_color": "#1b120f",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "slider-theme:signature-09",
+          "code": "signature-09",
+          "name": "Vintage Copper",
+          "sort_order": 90,
+          "add_to_cart_label": "Shop now",
+          "view_details_label": "Explore details",
+          "background_from": "#281913",
+          "background_via": "#794b37",
+          "background_to": "#e6c9af",
+          "text_color": "#ffffff",
+          "muted_text_color": "#efe1d5",
+          "badge_background": "#ffffff33",
+          "badge_text_color": "#ffffff",
+          "primary_button_background": "#ffffff",
+          "primary_button_text_color": "#1b120f",
+          "secondary_button_background": "#9f7d69",
+          "secondary_button_text_color": "#ffffff",
+          "nav_background": "#ffffffd9",
+          "nav_text_color": "#1b120f",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "slider-theme:signature-10",
+          "code": "signature-10",
+          "name": "Noir Beige",
+          "sort_order": 100,
+          "add_to_cart_label": "Add to cart",
+          "view_details_label": "View details",
+          "background_from": "#1e1410",
+          "background_via": "#604031",
+          "background_to": "#ddc1aa",
+          "text_color": "#ffffff",
+          "muted_text_color": "#eadace",
+          "badge_background": "#ffffff2e",
+          "badge_text_color": "#ffffff",
+          "primary_button_background": "#ffffff",
+          "primary_button_text_color": "#18100d",
+          "secondary_button_background": "#ffffff28",
+          "secondary_button_text_color": "#ffffff",
+          "nav_background": "#ffffffd6",
+          "nav_text_color": "#18100d",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "common_states",
+      "rowCount": 4,
+      "createStatement": "CREATE TABLE `common_states` (\n  `id` varchar(64) NOT NULL,\n  `country_id` varchar(64) NOT NULL,\n  `code` varchar(16) NOT NULL,\n  `name` varchar(120) NOT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `uq_common_states_country_code` (`country_id`,`code`),\n  UNIQUE KEY `uq_common_states_country_name` (`country_id`,`name`),\n  CONSTRAINT `fk_common_states_country` FOREIGN KEY (`country_id`) REFERENCES `common_countries` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "1",
+          "country_id": "1",
+          "code": "-",
+          "name": "-",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "state:IN-KA",
+          "country_id": "country:IN",
+          "code": "KA",
+          "name": "Karnataka",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "state:IN-MH",
+          "country_id": "country:IN",
+          "code": "MH",
+          "name": "Maharashtra",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "state:IN-TN",
+          "country_id": "country:IN",
+          "code": "TN",
+          "name": "Tamil Nadu",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "common_storefront_templates",
+      "rowCount": 9,
+      "createStatement": "CREATE TABLE `common_storefront_templates` (\n  `id` varchar(64) NOT NULL,\n  `code` varchar(64) NOT NULL,\n  `name` varchar(160) NOT NULL,\n  `sort_order` int(11) NOT NULL DEFAULT 0,\n  `badge_text` varchar(160) DEFAULT NULL,\n  `title` varchar(255) NOT NULL,\n  `description` text DEFAULT NULL,\n  `cta_primary_label` varchar(120) DEFAULT NULL,\n  `cta_primary_href` varchar(255) DEFAULT NULL,\n  `cta_secondary_label` varchar(120) DEFAULT NULL,\n  `cta_secondary_href` varchar(255) DEFAULT NULL,\n  `icon_key` varchar(64) DEFAULT NULL,\n  `theme_key` varchar(64) DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `code` (`code`),\n  UNIQUE KEY `name` (`name`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "storefront-template:home-bestsellers",
+          "code": "home-bestsellers",
+          "name": "Home Best Sellers Section",
+          "sort_order": 40,
+          "badge_text": "Bestsellers",
+          "title": "Best sellers highlighted through backend storefront flags.",
+          "description": "This section groups products using the real storefront best-seller flag and live inventory-ready products.",
+          "cta_primary_label": null,
+          "cta_primary_href": null,
+          "cta_secondary_label": null,
+          "cta_secondary_href": null,
+          "icon_key": null,
+          "theme_key": "mist",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "storefront-template:home-category",
+          "code": "home-category",
+          "name": "Home Category Section",
+          "sort_order": 10,
+          "badge_text": "Shop by Category",
+          "title": "Category groupings now come from the live product catalog.",
+          "description": "The store navigation, category rail, and category cards derive from active backend product and storefront profile records.",
+          "cta_primary_label": "Explore the full catalog",
+          "cta_primary_href": "/search",
+          "cta_secondary_label": null,
+          "cta_secondary_href": null,
+          "icon_key": null,
+          "theme_key": "neutral",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "storefront-template:home-cta",
+          "code": "home-cta",
+          "name": "Home CTA Section",
+          "sort_order": 60,
+          "badge_text": "Storefront Ready",
+          "title": "Storefront browsing is now running on the backend product catalog.",
+          "description": "Home sections, category browsing, product detail, brand highlights, and catalog filters derive from backend storefront data with a safe fallback copy path.",
+          "cta_primary_label": "Start browsing",
+          "cta_primary_href": "/search",
+          "cta_secondary_label": "Review cart",
+          "cta_secondary_href": "/cart",
+          "icon_key": null,
+          "theme_key": "cta",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "storefront-template:home-featured",
+          "code": "home-featured",
+          "name": "Home Featured Section",
+          "sort_order": 20,
+          "badge_text": "Featured Edit",
+          "title": "Feature-section products curated in the product publishing profile.",
+          "description": "These cards stay fully backend-driven, including category mapping, prices, inventory, and real product imagery.",
+          "cta_primary_label": null,
+          "cta_primary_href": null,
+          "cta_secondary_label": null,
+          "cta_secondary_href": null,
+          "icon_key": null,
+          "theme_key": "neutral",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "storefront-template:home-featured-labels",
+          "code": "home-featured-labels",
+          "name": "Home Featured Labels Section",
+          "sort_order": 50,
+          "badge_text": "Featured Labels",
+          "title": "Brand labels assembled from flagged live products.",
+          "description": "This area groups brands from the actual catalog instead of fixed sample content.",
+          "cta_primary_label": null,
+          "cta_primary_href": null,
+          "cta_secondary_label": null,
+          "cta_secondary_href": null,
+          "icon_key": null,
+          "theme_key": "neutral",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "storefront-template:home-new-arrivals",
+          "code": "home-new-arrivals",
+          "name": "Home New Arrivals Section",
+          "sort_order": 30,
+          "badge_text": "New Arrivals",
+          "title": "New arrivals curated directly from publishing options.",
+          "description": "Fresh storefront introductions are driven by active backend publishing rows rather than static page content.",
+          "cta_primary_label": null,
+          "cta_primary_href": null,
+          "cta_secondary_label": null,
+          "cta_secondary_href": null,
+          "icon_key": null,
+          "theme_key": "sand",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "storefront-template:trust-delivery",
+          "code": "trust-delivery",
+          "name": "Trust Note Delivery",
+          "sort_order": 80,
+          "badge_text": null,
+          "title": "Design-first flow",
+          "description": "Cart and checkout stay styled for the shopper journey while product discovery and merchandising run on live catalog data.",
+          "cta_primary_label": null,
+          "cta_primary_href": null,
+          "cta_secondary_label": null,
+          "cta_secondary_href": null,
+          "icon_key": "truck",
+          "theme_key": "trust",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "storefront-template:trust-editorial",
+          "code": "trust-editorial",
+          "name": "Trust Note Editorial",
+          "sort_order": 70,
+          "badge_text": null,
+          "title": "Editorial curation",
+          "description": "Built as a premium storefront with backend-driven product curation, polished hierarchy, and campaign-style entry sections.",
+          "cta_primary_label": null,
+          "cta_primary_href": null,
+          "cta_secondary_label": null,
+          "cta_secondary_href": null,
+          "icon_key": "sparkles",
+          "theme_key": "trust",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "storefront-template:trust-shell",
+          "code": "trust-shell",
+          "name": "Trust Note Shell",
+          "sort_order": 90,
+          "badge_text": null,
+          "title": "Shell preserved",
+          "description": "The menu, category rail, footer, and storefront sections stay aligned while reading dynamic copy and product data from the backend.",
+          "cta_primary_label": null,
+          "cta_primary_href": null,
+          "cta_secondary_label": null,
+          "cta_secondary_href": null,
+          "icon_key": "shield",
+          "theme_key": "trust",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "common_styles",
+      "rowCount": 5,
+      "createStatement": "CREATE TABLE `common_styles` (\n  `id` varchar(64) NOT NULL,\n  `code` varchar(32) NOT NULL,\n  `name` varchar(120) NOT NULL,\n  `description` varchar(255) DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `code` (`code`),\n  UNIQUE KEY `name` (`name`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "1",
+          "code": "-",
+          "name": "-",
+          "description": "Default or unknown style.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "style:casual",
+          "code": "CASUAL",
+          "name": "Casual",
+          "description": "Casual product style.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "style:ethnic",
+          "code": "ETHNIC",
+          "name": "Ethnic",
+          "description": "Ethnic product style.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "style:formal",
+          "code": "FORMAL",
+          "name": "Formal",
+          "description": "Formal product style.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "style:sport",
+          "code": "SPORT",
+          "name": "Sport",
+          "description": "Sport or athleisure style.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "common_taxes",
+      "rowCount": 6,
+      "createStatement": "CREATE TABLE `common_taxes` (\n  `id` varchar(64) NOT NULL,\n  `code` varchar(32) NOT NULL,\n  `name` varchar(120) NOT NULL,\n  `tax_type` varchar(32) NOT NULL,\n  `rate_percent` decimal(10,4) NOT NULL,\n  `description` varchar(255) DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `code` (`code`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "1",
+          "code": "-",
+          "name": "-",
+          "tax_type": "-",
+          "rate_percent": "0.0000",
+          "description": "Default or unknown tax.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "tax:gst-0",
+          "code": "GST_0",
+          "name": "GST 0%",
+          "tax_type": "GST",
+          "rate_percent": "0.0000",
+          "description": "Nil-rated GST.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "tax:gst-12",
+          "code": "GST_12",
+          "name": "GST 12%",
+          "tax_type": "GST",
+          "rate_percent": "12.0000",
+          "description": "Standard GST slab.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "tax:gst-18",
+          "code": "GST_18",
+          "name": "GST 18%",
+          "tax_type": "GST",
+          "rate_percent": "18.0000",
+          "description": "Standard GST slab.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "tax:gst-28",
+          "code": "GST_28",
+          "name": "GST 28%",
+          "tax_type": "GST",
+          "rate_percent": "28.0000",
+          "description": "High GST slab.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "tax:gst-5",
+          "code": "GST_5",
+          "name": "GST 5%",
+          "tax_type": "GST",
+          "rate_percent": "5.0000",
+          "description": "Low-rate GST.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "common_transports",
+      "rowCount": 5,
+      "createStatement": "CREATE TABLE `common_transports` (\n  `id` varchar(64) NOT NULL,\n  `code` varchar(32) NOT NULL,\n  `name` varchar(120) NOT NULL,\n  `description` varchar(255) DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `code` (`code`),\n  UNIQUE KEY `name` (`name`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "1",
+          "code": "-",
+          "name": "-",
+          "description": "Default or unknown transport.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "transport:air",
+          "code": "AIR",
+          "name": "Air",
+          "description": "Air cargo transport.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "transport:courier",
+          "code": "COURIER",
+          "name": "Courier",
+          "description": "Courier parcel delivery.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "transport:road",
+          "code": "ROAD",
+          "name": "Road",
+          "description": "Road freight and local delivery.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "transport:sea",
+          "code": "SEA",
+          "name": "Sea",
+          "description": "Sea or ocean freight.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "common_units",
+      "rowCount": 6,
+      "createStatement": "CREATE TABLE `common_units` (\n  `id` varchar(64) NOT NULL,\n  `code` varchar(16) NOT NULL,\n  `name` varchar(120) NOT NULL,\n  `symbol` varchar(16) DEFAULT NULL,\n  `description` varchar(255) DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `code` (`code`),\n  UNIQUE KEY `name` (`name`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "1",
+          "code": "-",
+          "name": "-",
+          "symbol": "-",
+          "description": "Default or unknown unit.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "unit:box",
+          "code": "BOX",
+          "name": "Box",
+          "symbol": "Box",
+          "description": "Box quantity.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "unit:kg",
+          "code": "KG",
+          "name": "Kilogram",
+          "symbol": "kg",
+          "description": "Weight in kilograms.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "unit:ltr",
+          "code": "LTR",
+          "name": "Litre",
+          "symbol": "L",
+          "description": "Liquid litre unit.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "unit:nos",
+          "code": "NOS",
+          "name": "Numbers",
+          "symbol": "Nos",
+          "description": "Counted units.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "unit:pcs",
+          "code": "PCS",
+          "name": "Pieces",
+          "symbol": "Pcs",
+          "description": "Pieces.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "common_warehouses",
+      "rowCount": 2,
+      "createStatement": "CREATE TABLE `common_warehouses` (\n  `id` varchar(64) NOT NULL,\n  `code` varchar(32) NOT NULL,\n  `name` varchar(120) NOT NULL,\n  `country_id` varchar(64) DEFAULT NULL,\n  `state_id` varchar(64) DEFAULT NULL,\n  `district_id` varchar(64) DEFAULT NULL,\n  `city_id` varchar(64) DEFAULT NULL,\n  `pincode_id` varchar(64) DEFAULT NULL,\n  `address_line1` varchar(160) DEFAULT NULL,\n  `address_line2` varchar(160) DEFAULT NULL,\n  `description` varchar(255) DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `code` (`code`),\n  UNIQUE KEY `name` (`name`),\n  KEY `fk_common_warehouses_country` (`country_id`),\n  KEY `fk_common_warehouses_state` (`state_id`),\n  KEY `fk_common_warehouses_district` (`district_id`),\n  KEY `fk_common_warehouses_city` (`city_id`),\n  KEY `fk_common_warehouses_pincode` (`pincode_id`),\n  CONSTRAINT `fk_common_warehouses_city` FOREIGN KEY (`city_id`) REFERENCES `common_cities` (`id`),\n  CONSTRAINT `fk_common_warehouses_country` FOREIGN KEY (`country_id`) REFERENCES `common_countries` (`id`),\n  CONSTRAINT `fk_common_warehouses_district` FOREIGN KEY (`district_id`) REFERENCES `common_districts` (`id`),\n  CONSTRAINT `fk_common_warehouses_pincode` FOREIGN KEY (`pincode_id`) REFERENCES `common_pincodes` (`id`),\n  CONSTRAINT `fk_common_warehouses_state` FOREIGN KEY (`state_id`) REFERENCES `common_states` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "1",
+          "code": "-",
+          "name": "-",
+          "country_id": "1",
+          "state_id": "1",
+          "district_id": "1",
+          "city_id": "1",
+          "pincode_id": "1",
+          "address_line1": "-",
+          "address_line2": "-",
+          "description": "Default or unknown warehouse.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "warehouse:main",
+          "code": "MAIN",
+          "name": "Main Warehouse",
+          "country_id": "country:IN",
+          "state_id": "state:IN-TN",
+          "district_id": "district:IN-TN-CHN",
+          "city_id": "city:IN-TN-CHENNAI",
+          "pincode_id": "pincode:600001",
+          "address_line1": "1 Harbour Estate",
+          "address_line2": "George Town",
+          "description": "Primary warehouse for bootstrap inventory operations.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "companies",
+      "rowCount": 1,
+      "createStatement": "CREATE TABLE `companies` (\n  `id` varchar(64) NOT NULL,\n  `name` varchar(160) NOT NULL,\n  `legal_name` varchar(200) DEFAULT NULL,\n  `registration_number` varchar(80) DEFAULT NULL,\n  `pan` varchar(32) DEFAULT NULL,\n  `financial_year_start` date DEFAULT NULL,\n  `books_start` date DEFAULT NULL,\n  `website` varchar(200) DEFAULT NULL,\n  `description` text DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `name` (`name`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "company:codexsun",
+          "name": "CODEXSUN",
+          "legal_name": "CODEXSUN Software Private Limited",
+          "registration_number": "CXN-ERP-001",
+          "pan": "ABCDE1234F",
+          "financial_year_start": "2025-03-31T18:30:00.000Z",
+          "books_start": "2025-03-31T18:30:00.000Z",
+          "website": "https://codexsun.com",
+          "description": "Default company bootstrap for the CXNext workspace.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "company_addresses",
+      "rowCount": 1,
+      "createStatement": "CREATE TABLE `company_addresses` (\n  `id` varchar(64) NOT NULL,\n  `company_id` varchar(64) NOT NULL,\n  `address_type` varchar(50) NOT NULL,\n  `address_line1` varchar(200) NOT NULL,\n  `address_line2` varchar(200) DEFAULT NULL,\n  `city_id` varchar(64) DEFAULT NULL,\n  `state_id` varchar(64) DEFAULT NULL,\n  `country_id` varchar(64) DEFAULT NULL,\n  `pincode_id` varchar(64) DEFAULT NULL,\n  `latitude` decimal(10,7) DEFAULT NULL,\n  `longitude` decimal(10,7) DEFAULT NULL,\n  `is_default` tinyint(1) NOT NULL DEFAULT 0,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `fk_company_addresses_company` (`company_id`),\n  KEY `fk_company_addresses_city` (`city_id`),\n  KEY `fk_company_addresses_state` (`state_id`),\n  KEY `fk_company_addresses_country` (`country_id`),\n  KEY `fk_company_addresses_pincode` (`pincode_id`),\n  CONSTRAINT `fk_company_addresses_city` FOREIGN KEY (`city_id`) REFERENCES `common_cities` (`id`),\n  CONSTRAINT `fk_company_addresses_company` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`),\n  CONSTRAINT `fk_company_addresses_country` FOREIGN KEY (`country_id`) REFERENCES `common_countries` (`id`),\n  CONSTRAINT `fk_company_addresses_pincode` FOREIGN KEY (`pincode_id`) REFERENCES `common_pincodes` (`id`),\n  CONSTRAINT `fk_company_addresses_state` FOREIGN KEY (`state_id`) REFERENCES `common_states` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "company-address:codexsun-head-office",
+          "company_id": "company:codexsun",
+          "address_type": "head_office",
+          "address_line1": "1 Harbour Estate",
+          "address_line2": "George Town",
+          "city_id": "city:IN-TN-CHENNAI",
+          "state_id": "state:IN-TN",
+          "country_id": "country:IN",
+          "pincode_id": "pincode:600001",
+          "latitude": "13.0827000",
+          "longitude": "80.2707000",
+          "is_default": 1,
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "company_bank_accounts",
+      "rowCount": 1,
+      "createStatement": "CREATE TABLE `company_bank_accounts` (\n  `id` varchar(64) NOT NULL,\n  `company_id` varchar(64) NOT NULL,\n  `bank_name` varchar(160) NOT NULL,\n  `account_number` varchar(80) NOT NULL,\n  `account_holder_name` varchar(160) NOT NULL,\n  `ifsc` varchar(32) NOT NULL,\n  `branch` varchar(120) DEFAULT NULL,\n  `is_primary` tinyint(1) NOT NULL DEFAULT 0,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `fk_company_bank_accounts_company` (`company_id`),\n  CONSTRAINT `fk_company_bank_accounts_company` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "company-bank:codexsun-primary",
+          "company_id": "company:codexsun",
+          "bank_name": "State Bank of India",
+          "account_number": "123456789012",
+          "account_holder_name": "CODEXSUN Software Private Limited",
+          "ifsc": "SBIN0000456",
+          "branch": "Chennai Main",
+          "is_primary": 1,
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "company_emails",
+      "rowCount": 1,
+      "createStatement": "CREATE TABLE `company_emails` (\n  `id` varchar(64) NOT NULL,\n  `company_id` varchar(64) NOT NULL,\n  `email` varchar(200) NOT NULL,\n  `email_type` varchar(50) NOT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `fk_company_emails_company` (`company_id`),\n  CONSTRAINT `fk_company_emails_company` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "company-email:codexsun-admin",
+          "company_id": "company:codexsun",
+          "email": "admin@codexsun.com",
+          "email_type": "admin",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "company_logos",
+      "rowCount": 0,
+      "createStatement": "CREATE TABLE `company_logos` (\n  `id` varchar(64) NOT NULL,\n  `company_id` varchar(64) NOT NULL,\n  `logo_url` varchar(255) NOT NULL,\n  `logo_type` varchar(50) NOT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `fk_company_logos_company` (`company_id`),\n  CONSTRAINT `fk_company_logos_company` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": []
+    },
+    {
+      "name": "company_phones",
+      "rowCount": 1,
+      "createStatement": "CREATE TABLE `company_phones` (\n  `id` varchar(64) NOT NULL,\n  `company_id` varchar(64) NOT NULL,\n  `phone_number` varchar(50) NOT NULL,\n  `phone_type` varchar(50) NOT NULL,\n  `is_primary` tinyint(1) NOT NULL DEFAULT 0,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `fk_company_phones_company` (`company_id`),\n  CONSTRAINT `fk_company_phones_company` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "company-phone:codexsun-primary",
+          "company_id": "company:codexsun",
+          "phone_number": "+91-9000000000",
+          "phone_type": "phone",
+          "is_primary": 1,
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "contacts",
+      "rowCount": 1,
+      "createStatement": "CREATE TABLE `contacts` (\n  `id` varchar(64) NOT NULL,\n  `uuid` varchar(64) NOT NULL,\n  `contact_type_id` varchar(64) NOT NULL,\n  `name` varchar(200) NOT NULL,\n  `legal_name` varchar(250) DEFAULT NULL,\n  `pan` varchar(20) DEFAULT NULL,\n  `gstin` varchar(20) DEFAULT NULL,\n  `msme_type` varchar(20) DEFAULT NULL,\n  `msme_no` varchar(20) DEFAULT NULL,\n  `opening_balance` decimal(15,2) NOT NULL DEFAULT 0.00,\n  `balance_type` varchar(10) DEFAULT NULL,\n  `credit_limit` decimal(15,2) NOT NULL DEFAULT 0.00,\n  `website` varchar(200) DEFAULT NULL,\n  `description` text DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `uuid` (`uuid`),\n  KEY `fk_contacts_contact_type` (`contact_type_id`),\n  CONSTRAINT `fk_contacts_contact_type` FOREIGN KEY (`contact_type_id`) REFERENCES `common_contact_types` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "contact:default",
+          "uuid": "contact-default",
+          "contact_type_id": "contact-type:company",
+          "name": "-",
+          "legal_name": "-",
+          "pan": null,
+          "gstin": null,
+          "msme_type": null,
+          "msme_no": null,
+          "opening_balance": "0.00",
+          "balance_type": null,
+          "credit_limit": "0.00",
+          "website": null,
+          "description": "Default placeholder contact.",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "contact_addresses",
+      "rowCount": 0,
+      "createStatement": "CREATE TABLE `contact_addresses` (\n  `id` varchar(64) NOT NULL,\n  `contact_id` varchar(64) NOT NULL,\n  `address_type` varchar(50) NOT NULL,\n  `address_line1` varchar(200) NOT NULL,\n  `address_line2` varchar(200) DEFAULT NULL,\n  `city_id` varchar(64) DEFAULT NULL,\n  `state_id` varchar(64) DEFAULT NULL,\n  `country_id` varchar(64) DEFAULT NULL,\n  `pincode_id` varchar(64) DEFAULT NULL,\n  `latitude` decimal(10,7) DEFAULT NULL,\n  `longitude` decimal(10,7) DEFAULT NULL,\n  `is_default` tinyint(1) NOT NULL DEFAULT 0,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `fk_contact_addresses_contact` (`contact_id`),\n  KEY `fk_contact_addresses_city` (`city_id`),\n  KEY `fk_contact_addresses_state` (`state_id`),\n  KEY `fk_contact_addresses_country` (`country_id`),\n  KEY `fk_contact_addresses_pincode` (`pincode_id`),\n  CONSTRAINT `fk_contact_addresses_city` FOREIGN KEY (`city_id`) REFERENCES `common_cities` (`id`),\n  CONSTRAINT `fk_contact_addresses_contact` FOREIGN KEY (`contact_id`) REFERENCES `contacts` (`id`),\n  CONSTRAINT `fk_contact_addresses_country` FOREIGN KEY (`country_id`) REFERENCES `common_countries` (`id`),\n  CONSTRAINT `fk_contact_addresses_pincode` FOREIGN KEY (`pincode_id`) REFERENCES `common_pincodes` (`id`),\n  CONSTRAINT `fk_contact_addresses_state` FOREIGN KEY (`state_id`) REFERENCES `common_states` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": []
+    },
+    {
+      "name": "contact_bank_accounts",
+      "rowCount": 0,
+      "createStatement": "CREATE TABLE `contact_bank_accounts` (\n  `id` varchar(64) NOT NULL,\n  `contact_id` varchar(64) NOT NULL,\n  `bank_name` varchar(150) NOT NULL,\n  `account_number` varchar(50) NOT NULL,\n  `account_holder_name` varchar(200) NOT NULL,\n  `ifsc` varchar(20) NOT NULL,\n  `branch` varchar(150) DEFAULT NULL,\n  `is_primary` tinyint(1) NOT NULL DEFAULT 0,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `fk_contact_bank_accounts_contact` (`contact_id`),\n  CONSTRAINT `fk_contact_bank_accounts_contact` FOREIGN KEY (`contact_id`) REFERENCES `contacts` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": []
+    },
+    {
+      "name": "contact_emails",
+      "rowCount": 0,
+      "createStatement": "CREATE TABLE `contact_emails` (\n  `id` varchar(64) NOT NULL,\n  `contact_id` varchar(64) NOT NULL,\n  `email` varchar(200) NOT NULL,\n  `email_type` varchar(50) NOT NULL,\n  `is_primary` tinyint(1) NOT NULL DEFAULT 0,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `fk_contact_emails_contact` (`contact_id`),\n  CONSTRAINT `fk_contact_emails_contact` FOREIGN KEY (`contact_id`) REFERENCES `contacts` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": []
+    },
+    {
+      "name": "contact_gst_details",
+      "rowCount": 0,
+      "createStatement": "CREATE TABLE `contact_gst_details` (\n  `id` varchar(64) NOT NULL,\n  `contact_id` varchar(64) NOT NULL,\n  `gstin` varchar(20) NOT NULL,\n  `state` varchar(100) NOT NULL,\n  `is_default` tinyint(1) NOT NULL DEFAULT 0,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `fk_contact_gst_details_contact` (`contact_id`),\n  CONSTRAINT `fk_contact_gst_details_contact` FOREIGN KEY (`contact_id`) REFERENCES `contacts` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": []
+    },
+    {
+      "name": "contact_phones",
+      "rowCount": 0,
+      "createStatement": "CREATE TABLE `contact_phones` (\n  `id` varchar(64) NOT NULL,\n  `contact_id` varchar(64) NOT NULL,\n  `phone_number` varchar(20) NOT NULL,\n  `phone_type` varchar(50) NOT NULL,\n  `is_primary` tinyint(1) NOT NULL DEFAULT 0,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `fk_contact_phones_contact` (`contact_id`),\n  CONSTRAINT `fk_contact_phones_contact` FOREIGN KEY (`contact_id`) REFERENCES `contacts` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": []
+    },
+    {
+      "name": "customer_delivery_addresses",
+      "rowCount": 0,
+      "createStatement": "CREATE TABLE `customer_delivery_addresses` (\n  `id` varchar(64) NOT NULL,\n  `user_id` varchar(64) NOT NULL,\n  `label` varchar(80) NOT NULL,\n  `first_name` varchar(80) NOT NULL,\n  `last_name` varchar(80) NOT NULL,\n  `phone_number` varchar(20) NOT NULL,\n  `address_line1` varchar(200) NOT NULL,\n  `address_line2` varchar(200) DEFAULT NULL,\n  `city_id` varchar(64) NOT NULL,\n  `state_id` varchar(64) NOT NULL,\n  `country_id` varchar(64) NOT NULL,\n  `pincode_id` varchar(64) NOT NULL,\n  `is_default` tinyint(1) NOT NULL DEFAULT 0,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `fk_customer_delivery_addresses_city` (`city_id`),\n  KEY `fk_customer_delivery_addresses_state` (`state_id`),\n  KEY `fk_customer_delivery_addresses_country` (`country_id`),\n  KEY `fk_customer_delivery_addresses_pincode` (`pincode_id`),\n  KEY `fk_customer_delivery_addresses_user` (`user_id`),\n  CONSTRAINT `fk_customer_delivery_addresses_city` FOREIGN KEY (`city_id`) REFERENCES `common_cities` (`id`),\n  CONSTRAINT `fk_customer_delivery_addresses_country` FOREIGN KEY (`country_id`) REFERENCES `common_countries` (`id`),\n  CONSTRAINT `fk_customer_delivery_addresses_pincode` FOREIGN KEY (`pincode_id`) REFERENCES `common_pincodes` (`id`),\n  CONSTRAINT `fk_customer_delivery_addresses_state` FOREIGN KEY (`state_id`) REFERENCES `common_states` (`id`),\n  CONSTRAINT `fk_customer_delivery_addresses_user` FOREIGN KEY (`user_id`) REFERENCES `auth_users` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": []
+    },
+    {
+      "name": "frappe_purchase_receipts",
+      "rowCount": 0,
+      "createStatement": "CREATE TABLE `frappe_purchase_receipts` (\n  `id` varchar(64) NOT NULL,\n  `frappe_receipt_id` varchar(140) NOT NULL,\n  `supplier` varchar(160) NOT NULL,\n  `supplier_name` varchar(200) NOT NULL,\n  `company` varchar(160) NOT NULL,\n  `warehouse` varchar(160) NOT NULL,\n  `bill_no` varchar(160) NOT NULL,\n  `currency` varchar(32) NOT NULL,\n  `posting_date` date DEFAULT NULL,\n  `posting_time` varchar(32) NOT NULL,\n  `status` varchar(64) NOT NULL,\n  `is_return` tinyint(1) NOT NULL DEFAULT 0,\n  `grand_total` decimal(14,2) NOT NULL DEFAULT 0.00,\n  `rounded_total` decimal(14,2) NOT NULL DEFAULT 0.00,\n  `item_count` int(11) NOT NULL DEFAULT 0,\n  `product_count` int(11) NOT NULL DEFAULT 0,\n  `source_modified_at` varchar(64) NOT NULL,\n  `synced_at` datetime NOT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `frappe_receipt_id` (`frappe_receipt_id`),\n  KEY `idx_frappe_purchase_receipts_supplier` (`supplier`),\n  KEY `idx_frappe_purchase_receipts_company` (`company`),\n  KEY `idx_frappe_purchase_receipts_status` (`status`),\n  KEY `idx_frappe_purchase_receipts_posting_date` (`posting_date`),\n  KEY `idx_frappe_purchase_receipts_synced_at` (`synced_at`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": []
+    },
+    {
+      "name": "frappe_purchase_receipt_items",
+      "rowCount": 0,
+      "createStatement": "CREATE TABLE `frappe_purchase_receipt_items` (\n  `id` varchar(64) NOT NULL,\n  `receipt_id` varchar(64) NOT NULL,\n  `frappe_row_id` varchar(140) NOT NULL,\n  `item_code` varchar(140) NOT NULL,\n  `item_name` varchar(255) NOT NULL,\n  `description` text DEFAULT NULL,\n  `warehouse` varchar(160) NOT NULL,\n  `uom` varchar(64) NOT NULL,\n  `stock_uom` varchar(64) NOT NULL,\n  `quantity` decimal(14,3) NOT NULL DEFAULT 0.000,\n  `received_quantity` decimal(14,3) NOT NULL DEFAULT 0.000,\n  `rejected_quantity` decimal(14,3) NOT NULL DEFAULT 0.000,\n  `rate` decimal(14,2) NOT NULL DEFAULT 0.00,\n  `amount` decimal(14,2) NOT NULL DEFAULT 0.00,\n  `product_id` varchar(64) DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `idx_frappe_purchase_receipt_items_receipt` (`receipt_id`),\n  KEY `idx_frappe_purchase_receipt_items_code` (`item_code`),\n  KEY `idx_frappe_purchase_receipt_items_product` (`product_id`),\n  CONSTRAINT `fk_frappe_purchase_receipt_items_receipt` FOREIGN KEY (`receipt_id`) REFERENCES `frappe_purchase_receipts` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": []
+    },
+    {
+      "name": "mailbox_messages",
+      "rowCount": 0,
+      "createStatement": "CREATE TABLE `mailbox_messages` (\n  `id` varchar(64) NOT NULL,\n  `template_id` varchar(64) DEFAULT NULL,\n  `template_code` varchar(120) DEFAULT NULL,\n  `reference_type` varchar(120) DEFAULT NULL,\n  `reference_id` varchar(120) DEFAULT NULL,\n  `subject` varchar(255) NOT NULL,\n  `html_body` longtext DEFAULT NULL,\n  `text_body` longtext DEFAULT NULL,\n  `from_email` varchar(320) NOT NULL,\n  `from_name` varchar(160) DEFAULT NULL,\n  `reply_to` varchar(320) DEFAULT NULL,\n  `status` varchar(24) NOT NULL,\n  `provider` varchar(64) DEFAULT NULL,\n  `provider_message_id` varchar(255) DEFAULT NULL,\n  `error_message` text DEFAULT NULL,\n  `metadata_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`metadata_json`)),\n  `sent_at` datetime DEFAULT NULL,\n  `failed_at` datetime DEFAULT NULL,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `idx_mailbox_messages_status` (`status`),\n  KEY `idx_mailbox_messages_created_at` (`created_at`),\n  KEY `idx_mailbox_messages_reference` (`reference_type`,`reference_id`),\n  KEY `idx_mailbox_messages_template_code` (`template_code`),\n  KEY `fk_mailbox_messages_template` (`template_id`),\n  CONSTRAINT `fk_mailbox_messages_template` FOREIGN KEY (`template_id`) REFERENCES `mailbox_templates` (`id`) ON DELETE SET NULL\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": []
+    },
+    {
+      "name": "mailbox_message_recipients",
+      "rowCount": 0,
+      "createStatement": "CREATE TABLE `mailbox_message_recipients` (\n  `id` varchar(64) NOT NULL,\n  `message_id` varchar(64) NOT NULL,\n  `recipient_type` varchar(8) NOT NULL,\n  `email` varchar(320) NOT NULL,\n  `name` varchar(160) DEFAULT NULL,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `idx_mailbox_message_recipients_message` (`message_id`),\n  KEY `idx_mailbox_message_recipients_email` (`email`),\n  CONSTRAINT `fk_mailbox_message_recipients_message` FOREIGN KEY (`message_id`) REFERENCES `mailbox_messages` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": []
+    },
+    {
+      "name": "mailbox_templates",
+      "rowCount": 1,
+      "createStatement": "CREATE TABLE `mailbox_templates` (\n  `id` varchar(64) NOT NULL,\n  `code` varchar(120) NOT NULL,\n  `name` varchar(160) NOT NULL,\n  `category` varchar(64) NOT NULL,\n  `description` text DEFAULT NULL,\n  `subject_template` varchar(255) NOT NULL,\n  `html_template` longtext DEFAULT NULL,\n  `text_template` longtext DEFAULT NULL,\n  `sample_data` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`sample_data`)),\n  `is_system` tinyint(1) NOT NULL DEFAULT 0,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `uq_mailbox_templates_code` (`code`),\n  KEY `idx_mailbox_templates_category` (`category`),\n  KEY `idx_mailbox_templates_active` (`is_active`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "mailbox-template-customer-registration-otp",
+          "code": "customer_registration_otp",
+          "name": "Customer Registration OTP",
+          "category": "Authentication",
+          "description": "OTP mail used during storefront customer registration.",
+          "subject_template": "Your verification code for {{brandName}}",
+          "html_template": "<div style=\"font-family:Arial,sans-serif;line-height:1.5;color:#111827\"><p>Your verification code is:</p><p style=\"font-size:28px;font-weight:700;letter-spacing:6px;margin:16px 0\">{{otp}}</p><p>This code expires in {{expiryMinutes}} minutes.</p></div>",
+          "text_template": "Your verification code is {{otp}}. It expires in {{expiryMinutes}} minutes.",
+          "sample_data": "{\"brandName\":\"CXNext\",\"otp\":\"123456\",\"expiryMinutes\":10}",
+          "is_system": 1,
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "media_files",
+      "rowCount": 1,
+      "createStatement": "CREATE TABLE `media_files` (\n  `id` varchar(64) NOT NULL,\n  `uuid` varchar(64) NOT NULL,\n  `file_name` varchar(255) NOT NULL,\n  `original_name` varchar(255) NOT NULL,\n  `file_path` varchar(500) NOT NULL,\n  `file_url` varchar(500) NOT NULL,\n  `thumbnail_path` varchar(500) DEFAULT NULL,\n  `thumbnail_url` varchar(500) DEFAULT NULL,\n  `file_type` varchar(50) NOT NULL,\n  `mime_type` varchar(100) NOT NULL,\n  `file_size` int(11) NOT NULL DEFAULT 0,\n  `width` int(11) DEFAULT NULL,\n  `height` int(11) DEFAULT NULL,\n  `alt_text` varchar(255) DEFAULT NULL,\n  `title` varchar(255) DEFAULT NULL,\n  `folder_id` varchar(64) DEFAULT NULL,\n  `storage_scope` varchar(20) NOT NULL DEFAULT 'public',\n  `is_optimized` tinyint(1) NOT NULL DEFAULT 0,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `uuid` (`uuid`),\n  KEY `fk_media_files_folder` (`folder_id`),\n  CONSTRAINT `fk_media_files_folder` FOREIGN KEY (`folder_id`) REFERENCES `media_folders` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "media-file:placeholder",
+          "uuid": "media-file-placeholder",
+          "file_name": "default.txt",
+          "original_name": "default.txt",
+          "file_path": "placeholders/default.txt",
+          "file_url": "http://localhost:4000/media/public/placeholders/default.txt",
+          "thumbnail_path": null,
+          "thumbnail_url": null,
+          "file_type": "document",
+          "mime_type": "text/plain",
+          "file_size": 67,
+          "width": null,
+          "height": null,
+          "alt_text": "Default placeholder document",
+          "title": "Default Placeholder",
+          "folder_id": "media-folder:root",
+          "storage_scope": "public",
+          "is_optimized": 0,
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "media_folders",
+      "rowCount": 1,
+      "createStatement": "CREATE TABLE `media_folders` (\n  `id` varchar(64) NOT NULL,\n  `name` varchar(200) NOT NULL,\n  `parent_id` varchar(64) DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `fk_media_folders_parent` (`parent_id`),\n  CONSTRAINT `fk_media_folders_parent` FOREIGN KEY (`parent_id`) REFERENCES `media_folders` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "media-folder:root",
+          "name": "Root Library",
+          "parent_id": null,
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:29.000Z",
+          "updated_at": "2026-03-25T14:18:29.000Z"
+        }
+      ]
+    },
+    {
+      "name": "media_tags",
+      "rowCount": 0,
+      "createStatement": "CREATE TABLE `media_tags` (\n  `id` varchar(64) NOT NULL,\n  `name` varchar(100) NOT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `name` (`name`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": []
+    },
+    {
+      "name": "media_tag_map",
+      "rowCount": 0,
+      "createStatement": "CREATE TABLE `media_tag_map` (\n  `id` varchar(64) NOT NULL,\n  `media_id` varchar(64) NOT NULL,\n  `tag_id` varchar(64) NOT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `uq_media_tag_map_media_tag` (`media_id`,`tag_id`),\n  KEY `fk_media_tag_map_tag` (`tag_id`),\n  CONSTRAINT `fk_media_tag_map_media` FOREIGN KEY (`media_id`) REFERENCES `media_files` (`id`),\n  CONSTRAINT `fk_media_tag_map_tag` FOREIGN KEY (`tag_id`) REFERENCES `media_tags` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": []
+    },
+    {
+      "name": "media_usage",
+      "rowCount": 0,
+      "createStatement": "CREATE TABLE `media_usage` (\n  `id` varchar(64) NOT NULL,\n  `media_id` varchar(64) NOT NULL,\n  `entity_type` varchar(100) NOT NULL,\n  `entity_id` varchar(64) NOT NULL,\n  `usage_type` varchar(50) NOT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `fk_media_usage_media` (`media_id`),\n  CONSTRAINT `fk_media_usage_media` FOREIGN KEY (`media_id`) REFERENCES `media_files` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": []
+    },
+    {
+      "name": "media_versions",
+      "rowCount": 0,
+      "createStatement": "CREATE TABLE `media_versions` (\n  `id` varchar(64) NOT NULL,\n  `media_id` varchar(64) NOT NULL,\n  `version_type` varchar(50) NOT NULL,\n  `file_path` varchar(500) NOT NULL,\n  `file_url` varchar(500) NOT NULL,\n  `width` int(11) DEFAULT NULL,\n  `height` int(11) DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `fk_media_versions_media` (`media_id`),\n  CONSTRAINT `fk_media_versions_media` FOREIGN KEY (`media_id`) REFERENCES `media_files` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": []
+    },
+    {
+      "name": "products",
+      "rowCount": 1,
+      "createStatement": "CREATE TABLE `products` (\n  `id` varchar(64) NOT NULL,\n  `uuid` varchar(64) NOT NULL,\n  `name` varchar(200) NOT NULL,\n  `slug` varchar(250) NOT NULL,\n  `description` text DEFAULT NULL,\n  `short_description` varchar(500) DEFAULT NULL,\n  `brand_id` varchar(64) DEFAULT NULL,\n  `category_id` varchar(64) DEFAULT NULL,\n  `product_group_id` varchar(64) DEFAULT NULL,\n  `product_type_id` varchar(64) DEFAULT NULL,\n  `unit_id` varchar(64) DEFAULT NULL,\n  `hsn_code_id` varchar(64) DEFAULT NULL,\n  `style_id` varchar(64) DEFAULT NULL,\n  `sku` varchar(100) NOT NULL,\n  `has_variants` tinyint(1) NOT NULL DEFAULT 0,\n  `base_price` decimal(15,2) NOT NULL DEFAULT 0.00,\n  `cost_price` decimal(15,2) NOT NULL DEFAULT 0.00,\n  `tax_id` varchar(64) DEFAULT NULL,\n  `is_featured` tinyint(1) NOT NULL DEFAULT 0,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `uuid` (`uuid`),\n  UNIQUE KEY `slug` (`slug`),\n  UNIQUE KEY `sku` (`sku`),\n  KEY `fk_products_brand` (`brand_id`),\n  KEY `fk_products_category` (`category_id`),\n  KEY `fk_products_group` (`product_group_id`),\n  KEY `fk_products_type` (`product_type_id`),\n  KEY `fk_products_unit` (`unit_id`),\n  KEY `fk_products_hsn` (`hsn_code_id`),\n  KEY `fk_products_style` (`style_id`),\n  KEY `fk_products_tax` (`tax_id`),\n  CONSTRAINT `fk_products_brand` FOREIGN KEY (`brand_id`) REFERENCES `common_brands` (`id`),\n  CONSTRAINT `fk_products_category` FOREIGN KEY (`category_id`) REFERENCES `common_product_categories` (`id`),\n  CONSTRAINT `fk_products_group` FOREIGN KEY (`product_group_id`) REFERENCES `common_product_groups` (`id`),\n  CONSTRAINT `fk_products_hsn` FOREIGN KEY (`hsn_code_id`) REFERENCES `common_hsn_codes` (`id`),\n  CONSTRAINT `fk_products_style` FOREIGN KEY (`style_id`) REFERENCES `common_styles` (`id`),\n  CONSTRAINT `fk_products_tax` FOREIGN KEY (`tax_id`) REFERENCES `common_taxes` (`id`),\n  CONSTRAINT `fk_products_type` FOREIGN KEY (`product_type_id`) REFERENCES `common_product_types` (`id`),\n  CONSTRAINT `fk_products_unit` FOREIGN KEY (`unit_id`) REFERENCES `common_units` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "product:cxnext-polo",
+          "uuid": "cxnext-polo",
+          "name": "CXNext Polo",
+          "slug": "cxnext-polo",
+          "description": "A Seeded apparel product used to bootstrap product, pricing, stock, and catalog flows.",
+          "short_description": "Seeded product with variants, images, stock, SEO, and tags.",
+          "brand_id": "brand:codexsun",
+          "category_id": "product-category:menswear",
+          "product_group_id": "product-group:apparel",
+          "product_type_id": "product-type:finished-goods",
+          "unit_id": "unit:pcs",
+          "hsn_code_id": "hsn:610910",
+          "style_id": "style:casual",
+          "sku": "CXN-POLO-001",
+          "has_variants": 1,
+          "base_price": "899.00",
+          "cost_price": "460.00",
+          "tax_id": "tax:gst-12",
+          "is_featured": 1,
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        }
+      ]
+    },
+    {
+      "name": "product_attributes",
+      "rowCount": 2,
+      "createStatement": "CREATE TABLE `product_attributes` (\n  `id` varchar(64) NOT NULL,\n  `product_id` varchar(64) NOT NULL,\n  `name` varchar(100) NOT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `uq_product_attributes_product_name` (`product_id`,`name`),\n  CONSTRAINT `fk_product_attributes_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "product-attribute:cxnext-polo-colour",
+          "product_id": "product:cxnext-polo",
+          "name": "Colour",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        },
+        {
+          "id": "product-attribute:cxnext-polo-size",
+          "product_id": "product:cxnext-polo",
+          "name": "Size",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        }
+      ]
+    },
+    {
+      "name": "product_attribute_values",
+      "rowCount": 3,
+      "createStatement": "CREATE TABLE `product_attribute_values` (\n  `id` varchar(64) NOT NULL,\n  `product_id` varchar(64) NOT NULL,\n  `attribute_id` varchar(64) NOT NULL,\n  `value` varchar(100) NOT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `uq_product_attribute_values_attribute_value` (`attribute_id`,`value`),\n  KEY `fk_product_attribute_values_product` (`product_id`),\n  CONSTRAINT `fk_product_attribute_values_attribute` FOREIGN KEY (`attribute_id`) REFERENCES `product_attributes` (`id`),\n  CONSTRAINT `fk_product_attribute_values_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "product-attribute-value:cxnext-polo-colour-navy",
+          "product_id": "product:cxnext-polo",
+          "attribute_id": "product-attribute:cxnext-polo-colour",
+          "value": "Navy",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        },
+        {
+          "id": "product-attribute-value:cxnext-polo-size-l",
+          "product_id": "product:cxnext-polo",
+          "attribute_id": "product-attribute:cxnext-polo-size",
+          "value": "L",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        },
+        {
+          "id": "product-attribute-value:cxnext-polo-size-m",
+          "product_id": "product:cxnext-polo",
+          "attribute_id": "product-attribute:cxnext-polo-size",
+          "value": "M",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        }
+      ]
+    },
+    {
+      "name": "product_discounts",
+      "rowCount": 1,
+      "createStatement": "CREATE TABLE `product_discounts` (\n  `id` varchar(64) NOT NULL,\n  `product_id` varchar(64) NOT NULL,\n  `variant_id` varchar(64) DEFAULT NULL,\n  `discount_type` varchar(50) NOT NULL,\n  `discount_value` decimal(15,2) NOT NULL DEFAULT 0.00,\n  `start_date` date DEFAULT NULL,\n  `end_date` date DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `fk_product_discounts_product` (`product_id`),\n  KEY `fk_product_discounts_variant` (`variant_id`),\n  CONSTRAINT `fk_product_discounts_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`),\n  CONSTRAINT `fk_product_discounts_variant` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "product-discount:cxnext-polo-launch",
+          "product_id": "product:cxnext-polo",
+          "variant_id": null,
+          "discount_type": "PERCENTAGE",
+          "discount_value": "10.00",
+          "start_date": null,
+          "end_date": null,
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        }
+      ]
+    },
+    {
+      "name": "product_images",
+      "rowCount": 2,
+      "createStatement": "CREATE TABLE `product_images` (\n  `id` varchar(64) NOT NULL,\n  `product_id` varchar(64) NOT NULL,\n  `image_url` varchar(500) NOT NULL,\n  `is_primary` tinyint(1) NOT NULL DEFAULT 0,\n  `sort_order` int(11) NOT NULL DEFAULT 0,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `fk_product_images_product` (`product_id`),\n  CONSTRAINT `fk_product_images_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "product-image:cxnext-polo-detail",
+          "product_id": "product:cxnext-polo",
+          "image_url": "https://placehold.co/1200x1200?text=CXNext+Polo+Detail",
+          "is_primary": 0,
+          "sort_order": 2,
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        },
+        {
+          "id": "product-image:cxnext-polo-front",
+          "product_id": "product:cxnext-polo",
+          "image_url": "https://placehold.co/1200x1200?text=CXNext+Polo+Front",
+          "is_primary": 1,
+          "sort_order": 1,
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        }
+      ]
+    },
+    {
+      "name": "product_offers",
+      "rowCount": 1,
+      "createStatement": "CREATE TABLE `product_offers` (\n  `id` varchar(64) NOT NULL,\n  `product_id` varchar(64) NOT NULL,\n  `title` varchar(200) NOT NULL,\n  `description` text DEFAULT NULL,\n  `offer_price` decimal(15,2) NOT NULL DEFAULT 0.00,\n  `start_date` date DEFAULT NULL,\n  `end_date` date DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `fk_product_offers_product` (`product_id`),\n  CONSTRAINT `fk_product_offers_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "product-offer:cxnext-polo-bundle",
+          "product_id": "product:cxnext-polo",
+          "title": "Launch offer",
+          "description": "Launch offer for catalog preview and pricing workflows.",
+          "offer_price": "849.00",
+          "start_date": null,
+          "end_date": null,
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        }
+      ]
+    },
+    {
+      "name": "product_prices",
+      "rowCount": 3,
+      "createStatement": "CREATE TABLE `product_prices` (\n  `id` varchar(64) NOT NULL,\n  `product_id` varchar(64) NOT NULL,\n  `variant_id` varchar(64) DEFAULT NULL,\n  `mrp` decimal(15,2) NOT NULL DEFAULT 0.00,\n  `selling_price` decimal(15,2) NOT NULL DEFAULT 0.00,\n  `cost_price` decimal(15,2) NOT NULL DEFAULT 0.00,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `fk_product_prices_product` (`product_id`),\n  KEY `fk_product_prices_variant` (`variant_id`),\n  CONSTRAINT `fk_product_prices_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`),\n  CONSTRAINT `fk_product_prices_variant` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "product-price:cxnext-polo-base",
+          "product_id": "product:cxnext-polo",
+          "variant_id": null,
+          "mrp": "999.00",
+          "selling_price": "899.00",
+          "cost_price": "460.00",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        },
+        {
+          "id": "product-price:cxnext-polo-l",
+          "product_id": "product:cxnext-polo",
+          "variant_id": "product-variant:cxnext-polo-l",
+          "mrp": "1029.00",
+          "selling_price": "929.00",
+          "cost_price": "480.00",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        },
+        {
+          "id": "product-price:cxnext-polo-m",
+          "product_id": "product:cxnext-polo",
+          "variant_id": "product-variant:cxnext-polo-m",
+          "mrp": "999.00",
+          "selling_price": "899.00",
+          "cost_price": "460.00",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        }
+      ]
+    },
+    {
+      "name": "product_reviews",
+      "rowCount": 2,
+      "createStatement": "CREATE TABLE `product_reviews` (\n  `id` varchar(64) NOT NULL,\n  `product_id` varchar(64) NOT NULL,\n  `user_id` varchar(64) DEFAULT NULL,\n  `rating` int(11) NOT NULL,\n  `review` text DEFAULT NULL,\n  `review_date` datetime NOT NULL DEFAULT current_timestamp(),\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `fk_product_reviews_product` (`product_id`),\n  KEY `fk_product_reviews_user` (`user_id`),\n  CONSTRAINT `fk_product_reviews_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`),\n  CONSTRAINT `fk_product_reviews_user` FOREIGN KEY (`user_id`) REFERENCES `auth_users` (`id`) ON DELETE SET NULL\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "product-review:cxnext-polo-primary",
+          "product_id": "product:cxnext-polo",
+          "user_id": null,
+          "rating": 5,
+          "review": "Strong seeded sample for validating the product detail layout.",
+          "review_date": "2026-01-12T04:30:00.000Z",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        },
+        {
+          "id": "product-review:cxnext-polo-secondary",
+          "product_id": "product:cxnext-polo",
+          "user_id": null,
+          "rating": 4,
+          "review": "Useful bootstrap record for testing tags, reviews, and inventory widgets.",
+          "review_date": "2026-01-14T10:00:00.000Z",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        }
+      ]
+    },
+    {
+      "name": "product_seo",
+      "rowCount": 1,
+      "createStatement": "CREATE TABLE `product_seo` (\n  `id` varchar(64) NOT NULL,\n  `product_id` varchar(64) NOT NULL,\n  `meta_title` varchar(200) DEFAULT NULL,\n  `meta_description` varchar(500) DEFAULT NULL,\n  `meta_keywords` varchar(500) DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `product_id` (`product_id`),\n  CONSTRAINT `fk_product_seo_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "product-seo:cxnext-polo",
+          "product_id": "product:cxnext-polo",
+          "meta_title": "CXNext Polo",
+          "meta_description": "Seeded polo used to validate catalog, pricing, and stock experiences.",
+          "meta_keywords": "cxnext,polo,apparel",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        }
+      ]
+    },
+    {
+      "name": "product_storefront_profiles",
+      "rowCount": 0,
+      "createStatement": "CREATE TABLE `product_storefront_profiles` (\n  `id` varchar(64) NOT NULL,\n  `product_id` varchar(64) NOT NULL,\n  `department` varchar(32) DEFAULT NULL,\n  `home_slider_enabled` tinyint(1) NOT NULL DEFAULT 0,\n  `home_slider_order` int(11) NOT NULL DEFAULT 0,\n  `promo_slider_enabled` tinyint(1) NOT NULL DEFAULT 0,\n  `promo_slider_order` int(11) NOT NULL DEFAULT 0,\n  `feature_section_enabled` tinyint(1) NOT NULL DEFAULT 0,\n  `feature_section_order` int(11) NOT NULL DEFAULT 0,\n  `is_new_arrival` tinyint(1) NOT NULL DEFAULT 0,\n  `is_best_seller` tinyint(1) NOT NULL DEFAULT 0,\n  `is_featured_label` tinyint(1) NOT NULL DEFAULT 0,\n  `catalog_badge` varchar(80) DEFAULT NULL,\n  `fabric` varchar(120) DEFAULT NULL,\n  `fit` varchar(120) DEFAULT NULL,\n  `sleeve` varchar(120) DEFAULT NULL,\n  `occasion` varchar(120) DEFAULT NULL,\n  `shipping_note` varchar(255) DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `product_id` (`product_id`),\n  CONSTRAINT `fk_product_storefront_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": []
+    },
+    {
+      "name": "product_tags",
+      "rowCount": 3,
+      "createStatement": "CREATE TABLE `product_tags` (\n  `id` varchar(64) NOT NULL,\n  `name` varchar(100) NOT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `name` (`name`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "product-tag:catalog-bootstrap",
+          "name": "catalog-bootstrap",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        },
+        {
+          "id": "product-tag:cxnext-polo",
+          "name": "cxnext-polo",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        },
+        {
+          "id": "product-tag:cxnext-seed",
+          "name": "cxnext-seed",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        }
+      ]
+    },
+    {
+      "name": "product_tag_map",
+      "rowCount": 3,
+      "createStatement": "CREATE TABLE `product_tag_map` (\n  `id` varchar(64) NOT NULL,\n  `product_id` varchar(64) NOT NULL,\n  `tag_id` varchar(64) NOT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `uq_product_tag_map_product_tag` (`product_id`,`tag_id`),\n  KEY `fk_product_tag_map_tag` (`tag_id`),\n  CONSTRAINT `fk_product_tag_map_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`),\n  CONSTRAINT `fk_product_tag_map_tag` FOREIGN KEY (`tag_id`) REFERENCES `product_tags` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "product-tag-map:cxnext-polo-apparel",
+          "product_id": "product:cxnext-polo",
+          "tag_id": "product-tag:cxnext-polo",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        },
+        {
+          "id": "product-tag-map:cxnext-polo-featured",
+          "product_id": "product:cxnext-polo",
+          "tag_id": "product-tag:catalog-bootstrap",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        },
+        {
+          "id": "product-tag-map:cxnext-polo-seed",
+          "product_id": "product:cxnext-polo",
+          "tag_id": "product-tag:cxnext-seed",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        }
+      ]
+    },
+    {
+      "name": "product_variants",
+      "rowCount": 2,
+      "createStatement": "CREATE TABLE `product_variants` (\n  `id` varchar(64) NOT NULL,\n  `product_id` varchar(64) NOT NULL,\n  `sku` varchar(100) NOT NULL,\n  `variant_name` varchar(200) NOT NULL,\n  `price` decimal(15,2) NOT NULL DEFAULT 0.00,\n  `cost_price` decimal(15,2) NOT NULL DEFAULT 0.00,\n  `stock_quantity` decimal(15,2) NOT NULL DEFAULT 0.00,\n  `opening_stock` decimal(15,2) NOT NULL DEFAULT 0.00,\n  `weight` decimal(10,2) DEFAULT NULL,\n  `barcode` varchar(100) DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `uq_product_variants_product_sku` (`product_id`,`sku`),\n  CONSTRAINT `fk_product_variants_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "product-variant:cxnext-polo-l",
+          "product_id": "product:cxnext-polo",
+          "sku": "CXN-POLO-001-L",
+          "variant_name": "Navy / L",
+          "price": "929.00",
+          "cost_price": "480.00",
+          "stock_quantity": "12.00",
+          "opening_stock": "12.00",
+          "weight": "0.37",
+          "barcode": "8901000000012",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        },
+        {
+          "id": "product-variant:cxnext-polo-m",
+          "product_id": "product:cxnext-polo",
+          "sku": "CXN-POLO-001-M",
+          "variant_name": "Navy / M",
+          "price": "899.00",
+          "cost_price": "460.00",
+          "stock_quantity": "18.00",
+          "opening_stock": "18.00",
+          "weight": "0.35",
+          "barcode": "8901000000011",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        }
+      ]
+    },
+    {
+      "name": "product_variant_attributes",
+      "rowCount": 4,
+      "createStatement": "CREATE TABLE `product_variant_attributes` (\n  `id` varchar(64) NOT NULL,\n  `variant_id` varchar(64) NOT NULL,\n  `attribute_name` varchar(100) NOT NULL,\n  `attribute_value` varchar(100) NOT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `fk_product_variant_attributes_variant` (`variant_id`),\n  CONSTRAINT `fk_product_variant_attributes_variant` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "product-variant-attribute:cxnext-polo-l-colour",
+          "variant_id": "product-variant:cxnext-polo-l",
+          "attribute_name": "Colour",
+          "attribute_value": "Navy",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        },
+        {
+          "id": "product-variant-attribute:cxnext-polo-l-size",
+          "variant_id": "product-variant:cxnext-polo-l",
+          "attribute_name": "Size",
+          "attribute_value": "L",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        },
+        {
+          "id": "product-variant-attribute:cxnext-polo-m-colour",
+          "variant_id": "product-variant:cxnext-polo-m",
+          "attribute_name": "Colour",
+          "attribute_value": "Navy",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        },
+        {
+          "id": "product-variant-attribute:cxnext-polo-m-size",
+          "variant_id": "product-variant:cxnext-polo-m",
+          "attribute_name": "Size",
+          "attribute_value": "M",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        }
+      ]
+    },
+    {
+      "name": "product_variant_images",
+      "rowCount": 2,
+      "createStatement": "CREATE TABLE `product_variant_images` (\n  `id` varchar(64) NOT NULL,\n  `variant_id` varchar(64) NOT NULL,\n  `image_url` varchar(500) NOT NULL,\n  `is_primary` tinyint(1) NOT NULL DEFAULT 0,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `fk_product_variant_images_variant` (`variant_id`),\n  CONSTRAINT `fk_product_variant_images_variant` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "product-variant-image:cxnext-polo-l",
+          "variant_id": "product-variant:cxnext-polo-l",
+          "image_url": "https://placehold.co/1200x1200?text=CXNext+Polo+L",
+          "is_primary": 1,
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        },
+        {
+          "id": "product-variant-image:cxnext-polo-m",
+          "variant_id": "product-variant:cxnext-polo-m",
+          "image_url": "https://placehold.co/1200x1200?text=CXNext+Polo+M",
+          "is_primary": 1,
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        }
+      ]
+    },
+    {
+      "name": "product_variant_map",
+      "rowCount": 3,
+      "createStatement": "CREATE TABLE `product_variant_map` (\n  `id` varchar(64) NOT NULL,\n  `product_id` varchar(64) NOT NULL,\n  `attribute_id` varchar(64) NOT NULL,\n  `value_id` varchar(64) NOT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `fk_product_variant_map_product` (`product_id`),\n  KEY `fk_product_variant_map_attribute` (`attribute_id`),\n  KEY `fk_product_variant_map_value` (`value_id`),\n  CONSTRAINT `fk_product_variant_map_attribute` FOREIGN KEY (`attribute_id`) REFERENCES `product_attributes` (`id`),\n  CONSTRAINT `fk_product_variant_map_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`),\n  CONSTRAINT `fk_product_variant_map_value` FOREIGN KEY (`value_id`) REFERENCES `product_attribute_values` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "product-variant-map:cxnext-polo-colour-navy",
+          "product_id": "product:cxnext-polo",
+          "attribute_id": "product-attribute:cxnext-polo-colour",
+          "value_id": "product-attribute-value:cxnext-polo-colour-navy",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        },
+        {
+          "id": "product-variant-map:cxnext-polo-size-l",
+          "product_id": "product:cxnext-polo",
+          "attribute_id": "product-attribute:cxnext-polo-size",
+          "value_id": "product-attribute-value:cxnext-polo-size-l",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        },
+        {
+          "id": "product-variant-map:cxnext-polo-size-m",
+          "product_id": "product:cxnext-polo",
+          "attribute_id": "product-attribute:cxnext-polo-size",
+          "value_id": "product-attribute-value:cxnext-polo-size-m",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        }
+      ]
+    },
+    {
+      "name": "sales_invoices",
+      "rowCount": 0,
+      "createStatement": "CREATE TABLE `sales_invoices` (\n  `id` varchar(64) NOT NULL,\n  `order_id` varchar(64) NOT NULL,\n  `invoice_number` varchar(64) NOT NULL,\n  `status` varchar(32) NOT NULL,\n  `issue_date` datetime NOT NULL,\n  `due_date` datetime DEFAULT NULL,\n  `subtotal` decimal(12,2) NOT NULL DEFAULT 0.00,\n  `shipping_amount` decimal(12,2) NOT NULL DEFAULT 0.00,\n  `handling_amount` decimal(12,2) NOT NULL DEFAULT 0.00,\n  `total_amount` decimal(12,2) NOT NULL DEFAULT 0.00,\n  `currency_code` varchar(16) NOT NULL,\n  `payment_status` varchar(32) NOT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `order_id` (`order_id`),\n  UNIQUE KEY `invoice_number` (`invoice_number`),\n  KEY `idx_sales_invoices_status` (`status`),\n  CONSTRAINT `fk_sales_invoices_order` FOREIGN KEY (`order_id`) REFERENCES `storefront_orders` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": []
+    },
+    {
+      "name": "sales_invoice_items",
+      "rowCount": 0,
+      "createStatement": "CREATE TABLE `sales_invoice_items` (\n  `id` varchar(64) NOT NULL,\n  `invoice_id` varchar(64) NOT NULL,\n  `order_item_id` varchar(64) NOT NULL,\n  `product_id` varchar(64) NOT NULL,\n  `description` varchar(255) NOT NULL,\n  `quantity` decimal(12,2) NOT NULL DEFAULT 0.00,\n  `unit_price` decimal(12,2) NOT NULL DEFAULT 0.00,\n  `line_total` decimal(12,2) NOT NULL DEFAULT 0.00,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `idx_sales_invoice_items_invoice` (`invoice_id`),\n  KEY `idx_sales_invoice_items_order_item` (`order_item_id`),\n  CONSTRAINT `fk_sales_invoice_items_invoice` FOREIGN KEY (`invoice_id`) REFERENCES `sales_invoices` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": []
+    },
+    {
+      "name": "stock_items",
+      "rowCount": 2,
+      "createStatement": "CREATE TABLE `stock_items` (\n  `id` varchar(64) NOT NULL,\n  `product_id` varchar(64) NOT NULL,\n  `variant_id` varchar(64) DEFAULT NULL,\n  `warehouse_id` varchar(64) NOT NULL,\n  `quantity` decimal(15,2) NOT NULL DEFAULT 0.00,\n  `reserved_quantity` decimal(15,2) NOT NULL DEFAULT 0.00,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `fk_stock_items_product` (`product_id`),\n  KEY `fk_stock_items_variant` (`variant_id`),\n  KEY `fk_stock_items_warehouse` (`warehouse_id`),\n  CONSTRAINT `fk_stock_items_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`),\n  CONSTRAINT `fk_stock_items_variant` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`id`),\n  CONSTRAINT `fk_stock_items_warehouse` FOREIGN KEY (`warehouse_id`) REFERENCES `common_warehouses` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "stock-item:cxnext-polo-l",
+          "product_id": "product:cxnext-polo",
+          "variant_id": "product-variant:cxnext-polo-l",
+          "warehouse_id": "warehouse:main",
+          "quantity": "12.00",
+          "reserved_quantity": "1.00",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        },
+        {
+          "id": "stock-item:cxnext-polo-m",
+          "product_id": "product:cxnext-polo",
+          "variant_id": "product-variant:cxnext-polo-m",
+          "warehouse_id": "warehouse:main",
+          "quantity": "18.00",
+          "reserved_quantity": "2.00",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        }
+      ]
+    },
+    {
+      "name": "stock_movements",
+      "rowCount": 2,
+      "createStatement": "CREATE TABLE `stock_movements` (\n  `id` varchar(64) NOT NULL,\n  `product_id` varchar(64) NOT NULL,\n  `variant_id` varchar(64) DEFAULT NULL,\n  `warehouse_id` varchar(64) DEFAULT NULL,\n  `movement_type` varchar(50) NOT NULL,\n  `quantity` decimal(15,2) NOT NULL DEFAULT 0.00,\n  `reference_type` varchar(50) DEFAULT NULL,\n  `reference_id` varchar(64) DEFAULT NULL,\n  `movement_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `fk_stock_movements_product` (`product_id`),\n  KEY `fk_stock_movements_variant` (`variant_id`),\n  KEY `fk_stock_movements_warehouse` (`warehouse_id`),\n  CONSTRAINT `fk_stock_movements_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`),\n  CONSTRAINT `fk_stock_movements_variant` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`id`),\n  CONSTRAINT `fk_stock_movements_warehouse` FOREIGN KEY (`warehouse_id`) REFERENCES `common_warehouses` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "stock-movement:cxnext-polo-l-opening",
+          "product_id": "product:cxnext-polo",
+          "variant_id": "product-variant:cxnext-polo-l",
+          "warehouse_id": "warehouse:main",
+          "movement_type": "OPENING_STOCK",
+          "quantity": "12.00",
+          "reference_type": "SEEDER",
+          "reference_id": "001-product-bootstrap",
+          "movement_at": "2026-01-01T03:30:00.000Z",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        },
+        {
+          "id": "stock-movement:cxnext-polo-m-opening",
+          "product_id": "product:cxnext-polo",
+          "variant_id": "product-variant:cxnext-polo-m",
+          "warehouse_id": "warehouse:main",
+          "movement_type": "OPENING_STOCK",
+          "quantity": "18.00",
+          "reference_type": "SEEDER",
+          "reference_id": "001-product-bootstrap",
+          "movement_at": "2026-01-01T03:30:00.000Z",
+          "is_active": 1,
+          "created_at": "2026-03-25T14:18:30.000Z",
+          "updated_at": "2026-03-25T14:18:30.000Z"
+        }
+      ]
+    },
+    {
+      "name": "storefront_orders",
+      "rowCount": 0,
+      "createStatement": "CREATE TABLE `storefront_orders` (\n  `id` varchar(64) NOT NULL,\n  `order_number` varchar(40) NOT NULL,\n  `status` varchar(32) NOT NULL DEFAULT 'placed',\n  `first_name` varchar(120) NOT NULL,\n  `last_name` varchar(120) NOT NULL,\n  `email` varchar(180) NOT NULL,\n  `phone` varchar(40) NOT NULL,\n  `address_line1` varchar(200) NOT NULL,\n  `address_line2` varchar(200) DEFAULT NULL,\n  `city` varchar(120) NOT NULL,\n  `state_name` varchar(120) NOT NULL,\n  `country_name` varchar(120) NOT NULL,\n  `postal_code` varchar(32) NOT NULL,\n  `customer_note` text DEFAULT NULL,\n  `delivery_method` varchar(32) NOT NULL,\n  `payment_method` varchar(32) NOT NULL,\n  `payment_status` varchar(32) NOT NULL DEFAULT 'pending',\n  `payment_gateway` varchar(32) DEFAULT NULL,\n  `payment_gateway_order_id` varchar(120) DEFAULT NULL,\n  `payment_gateway_payment_id` varchar(120) DEFAULT NULL,\n  `payment_gateway_signature` varchar(255) DEFAULT NULL,\n  `payment_captured_at` datetime DEFAULT NULL,\n  `subtotal` decimal(12,2) NOT NULL DEFAULT 0.00,\n  `shipping_amount` decimal(12,2) NOT NULL DEFAULT 0.00,\n  `handling_amount` decimal(12,2) NOT NULL DEFAULT 0.00,\n  `total_amount` decimal(12,2) NOT NULL DEFAULT 0.00,\n  `currency_code` varchar(12) NOT NULL DEFAULT 'INR',\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `order_number` (`order_number`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": []
+    },
+    {
+      "name": "storefront_order_events",
+      "rowCount": 0,
+      "createStatement": "CREATE TABLE `storefront_order_events` (\n  `id` varchar(64) NOT NULL,\n  `order_id` varchar(64) NOT NULL,\n  `event_type` varchar(64) NOT NULL,\n  `title` varchar(160) NOT NULL,\n  `description` text DEFAULT NULL,\n  `status_after` varchar(64) NOT NULL,\n  `metadata_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`metadata_json`)),\n  `occurred_at` datetime NOT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `idx_storefront_order_events_order` (`order_id`),\n  KEY `idx_storefront_order_events_type` (`event_type`),\n  KEY `idx_storefront_order_events_time` (`occurred_at`),\n  CONSTRAINT `fk_storefront_order_events_order` FOREIGN KEY (`order_id`) REFERENCES `storefront_orders` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": []
+    },
+    {
+      "name": "storefront_order_items",
+      "rowCount": 0,
+      "createStatement": "CREATE TABLE `storefront_order_items` (\n  `id` varchar(64) NOT NULL,\n  `order_id` varchar(64) NOT NULL,\n  `product_id` varchar(64) NOT NULL,\n  `product_name` varchar(180) NOT NULL,\n  `product_slug` varchar(180) NOT NULL,\n  `sku` varchar(120) NOT NULL,\n  `size_value` varchar(80) NOT NULL,\n  `color_value` varchar(80) NOT NULL,\n  `quantity` int(11) NOT NULL DEFAULT 1,\n  `unit_price` decimal(12,2) NOT NULL DEFAULT 0.00,\n  `line_total` decimal(12,2) NOT NULL DEFAULT 0.00,\n  `created_at` datetime NOT NULL DEFAULT current_timestamp(),\n  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `idx_storefront_order_items_order` (`order_id`),\n  KEY `idx_storefront_order_items_product` (`product_id`),\n  CONSTRAINT `fk_storefront_order_items_order` FOREIGN KEY (`order_id`) REFERENCES `storefront_orders` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": []
+    },
+    {
+      "name": "storefront_shipments",
+      "rowCount": 0,
+      "createStatement": "CREATE TABLE `storefront_shipments` (\n  `id` varchar(64) NOT NULL,\n  `order_id` varchar(64) NOT NULL,\n  `shipment_number` varchar(64) NOT NULL,\n  `status` varchar(64) NOT NULL,\n  `courier_name` varchar(120) DEFAULT NULL,\n  `courier_service` varchar(120) DEFAULT NULL,\n  `tracking_number` varchar(120) DEFAULT NULL,\n  `tracking_url` varchar(255) DEFAULT NULL,\n  `pickup_requested_at` datetime DEFAULT NULL,\n  `picked_up_at` datetime DEFAULT NULL,\n  `estimated_delivery_at` datetime DEFAULT NULL,\n  `delivered_at` datetime DEFAULT NULL,\n  `delivery_confirmed_at` datetime DEFAULT NULL,\n  `notes` text DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `shipment_number` (`shipment_number`),\n  KEY `idx_storefront_shipments_order` (`order_id`),\n  KEY `idx_storefront_shipments_tracking_number` (`tracking_number`),\n  CONSTRAINT `fk_storefront_shipments_order` FOREIGN KEY (`order_id`) REFERENCES `storefront_orders` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": []
+    },
+    {
+      "name": "storefront_shipment_events",
+      "rowCount": 0,
+      "createStatement": "CREATE TABLE `storefront_shipment_events` (\n  `id` varchar(64) NOT NULL,\n  `shipment_id` varchar(64) NOT NULL,\n  `order_id` varchar(64) NOT NULL,\n  `event_type` varchar(64) NOT NULL,\n  `title` varchar(160) NOT NULL,\n  `description` text DEFAULT NULL,\n  `location_name` varchar(160) DEFAULT NULL,\n  `event_time` datetime NOT NULL,\n  `metadata_json` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`metadata_json`)),\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `idx_storefront_shipment_events_shipment` (`shipment_id`),\n  KEY `idx_storefront_shipment_events_order` (`order_id`),\n  CONSTRAINT `fk_storefront_shipment_events_order` FOREIGN KEY (`order_id`) REFERENCES `storefront_orders` (`id`),\n  CONSTRAINT `fk_storefront_shipment_events_shipment` FOREIGN KEY (`shipment_id`) REFERENCES `storefront_shipments` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": []
+    },
+    {
+      "name": "system_migrations",
+      "rowCount": 18,
+      "createStatement": "CREATE TABLE `system_migrations` (\n  `id` varchar(128) NOT NULL,\n  `name` varchar(255) NOT NULL,\n  `applied_at` datetime NOT NULL DEFAULT current_timestamp(),\n  PRIMARY KEY (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "001-auth-foundation",
+          "name": "Auth foundation tables and seed data",
+          "applied_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "002-common-reference-modules",
+          "name": "Common ecommerce and billing reference modules",
+          "applied_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "003-company-foundation",
+          "name": "Company master foundation",
+          "applied_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "004-contact-foundation",
+          "name": "Contact master foundation",
+          "applied_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "005-product-foundation",
+          "name": "Product master foundation",
+          "applied_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "006-media-manager",
+          "name": "Media manager foundation",
+          "applied_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "007-common-unknown-defaults",
+          "name": "Common unknown fallback records",
+          "applied_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "008-product-storefront",
+          "name": "Product storefront merchandising",
+          "applied_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "009-storefront-orders",
+          "name": "Storefront checkout orders",
+          "applied_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "010-storefront-templates",
+          "name": "Storefront home design templates",
+          "applied_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "011-storefront-razorpay-payments",
+          "name": "Storefront Razorpay payment tracking",
+          "applied_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "012-auth-contact-verifications",
+          "name": "Auth contact verification challenges",
+          "applied_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "013-mailbox-foundation",
+          "name": "Mailbox messages and templates",
+          "applied_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "014-slider-themes",
+          "name": "Slider themes",
+          "applied_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "015-customer-profile",
+          "name": "Customer profile",
+          "applied_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "016-commerce-operations",
+          "name": "Commerce operations",
+          "applied_at": "2026-03-25T14:18:29.000Z"
+        },
+        {
+          "id": "017-customer-account-recovery",
+          "name": "Customer account deletion grace period and recovery",
+          "applied_at": "2026-03-25T14:18:30.000Z"
+        },
+        {
+          "id": "018-frappe-purchase-receipts",
+          "name": "Frappe purchase receipt sync",
+          "applied_at": "2026-03-25T14:23:28.000Z"
+        }
+      ]
+    },
+    {
+      "name": "system_seeders",
+      "rowCount": 1,
+      "createStatement": "CREATE TABLE `system_seeders` (\n  `id` varchar(128) NOT NULL,\n  `name` varchar(255) NOT NULL,\n  `applied_at` datetime NOT NULL DEFAULT current_timestamp(),\n  PRIMARY KEY (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+      "rows": [
+        {
+          "id": "001-product-bootstrap",
+          "name": "Single product catalog bootstrap",
+          "applied_at": "2026-03-25T14:18:30.000Z"
+        }
+      ]
+    }
+  ]
+}

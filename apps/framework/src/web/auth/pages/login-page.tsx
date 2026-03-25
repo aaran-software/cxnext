@@ -7,7 +7,7 @@ import {
   restoreAccount,
 } from '@/shared/api/client'
 import { useAuth } from '@framework-core/web/auth/components/auth-provider'
-import { getAuthNavigationState, getRequestedPath } from '@framework-core/web/auth/lib/navigation-state'
+import { clearRequestedPath, getAuthNavigationState, getRequestedPath } from '@framework-core/web/auth/lib/navigation-state'
 import { resolveAuthorizedPath } from '@framework-core/web/auth/lib/portal-routing'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -47,6 +47,7 @@ export function LoginPage() {
           ? 'You are now authenticated and redirected to checkout.'
           : 'You are now authenticated and redirected to your workspace.',
       })
+      clearRequestedPath()
       void navigate(redirectTo, { replace: true })
     } catch (submissionError) {
       const message = submissionError instanceof Error
@@ -114,6 +115,7 @@ export function LoginPage() {
 
       const session = await login({ email, password })
       const redirectTo = resolveAuthorizedPath(session.user.actorType, requestedPath)
+      clearRequestedPath()
       void navigate(redirectTo, { replace: true })
     } catch (restoreError) {
       const message = restoreError instanceof Error ? restoreError.message : 'Unable to restore the account right now.'

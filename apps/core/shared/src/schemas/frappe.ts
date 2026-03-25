@@ -153,6 +153,7 @@ export const frappeItemResponseSchema = z.object({
 
 export const frappeItemProductSyncPayloadSchema = z.object({
   itemIds: z.array(z.string().trim().min(1)).min(1),
+  duplicateMode: z.enum(['overwrite', 'skip']).default('overwrite'),
 })
 
 export const frappeItemProductSyncResultSchema = z.object({
@@ -161,7 +162,7 @@ export const frappeItemProductSyncResultSchema = z.object({
   productId: z.string().trim().min(1),
   productName: z.string().trim().min(1),
   productSlug: z.string().trim().min(1),
-  mode: z.enum(['create', 'update']),
+  mode: z.enum(['create', 'update', 'skipped']),
 })
 
 export const frappeItemProductSyncResponseSchema = z.object({
@@ -235,6 +236,10 @@ export const frappePurchaseReceiptManagerResponseSchema = z.object({
   manager: frappePurchaseReceiptManagerSchema,
 })
 
+export const frappePurchaseReceiptResponseSchema = z.object({
+  item: frappePurchaseReceiptSchema,
+})
+
 export const frappePurchaseReceiptSyncPayloadSchema = z.object({
   receiptIds: z.array(z.string().trim().min(1)).min(1),
 })
@@ -282,6 +287,7 @@ export type FrappePurchaseReceipt = z.infer<typeof frappePurchaseReceiptSchema>
 export type FrappePurchaseReceiptReferences = z.infer<typeof frappePurchaseReceiptReferencesSchema>
 export type FrappePurchaseReceiptManager = z.infer<typeof frappePurchaseReceiptManagerSchema>
 export type FrappePurchaseReceiptManagerResponse = z.infer<typeof frappePurchaseReceiptManagerResponseSchema>
+export type FrappePurchaseReceiptResponse = z.infer<typeof frappePurchaseReceiptResponseSchema>
 export type FrappePurchaseReceiptSyncPayload = z.infer<typeof frappePurchaseReceiptSyncPayloadSchema>
 export type FrappePurchaseReceiptSyncResult = z.infer<typeof frappePurchaseReceiptSyncResultSchema>
 export type FrappePurchaseReceiptSyncResponse = z.infer<typeof frappePurchaseReceiptSyncResponseSchema>

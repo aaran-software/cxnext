@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, CheckCircle2, CircleAlert } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@framework-core/web/auth/components/auth-provider'
-import { getAuthNavigationState, getRequestedPath } from '@framework-core/web/auth/lib/navigation-state'
+import { clearRequestedPath, getAuthNavigationState, getRequestedPath } from '@framework-core/web/auth/lib/navigation-state'
 import { resolveAuthorizedPath } from '@framework-core/web/auth/lib/portal-routing'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -301,6 +301,7 @@ export function RegisterPage() {
           ? `Welcome ${name.trim()}. Your workspace is ready.`
           : `Welcome ${name.trim()}. Continue with delivery details and payment.`,
       })
+      clearRequestedPath()
       void navigate(redirectTo, { replace: true })
     } catch (submissionError) {
       const message = submissionError instanceof Error

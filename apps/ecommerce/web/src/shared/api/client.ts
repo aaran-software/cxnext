@@ -81,6 +81,7 @@ import type {
   FrappeItemResponse,
   FrappeItemUpsertPayload,
   FrappePurchaseReceiptManagerResponse,
+  FrappePurchaseReceiptResponse,
   FrappePurchaseReceiptSyncPayload,
   FrappePurchaseReceiptSyncResponse,
   FrappeSettingsResponse,
@@ -93,6 +94,8 @@ import type {
   SystemSettingsUpdatePayload,
   SystemEnvironmentResponse,
   SystemEnvironmentUpdatePayload,
+  EcommercePricingSettingsResponse,
+  EcommercePricingSettingsUpdatePayload,
   SystemUpdateRunResponse,
   SystemVersionResponse,
   SystemUpdateCheckResponse,
@@ -399,6 +402,22 @@ export async function updateSystemSettings(token: string, payload: SystemSetting
   return response.settings
 }
 
+export async function getEcommerceSettings(token: string) {
+  const response = await request<EcommercePricingSettingsResponse>('/admin/ecommerce/settings', {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.settings
+}
+
+export async function updateEcommerceSettings(token: string, payload: EcommercePricingSettingsUpdatePayload) {
+  const response = await request<EcommercePricingSettingsResponse>('/admin/ecommerce/settings', {
+    method: 'PATCH',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
+  })
+  return response.settings
+}
+
 export async function getSystemEnvironment(token: string) {
   const response = await request<SystemEnvironmentResponse>('/admin/settings/environment', {
     headers: createAuthorizationHeaders(token),
@@ -484,6 +503,13 @@ export async function listFrappePurchaseReceipts(token: string) {
     headers: createAuthorizationHeaders(token),
   })
   return response.manager
+}
+
+export async function getFrappePurchaseReceipt(token: string, receiptId: string) {
+  const response = await request<FrappePurchaseReceiptResponse>(`/admin/frappe/purchase-receipts/${encodeURIComponent(receiptId)}`, {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.item
 }
 
 export async function syncFrappePurchaseReceipts(token: string, payload: FrappePurchaseReceiptSyncPayload) {

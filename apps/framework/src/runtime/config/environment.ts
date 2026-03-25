@@ -82,6 +82,23 @@ const defaultIntegerString = (fallback: number) =>
 
       return parsed
     })
+const defaultNonNegativeNumber = (fallback: number) =>
+  z
+    .string()
+    .optional()
+    .transform((value) => {
+      const normalized = value?.trim()
+      if (!normalized) {
+        return fallback
+      }
+
+      const parsed = Number(normalized)
+      if (!Number.isFinite(parsed) || parsed < 0) {
+        throw new Error('Expected a non-negative number.')
+      }
+
+      return parsed
+    })
 
 const environmentSchema = z.object({
   APP_MODE: appModeSchema.optional(),
@@ -142,6 +159,8 @@ const environmentSchema = z.object({
   RAZORPAY_CHECKOUT_IMAGE: optionalNonEmptyString,
   RAZORPAY_THEME_COLOR: optionalNonEmptyString,
   PAYMENT_TEST_BYPASS: defaultFalseBooleanFlag,
+  ECOMMERCE_PRICE_PURCHASE_TO_SELL_PERCENT: defaultNonNegativeNumber(75),
+  ECOMMERCE_PRICE_PURCHASE_TO_MRP_PERCENT: defaultNonNegativeNumber(150),
   FRAPPE_ENABLED: defaultFalseBooleanFlag,
   FRAPPE_BASE_URL: defaultTrimmedString(''),
   FRAPPE_SITE_NAME: defaultTrimmedString(''),
@@ -263,6 +282,8 @@ export const managedEnvironmentKeys = [
   'RAZORPAY_CHECKOUT_IMAGE',
   'RAZORPAY_THEME_COLOR',
   'PAYMENT_TEST_BYPASS',
+  'ECOMMERCE_PRICE_PURCHASE_TO_SELL_PERCENT',
+  'ECOMMERCE_PRICE_PURCHASE_TO_MRP_PERCENT',
   'FRAPPE_ENABLED',
   'FRAPPE_BASE_URL',
   'FRAPPE_SITE_NAME',
@@ -459,6 +480,12 @@ function resolveEnvironment() {
         themeColor: parsedEnvironment.RAZORPAY_THEME_COLOR ?? '',
       },
       testBypass: parsedEnvironment.PAYMENT_TEST_BYPASS,
+    },
+    ecommerce: {
+      pricing: {
+        purchaseToSellPercent: parsedEnvironment.ECOMMERCE_PRICE_PURCHASE_TO_SELL_PERCENT,
+        purchaseToMrpPercent: parsedEnvironment.ECOMMERCE_PRICE_PURCHASE_TO_MRP_PERCENT,
+      },
     },
     frappe: {
       enabled: parsedEnvironment.FRAPPE_ENABLED,

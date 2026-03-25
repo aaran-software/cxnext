@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import type { RowDataPacket } from 'mysql2'
 import {
   frappePurchaseReceiptManagerResponseSchema,
+  frappePurchaseReceiptResponseSchema,
   frappePurchaseReceiptSchema,
   frappePurchaseReceiptItemSchema,
   frappePurchaseReceiptSyncPayloadSchema,
@@ -283,6 +284,26 @@ export async function listFrappePurchaseReceipts(user: AuthUser) {
       },
       syncedAt: new Date().toISOString(),
     },
+  })
+}
+
+export async function getFrappePurchaseReceipt(user: AuthUser, receiptId: string) {
+  assertFrappeViewer(user)
+
+  const record = await readPurchaseReceiptRecordById(receiptId)
+  const receiptIds = [toStringValue(record.name)]
+  const itemCodes = readPurchaseItems(record).map((item) => toStringValue(item.item_code))
+  const [linkedProductsBySku, syncedReceiptsById] = await Promise.all([
+    listLinkedProductsBySku(itemCodes),
+    listSyncedReceiptsById(receiptIds),
+  ])
+
+  return frappePurchaseReceiptResponseSchema.parse({
+    item: toPurchaseReceipt(
+      record,
+      syncedReceiptsById.get(toStringValue(record.name)) ?? null,
+      linkedProductsBySku,
+    ),
   })
 }
 

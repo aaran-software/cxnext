@@ -99,6 +99,10 @@ function fileExtension(name: string) {
   return segments.length > 1 ? segments.at(-1)?.toUpperCase() ?? '--' : '--'
 }
 
+function getPreviewUrl(item: MediaSummary) {
+  return item.thumbnailUrl ?? item.fileUrl
+}
+
 export function MediaAssetManagerDialog({
   open,
   onOpenChange,
@@ -270,52 +274,125 @@ export function MediaAssetManagerDialog({
             </TabsList>
 
             <TabsContent value="library" className="mt-0 grid gap-4">
-              <div className="flex items-center gap-3">
-                <div className="relative flex-1">
-                  <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    value={searchValue}
-                    onChange={(event) => setSearchValue(event.target.value)}
-                    placeholder="Search image assets"
-                    className="pl-9"
-                  />
-                </div>
-                <Button type="button" variant="outline" onClick={() => setActiveTab('upload')}>
-                  <ImagePlus className="size-4" />
-                  Upload New
-                </Button>
-              </div>
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
+                <div className="rounded-[1.75rem] border border-border/70 bg-card/50 p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="relative flex-1">
+                      <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        value={searchValue}
+                        onChange={(event) => setSearchValue(event.target.value)}
+                        placeholder="Search image assets"
+                        className="pl-9"
+                      />
+                    </div>
+                    <Button type="button" variant="outline" size="icon" onClick={() => setActiveTab('upload')}>
+                      <ImagePlus className="size-4" />
+                    </Button>
+                  </div>
 
-              <div className="grid max-h-[32rem] gap-4 overflow-y-auto rounded-[1.75rem] border border-border/70 bg-card/50 p-4 md:grid-cols-3">
-                {loading ? <p className="text-sm text-muted-foreground">Loading media assets...</p> : null}
-                {!loading && visibleItems.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No image assets match the current filter.</p>
-                ) : null}
-                {visibleItems.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setSelectedAssetId(item.id)}
-                    className={`overflow-hidden rounded-[1.4rem] border text-left transition ${
-                      selectedAssetId === item.id
-                        ? 'border-primary bg-primary/5 shadow-sm'
-                        : 'border-border/70 bg-background hover:border-primary/40'
-                    }`}
-                  >
-                    <div className="aspect-[4/3] bg-muted">
-                      {item.storageScope === 'public' ? (
-                        <img src={item.fileUrl} alt={item.altText ?? item.fileName} className="h-full w-full object-cover" loading="lazy" decoding="async" />
-                      ) : (
-                        <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Private asset</div>
-                      )}
+                  <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                    <p>{visibleItems.length} image assets</p>
+                    <p>Click one to preview</p>
+                  </div>
+
+                  <div className="mt-4 max-h-[26rem] space-y-2 overflow-y-auto pr-1">
+                    {loading ? <p className="text-sm text-muted-foreground">Loading media assets...</p> : null}
+                    {!loading && visibleItems.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No image assets match the current filter.</p>
+                    ) : null}
+                    {visibleItems.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setSelectedAssetId(item.id)}
+                        className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left transition ${
+                          selectedAssetId === item.id
+                            ? 'border-primary bg-primary/5 shadow-sm'
+                            : 'border-border/70 bg-background/60 hover:border-primary/40 hover:bg-background'
+                        }`}
+                      >
+                        <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border/70 bg-muted">
+                          {item.fileType === 'image' && item.storageScope === 'public' ? (
+                            <img
+                              src={getPreviewUrl(item)}
+                              alt={item.altText ?? item.fileName}
+                              className="h-full w-full object-cover"
+                              loading="lazy"
+                              decoding="async"
+                            />
+                          ) : (
+                            <ImagePlus className="size-4 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-medium text-foreground">{item.title || item.fileName}</p>
+                          <p className="truncate text-xs text-muted-foreground">{item.originalName}</p>
+                          <p className="mt-1 truncate text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                            {item.storageScope} | {item.folderName || 'Root'}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-[1.75rem] border border-border/70 bg-card/50 p-4">
+                  <div className="flex items-center justify-between gap-3 border-b border-border/70 pb-4">
+                    <div>
+                      <p className="font-medium text-foreground">Image preview</p>
+                      <p className="text-sm text-muted-foreground">
+                        The preview pane keeps the full image scrollable so you can inspect the asset at its real size.
+                      </p>
                     </div>
-                    <div className="grid gap-1 p-3">
-                      <p className="truncate font-medium text-foreground">{item.title || item.fileName}</p>
-                      <p className="truncate text-xs text-muted-foreground">{item.originalName}</p>
-                      <p className="text-xs text-muted-foreground">{item.storageScope} | {item.folderName || 'Root'}</p>
-                    </div>
-                  </button>
-                ))}
+                    <Button type="button" variant="outline" onClick={() => setActiveTab('upload')}>
+                      <ImagePlus className="size-4" />
+                      Upload New
+                    </Button>
+                  </div>
+
+                  <div className="mt-4">
+                    {selectedAsset ? (
+                      <div className="grid gap-4">
+                        <div className="max-h-[28rem] overflow-auto rounded-[1.5rem] border border-border/70 bg-muted/30 p-4">
+                          <img
+                            src={selectedAsset.fileUrl}
+                            alt={selectedAsset.altText ?? selectedAsset.fileName}
+                            className="h-auto w-auto max-w-none"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        </div>
+                        <div className="grid gap-3 rounded-[1.3rem] border border-border/70 bg-background/70 p-4 text-sm">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-medium text-foreground">{selectedAsset.title || selectedAsset.fileName}</p>
+                            <span className="text-muted-foreground">-</span>
+                            <p className="text-muted-foreground">{selectedAsset.originalName}</p>
+                          </div>
+                          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                            <span>{selectedAsset.storageScope}</span>
+                            <span>-</span>
+                            <span>{selectedAsset.folderName || 'Root'}</span>
+                            <span>-</span>
+                            <span>{selectedAsset.width ?? '--'} x {selectedAsset.height ?? '--'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex min-h-[28rem] flex-col items-center justify-center gap-3 rounded-[1.5rem] border border-dashed border-border/70 bg-muted/20 px-6 py-10 text-center">
+                        <div className="flex size-14 items-center justify-center rounded-full bg-background shadow-sm">
+                          <ImagePlus className="size-6 text-muted-foreground" />
+                        </div>
+                        <div className="space-y-1">
+                          <p className="font-medium text-foreground">Select an image to inspect it</p>
+                          <p className="max-w-sm text-sm text-muted-foreground">
+                            Pick a thumbnail on the left to open the full image in a scrollable preview window.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </TabsContent>
 
@@ -495,7 +572,7 @@ export function MediaAssetManagerDialog({
                     </div>
                     <div className="rounded-[1.3rem] border border-border/70 bg-background/85 p-4 md:col-span-3">
                       <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Persistence</p>
-                      <p className="mt-2 text-sm text-muted-foreground">The file remains a local upload draft until you confirm with “Upload and Use Asset”. Confirmation writes the file and creates the linked media asset record together.</p>
+                      <p className="mt-2 text-sm text-muted-foreground">The file remains a local upload draft until you confirm with "Upload and Use Asset". Confirmation writes the file and creates the linked media asset record together.</p>
                     </div>
                   </TabsContent>
                 </Tabs>

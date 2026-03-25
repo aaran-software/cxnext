@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom"
 import { useAuth } from "@/state/authStore"
 import type { AuthRole } from "@/types/auth"
+import { rememberRequestedPath } from "@framework-core/web/auth/lib/navigation-state"
 
 interface ProtectedRouteProps {
   allowedRoles?: AuthRole[]
@@ -19,6 +20,7 @@ export default function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
   }
 
   if (!auth.isAuthenticated) {
+    rememberRequestedPath(`${location.pathname}${location.search}${location.hash}`)
     return <Navigate to="/login" replace state={{ from: location }} />
   }
 

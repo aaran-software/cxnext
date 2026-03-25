@@ -2,6 +2,7 @@ import type { Product, ProductSummary, ProductUpsertPayload } from '@shared/inde
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { CopyIcon, EditIcon, MoreHorizontalIcon, PowerIcon } from 'lucide-react'
+import { useAuth } from '@framework-core/web/auth/components/auth-provider'
 import { CommonList } from '@/components/forms/CommonList'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -12,8 +13,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ActiveStatusBadge, StatusBadge } from '@/components/ui/status-badge'
-import { createProduct, deactivateProduct, getProduct, HttpError, listProducts, restoreProduct } from '@/shared/api/client'
+import {
+  createProduct,
+  deactivateProduct,
+  getEcommerceSettings,
+  getProduct,
+  HttpError,
+  listProducts,
+  restoreProduct,
+} from '@/shared/api/client'
 import { showFailedActionToast, showSavedToast, showStatusChangeToast } from '@/shared/notifications/toast'
+import { calculatePricingFromPurchase, type PricingFormulaSettings } from '../lib/pricing-formula'
 
 function toErrorMessage(error: unknown) {
   if (error instanceof HttpError) return error.message
@@ -31,6 +41,8 @@ type PublishingFilterKey =
 
 export function ProductListPage() {
   const navigate = useNavigate()
+  const { session } = useAuth()
+  const accessToken = session?.accessToken ?? null
   const [items, setItems] = useState<ProductSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -47,6 +59,10 @@ export function ProductListPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(100)
   const [processingId, setProcessingId] = useState<string | null>(null)
+  const [pricingSettings, setPricingSettings] = useState<PricingFormulaSettings>({
+    purchaseToSellPercent: 75,
+    purchaseToMrpPercent: 150,
+  })
 
   useEffect(() => {
     let cancelled = false
@@ -73,6 +89,40 @@ export function ProductListPage() {
     void load()
     return () => { cancelled = true }
   }, [])
+
+  useEffect(() => {
+    if (!accessToken) {
+      return
+    }
+    const authToken = accessToken
+
+    let cancelled = false
+
+    async function loadPricingSettings() {
+      try {
+        const settings = await getEcommerceSettings(authToken)
+        if (!cancelled) {
+          setPricingSettings({
+            purchaseToSellPercent: settings.purchaseToSellPercent,
+            purchaseToMrpPercent: settings.purchaseToMrpPercent,
+          })
+        }
+      } catch {
+        if (!cancelled) {
+          setPricingSettings({
+            purchaseToSellPercent: 75,
+            purchaseToMrpPercent: 150,
+          })
+        }
+      }
+    }
+
+    void loadPricingSettings()
+
+    return () => {
+      cancelled = true
+    }
+  }, [accessToken])
 
   const filteredItems = useMemo(() => {
     const normalizedSearch = searchValue.trim().toLowerCase()
@@ -155,7 +205,7 @@ export function ProductListPage() {
 
     try {
       const product = await getProduct(item.id)
-      const duplicatedProduct = await createProduct(buildDuplicatePayload(product))
+      const duplicatedProduct = await createProduct(buildDuplicatePayload(product, pricingSettings))
 
       setItems((current) => [duplicatedProduct, ...current])
       showSavedToast({
@@ -435,9 +485,10 @@ export function ProductListPage() {
   )
 }
 
-function buildDuplicatePayload(product: Product): ProductUpsertPayload {
+function buildDuplicatePayload(product: Product, pricingSettings: PricingFormulaSettings): ProductUpsertPayload {
   const duplicateName = `${product.name}-copy`
   const variantClientKeyById = new Map<string, string>()
+  const purchasePrice = product.costPrice > 0 ? product.costPrice : product.basePrice
 
   product.variants.forEach((variant) => {
     variantClientKeyById.set(variant.id, variant.id)
@@ -457,8 +508,8 @@ function buildDuplicatePayload(product: Product): ProductUpsertPayload {
     styleId: product.styleId ?? '1',
     sku: '',
     hasVariants: product.hasVariants,
-    basePrice: product.basePrice,
-    costPrice: product.costPrice,
+    basePrice: calculatePricingFromPurchase(purchasePrice, pricingSettings).sellingPrice,
+    costPrice: purchasePrice,
     taxId: product.taxId ?? '1',
     isFeatured: product.isFeatured,
     isActive: product.isActive,
@@ -471,8 +522,8 @@ function buildDuplicatePayload(product: Product): ProductUpsertPayload {
       clientKey: variant.id,
       sku: variant.sku,
       variantName: variant.variantName,
-      price: variant.price,
-      costPrice: variant.costPrice,
+      price: calculatePricingFromPurchase(variant.costPrice > 0 ? variant.costPrice : purchasePrice, pricingSettings).sellingPrice,
+      costPrice: variant.costPrice > 0 ? variant.costPrice : purchasePrice,
       stockQuantity: variant.stockQuantity,
       openingStock: variant.openingStock,
       weight: variant.weight,
@@ -489,9 +540,15 @@ function buildDuplicatePayload(product: Product): ProductUpsertPayload {
     })),
     prices: product.prices.map((price) => ({
       variantClientKey: price.variantId ? variantClientKeyById.get(price.variantId) ?? null : null,
-      mrp: price.mrp,
-      sellingPrice: price.sellingPrice,
-      costPrice: price.costPrice,
+      ...(() => {
+        const nextPurchasePrice = price.costPrice > 0 ? price.costPrice : purchasePrice
+        const { sellingPrice, mrp } = calculatePricingFromPurchase(nextPurchasePrice, pricingSettings)
+        return {
+          sellingPrice,
+          mrp,
+          costPrice: nextPurchasePrice,
+        }
+      })(),
     })),
     discounts: product.discounts.map((discount) => ({
       variantClientKey: discount.variantId ? variantClientKeyById.get(discount.variantId) ?? null : null,

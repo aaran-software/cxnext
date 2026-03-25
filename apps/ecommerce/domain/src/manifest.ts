@@ -48,4 +48,10 @@ export const ecommerceWorkspaceItems: EcommerceWorkspaceItem[] = [
     route: '/admin/dashboard/slider-themes',
     summary: 'Slider themes, hero motion, and storefront banner settings.',
   },
+  {
+    id: 'settings',
+    name: 'Ecommerce Settings',
+    route: '/admin/dashboard/ecommerce/settings',
+    summary: 'Pricing formula defaults for purchase, sell, and MRP calculations.',
+  },
 ]

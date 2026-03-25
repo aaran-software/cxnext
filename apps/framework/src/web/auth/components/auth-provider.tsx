@@ -7,7 +7,7 @@ import {
   useState,
 } from 'react'
 import { getCurrentUser, login, recoveryLogin, register } from '@/shared/api/client'
-import { useSetup } from '@/features/setup/components/setup-provider'
+import { clearRequestedPath } from '@framework-core/web/auth/lib/navigation-state'
 
 const STORAGE_KEY = 'cxnext-auth-session-v2'
 
@@ -33,6 +33,8 @@ function clearStoredSession() {
   if (typeof window !== 'undefined') {
     window.localStorage.removeItem(STORAGE_KEY)
   }
+
+  clearRequestedPath()
 }
 
 function getStoredSession(): AuthSession | null {
@@ -67,21 +69,12 @@ function getStoredSession(): AuthSession | null {
 }
 
 export function AuthProvider({ children }: PropsWithChildren) {
-  const { status } = useSetup()
   const [session, setSession] = useState<AuthSession | null>(() => getStoredSession())
 
   function resetSession() {
     clearStoredSession()
     setSession(null)
   }
-
-  useEffect(() => {
-    if (status?.status !== 'ready' && session && session.user.id !== 'fallback-recovery-admin') {
-      clearStoredSession()
-      setSession(null)
-      return
-    }
-  }, [session, status])
 
   useEffect(() => {
     if (!session?.accessToken || !session.user || typeof session.user !== 'object') {

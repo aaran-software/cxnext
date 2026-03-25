@@ -85,7 +85,7 @@ export function FrappePurchaseReceiptPage() {
   const [syncing, setSyncing] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [searchValue, setSearchValue] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | string>('all')
+  const [statusFilter, setStatusFilter] = useState('all')
   const [returnOnly, setReturnOnly] = useState(false)
   const [syncedOnly, setSyncedOnly] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -447,7 +447,9 @@ export function FrappePurchaseReceiptPage() {
               className: 'min-w-0 max-w-[16rem]',
               cell: (item) => (
                 <div className="min-w-0 max-w-[16rem]">
-                  <p className="font-medium text-foreground">{item.receiptNumber}</p>
+                  <Link to={`/admin/dashboard/frappe/purchase-receipts/${item.id}`} className="font-medium text-foreground underline-offset-4 hover:underline">
+                    {item.receiptNumber}
+                  </Link>
                   <p className="text-sm text-muted-foreground">{item.billNo || 'No supplier bill number'}</p>
                   <p className="text-sm text-muted-foreground">{item.postingDate || 'No posting date'} {item.postingTime || ''}</p>
                 </div>
