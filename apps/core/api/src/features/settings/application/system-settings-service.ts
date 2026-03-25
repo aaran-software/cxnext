@@ -1,5 +1,7 @@
 import { spawn } from 'node:child_process'
 import {
+  systemEnvironmentResponseSchema,
+  systemEnvironmentUpdatePayloadSchema,
   systemSettingsResponseSchema,
   systemSettingsSchema,
   systemSettingsUpdatePayloadSchema,
@@ -8,7 +10,13 @@ import {
   type AuthUser,
 } from '@shared/index'
 import { ApplicationError } from '@framework-core/runtime/errors/application-error'
-import { environment, reloadEnvironment, updateEnvironmentFile } from '@framework-core/runtime/config/environment'
+import {
+  environment,
+  managedEnvironmentKeys,
+  readManagedEnvironmentValues,
+  reloadEnvironment,
+  updateEnvironmentFile,
+} from '@framework-core/runtime/config/environment'
 
 let restartScheduled = false
 
@@ -30,6 +38,29 @@ function getSystemSettings() {
       branch: environment.runtime.git.branch,
     },
   })
+}
+
+function getSystemEnvironment() {
+  return systemEnvironmentResponseSchema.parse({
+    environment: {
+      values: readManagedEnvironmentValues(),
+      sourceMode: environment.runtime.git.syncEnabled ? 'git' : 'embedded',
+      forceUpdatePending: environment.runtime.git.forceUpdateOnStart,
+    },
+  })
+}
+
+function assertManagedEnvironmentKeys(values: Record<string, string>) {
+  const allowedKeys = new Set<string>(managedEnvironmentKeys)
+  const invalidKeys = Object.keys(values).filter((key) => !allowedKeys.has(key))
+
+  if (invalidKeys.length > 0) {
+    throw new ApplicationError(
+      'Unsupported environment keys were submitted.',
+      { invalidKeys: invalidKeys.join(', ') },
+      400,
+    )
+  }
 }
 
 function scheduleRestart() {
@@ -63,6 +94,11 @@ export function readSystemSettings(user: AuthUser) {
   })
 }
 
+export function readSystemEnvironment(user: AuthUser) {
+  assertSuperAdmin(user)
+  return getSystemEnvironment()
+}
+
 export function saveSystemSettings(user: AuthUser, payload: unknown) {
   assertSuperAdmin(user)
 
@@ -80,6 +116,17 @@ export function saveSystemSettings(user: AuthUser, payload: unknown) {
   return systemSettingsResponseSchema.parse({
     settings: getSystemSettings(),
   })
+}
+
+export function saveSystemEnvironment(user: AuthUser, payload: unknown) {
+  assertSuperAdmin(user)
+
+  const parsedPayload = systemEnvironmentUpdatePayloadSchema.parse(payload)
+  assertManagedEnvironmentKeys(parsedPayload.values)
+  updateEnvironmentFile(parsedPayload.values)
+  reloadEnvironment()
+
+  return getSystemEnvironment()
 }
 
 export function runManualUpdate(user: AuthUser, payload: unknown) {
@@ -100,6 +147,24 @@ export function runManualUpdate(user: AuthUser, payload: unknown) {
 
   return systemUpdateRunResponseSchema.parse({
     message: 'Update scheduled. The container will restart and rebuild from the configured Git source.',
+    restartScheduled: true,
+  })
+}
+
+export function saveSystemEnvironmentAndUpdate(user: AuthUser, payload: unknown) {
+  assertSuperAdmin(user)
+
+  const parsedPayload = systemEnvironmentUpdatePayloadSchema.parse(payload)
+  assertManagedEnvironmentKeys(parsedPayload.values)
+  updateEnvironmentFile({
+    ...parsedPayload.values,
+    GIT_FORCE_UPDATE_ON_START: 'true',
+  })
+  reloadEnvironment()
+  scheduleRestart()
+
+  return systemUpdateRunResponseSchema.parse({
+    message: 'Environment saved. The container will restart and apply the updated runtime configuration.',
     restartScheduled: true,
   })
 }

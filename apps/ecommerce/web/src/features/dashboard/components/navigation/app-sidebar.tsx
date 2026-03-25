@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import type { SystemVersion } from "@shared/index"
-import { Blocks, ChevronRight, LayoutDashboard, Settings2, ShieldCheck } from "lucide-react"
+import { Blocks, ChevronRight, LayoutDashboard, RefreshCcw, Settings2, SlidersHorizontal, Users } from "lucide-react"
 import { Link, NavLink, useLocation } from "react-router-dom"
 import {
   Collapsible,
@@ -43,6 +43,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { apps, currentApp, services } = useDesk()
   const location = useLocation()
   const [systemVersion, setSystemVersion] = React.useState<SystemVersion | null>(null)
+  const canManageUsers = Boolean(
+    session?.user.isSuperAdmin || session?.user.permissions.some((permission) => permission.key === 'users:manage'),
+  )
 
   React.useEffect(() => {
     let cancelled = false
@@ -279,6 +282,26 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     </SidebarMenuItem>
                   )
                 })}
+                {canManageUsers ? (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip="Users">
+                      <NavLink to={buildAdminPortalPath('/users')}>
+                        <Users />
+                        <span>Users</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ) : null}
+                {session?.user.isSuperAdmin ? (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip="Environment">
+                      <NavLink to={buildAdminPortalPath('/environment')}>
+                        <SlidersHorizontal />
+                        <span>Environment</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ) : null}
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild tooltip="Settings">
                     <NavLink to={buildAdminPortalPath('/settings')}>
@@ -288,10 +311,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild tooltip="Version">
-                    <NavLink to={buildAdminPortalPath('/version')}>
-                      <ShieldCheck />
-                      <span>Version</span>
+                  <SidebarMenuButton asChild tooltip="System Update">
+                    <NavLink to={buildAdminPortalPath('/system-update')}>
+                      <RefreshCcw />
+                      <span>System Update</span>
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

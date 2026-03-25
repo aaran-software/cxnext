@@ -206,8 +206,11 @@ const StoreCheckoutPage = lazyPage(() => import('@/features/store/pages/store-ch
 const StoreHomePage = lazyPage(() => import('@/features/store/pages/store-home-page'), 'StoreHomePage')
 const StoreProductPage = lazyPage(() => import('@/features/store/pages/store-product-page'), 'StoreProductPage')
 const StoreWishlistPage = lazyPage(() => import('@/features/store/pages/store-wishlist-page'), 'StoreWishlistPage')
+const SystemEnvironmentPage = lazyPage(() => import('@/features/settings/pages/system-environment-page'), 'SystemEnvironmentPage')
 const SystemSettingsPage = lazyPage(() => import('@/features/settings/pages/system-settings-page'), 'SystemSettingsPage')
 const SystemVersionPage = lazyPage(() => import('@/features/settings/pages/system-version-page'), 'SystemVersionPage')
+const UserFormPage = lazyPage(() => import('@/features/users/pages/user-form-page'), 'UserFormPage')
+const UserListPage = lazyPage(() => import('@/features/users/pages/user-list-page'), 'UserListPage')
 
 function LegacyAdminDashboardRedirect() {
   const location = useLocation()
@@ -271,6 +274,9 @@ const adminRoutes = {
         { path: 'mailbox/templates', element: renderLazy(MailboxTemplateListPage) },
         { path: 'mailbox/templates/new', element: renderLazy(MailboxTemplateFormPage) },
         { path: 'mailbox/templates/:templateId/edit', element: renderLazy(MailboxTemplateFormPage) },
+        { path: 'users', element: renderLazy(UserListPage) },
+        { path: 'users/new', element: renderLazy(UserFormPage) },
+        { path: 'users/:userId/edit', element: renderLazy(UserFormPage) },
         { path: 'storefront-designer', element: renderLazy(StorefrontTemplateListPage) },
         { path: 'storefront-designer/new', element: renderLazy(StorefrontTemplateFormPage) },
         { path: 'storefront-designer/:templateId', element: renderLazy(StorefrontTemplateShowPage) },
@@ -279,11 +285,13 @@ const adminRoutes = {
         { path: 'slider-themes/new', element: renderLazy(SliderThemeFormPage) },
         { path: 'slider-themes/:themeId', element: renderLazy(SliderThemeShowPage) },
         { path: 'slider-themes/:themeId/edit', element: renderLazy(SliderThemeFormPage) },
+        { path: 'system-update', element: renderLazy(SystemVersionPage) },
+        { path: 'version', element: renderLazy(SystemVersionPage) },
         {
           element: <RequireSuperAdmin />,
           children: [
+            { path: 'environment', element: renderLazy(SystemEnvironmentPage) },
             { path: 'settings', element: renderLazy(SystemSettingsPage) },
-            { path: 'version', element: renderLazy(SystemVersionPage) },
           ],
         },
         { path: 'common', element: renderLazy(CommonModulesHomePage) },

@@ -5,6 +5,7 @@ import {
   BadgeCheck,
   ChevronsUpDown,
   LogOut,
+  RefreshCcw,
   Settings2,
   Sparkles,
 } from 'lucide-react'
@@ -124,11 +125,19 @@ export function NavUser({
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem asChild>
-                <Link to={buildAdminPortalPath('/version')}>
+                <Link to={buildAdminPortalPath('/system-update')}>
                   <BadgeCheck className="size-4" />
-                  Version
+                  Version status
                 </Link>
               </DropdownMenuItem>
+              {showAdminLinks ? (
+                <DropdownMenuItem asChild>
+                  <Link to={buildAdminPortalPath('/system-update')}>
+                    <RefreshCcw className="size-4" />
+                    System update
+                  </Link>
+                </DropdownMenuItem>
+              ) : null}
               {showAdminLinks ? (
                 <DropdownMenuItem asChild>
                   <Link to={buildAdminPortalPath('/settings')}>

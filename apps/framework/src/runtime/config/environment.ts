@@ -80,8 +80,8 @@ const environmentSchema = z.object({
     .string()
     .optional()
     .transform((value) => value !== 'false'),
-  SEED_DEFAULT_USER_NAME: defaultNonEmptyString('Platform Admin'),
-  SEED_DEFAULT_USER_EMAIL: z.string().optional().transform((value) => value?.trim() || 'admin@example.com').pipe(z.email()),
+  SEED_DEFAULT_USER_NAME: defaultNonEmptyString('Sundar'),
+  SEED_DEFAULT_USER_EMAIL: z.string().optional().transform((value) => value?.trim() || 'sundar@sundar.com').pipe(z.email()),
   SEED_DEFAULT_USER_PASSWORD: z.string().optional().transform((value) => value?.trim() || 'change-me-now'),
   SEED_DEFAULT_USER_AVATAR_URL: z.string().optional().transform((value) => value?.trim() || 'https://ui-avatars.com/api/?name=Platform+Admin&background=1f2937&color=ffffff').pipe(z.url()),
   SEED_DUMMY_PRODUCTS: z
@@ -145,6 +145,68 @@ const environmentSchema = z.object({
   }
 })
 
+export const managedEnvironmentKeys = [
+  'APP_MODE',
+  'APP_DEBUG',
+  'APP_SKIP_SETUP_CHECK',
+  'PORT',
+  'CORS_ORIGIN',
+  'JWT_SECRET',
+  'JWT_EXPIRES_IN_SECONDS',
+  'VITE_FRONTEND_TARGET',
+  'DB_ENABLED',
+  'DB_HOST',
+  'DB_PORT',
+  'DB_USER',
+  'DB_PASSWORD',
+  'DB_NAME',
+  'WEB_DIST_ROOT',
+  'SEED_DEFAULT_USER',
+  'SEED_DEFAULT_USER_NAME',
+  'SEED_DEFAULT_USER_EMAIL',
+  'SEED_DEFAULT_USER_PASSWORD',
+  'SEED_DEFAULT_USER_AVATAR_URL',
+  'SEED_DUMMY_PRODUCTS',
+  'MEDIA_STORAGE_ROOT',
+  'MEDIA_PUBLIC_BASE_URL',
+  'MEDIA_WEB_PUBLIC_SYMLINK',
+  'AUTH_OTP_DEBUG',
+  'AUTH_OTP_EXPIRY_MINUTES',
+  'SMTP_HOST',
+  'SMTP_PORT',
+  'SMTP_SECURE',
+  'SMTP_USER',
+  'SMTP_PASS',
+  'SMTP_FROM_EMAIL',
+  'SMTP_FROM_NAME',
+  'MSG91_AUTH_KEY',
+  'MSG91_TEMPLATE_ID',
+  'MSG91_OTP_BASE_URL',
+  'MSG91_WIDGET_VERIFY_URL',
+  'MSG91_COUNTRY_CODE',
+  'WHATSAPP_ACCESS_TOKEN',
+  'WHATSAPP_PHONE_NUMBER_ID',
+  'WHATSAPP_TEMPLATE_NAME',
+  'WHATSAPP_TEMPLATE_LANGUAGE',
+  'WHATSAPP_GRAPH_API_VERSION',
+  'RAZORPAY_KEY_ID',
+  'RAZORPAY_KEY_SECRET',
+  'RAZORPAY_BUSINESS_NAME',
+  'RAZORPAY_CHECKOUT_IMAGE',
+  'RAZORPAY_THEME_COLOR',
+  'PAYMENT_TEST_BYPASS',
+  'SUPER_ADMIN_EMAILS',
+  'GIT_SYNC_ENABLED',
+  'GIT_AUTO_UPDATE_ON_START',
+  'GIT_FORCE_UPDATE_ON_START',
+  'GIT_REPOSITORY_URL',
+  'GIT_BRANCH',
+  'INSTALL_DEPS_ON_START',
+  'BUILD_ON_START',
+] as const
+
+export type ManagedEnvironmentKey = typeof managedEnvironmentKeys[number]
+
 const envFilePath = path.resolve(process.cwd(), '.env')
 
 function readEnvironmentFile() {
@@ -156,14 +218,62 @@ function readEnvironmentFile() {
   return dotenv.parse(rawValue)
 }
 
+function readEnvironmentFileRaw() {
+  if (!fs.existsSync(envFilePath)) {
+    throw new Error(`Missing .env file at ${envFilePath}. Copy .env.example to .env before starting CXNext.`)
+  }
+
+  return fs.readFileSync(envFilePath, 'utf8')
+}
+
+function buildUpdatedEnvironmentFileContent(existingRaw: string, updates: Record<string, string>) {
+  const lines = existingRaw.split(/\r?\n/)
+  const pendingEntries = new Map(Object.entries(updates))
+  const nextLines = lines.map((line) => {
+    const match = line.match(/^([A-Z0-9_]+)=(.*)$/)
+
+    if (!match) {
+      return line
+    }
+
+    const key = match[1]
+    const nextValue = pendingEntries.get(key)
+    if (nextValue === undefined) {
+      return line
+    }
+
+    pendingEntries.delete(key)
+    return `${key}=${nextValue}`
+  })
+
+  if (pendingEntries.size > 0) {
+    if (nextLines.length > 0 && nextLines[nextLines.length - 1] !== '') {
+      nextLines.push('')
+    }
+
+    for (const [key, value] of pendingEntries.entries()) {
+      nextLines.push(`${key}=${value}`)
+    }
+  }
+
+  return `${nextLines.join('\n').replace(/\n*$/, '\n')}`
+}
+
 function resolveEnvironment() {
   const parsedEnvironment = environmentSchema.parse(readEnvironmentFile())
   const resolvedStorageRoot = path.resolve(process.cwd(), parsedEnvironment.MEDIA_STORAGE_ROOT)
   const resolvedWebPublicSymlink = path.resolve(process.cwd(), parsedEnvironment.MEDIA_WEB_PUBLIC_SYMLINK)
   const resolvedWebDistRoot = path.resolve(process.cwd(), parsedEnvironment.WEB_DIST_ROOT)
-  const superAdminEmails = parsedEnvironment.SUPER_ADMIN_EMAILS.split(',')
-    .map((entry) => entry.trim().toLowerCase())
-    .filter(Boolean)
+  const superAdminEmails = Array.from(
+    new Set(
+      [
+        ...parsedEnvironment.SUPER_ADMIN_EMAILS.split(',')
+          .map((entry) => entry.trim().toLowerCase())
+          .filter(Boolean),
+        ...(parsedEnvironment.SEED_DEFAULT_USER ? [parsedEnvironment.SEED_DEFAULT_USER_EMAIL.trim().toLowerCase()] : []),
+      ],
+    ),
+  )
 
   return {
     envFilePath,
@@ -290,41 +400,22 @@ export function isSuperAdminEmail(email: string, actorType: string) {
   return actorType === 'admin' && environment.superAdminEmails.includes(email.trim().toLowerCase())
 }
 
+export function readManagedEnvironmentValues() {
+  const parsedEnvironment = readEnvironmentFile()
+
+  return Object.fromEntries(
+    managedEnvironmentKeys.map((key) => [key, parsedEnvironment[key] ?? '']),
+  ) as Record<ManagedEnvironmentKey, string>
+}
+
 export function updateEnvironmentFile(updates: Record<string, string>) {
   if (!fs.existsSync(envFilePath)) {
     throw new Error(`Missing .env file at ${envFilePath}. Copy .env.example to .env before starting CXNext.`)
   }
 
-  const existingRaw = fs.readFileSync(envFilePath, 'utf8')
-  const lines = existingRaw.split(/\r?\n/)
-  const pendingEntries = new Map(Object.entries(updates))
-  const nextLines = lines.map((line) => {
-    const match = line.match(/^([A-Z0-9_]+)=(.*)$/)
-
-    if (!match) {
-      return line
-    }
-
-    const key = match[1]
-    const nextValue = pendingEntries.get(key)
-    if (nextValue === undefined) {
-      return line
-    }
-
-    pendingEntries.delete(key)
-    return `${key}=${nextValue}`
-  })
-
-  if (pendingEntries.size > 0) {
-    if (nextLines.length > 0 && nextLines[nextLines.length - 1] !== '') {
-      nextLines.push('')
-    }
-
-    for (const [key, value] of pendingEntries.entries()) {
-      nextLines.push(`${key}=${value}`)
-    }
-  }
-
-  fs.writeFileSync(envFilePath, `${nextLines.join('\n').replace(/\n*$/, '\n')}`, 'utf8')
+  const existingRaw = readEnvironmentFileRaw()
+  const nextRaw = buildUpdatedEnvironmentFileContent(existingRaw, updates)
+  environmentSchema.parse(dotenv.parse(nextRaw))
+  fs.writeFileSync(envFilePath, nextRaw, 'utf8')
   return reloadEnvironment()
 }

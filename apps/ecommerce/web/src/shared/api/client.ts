@@ -18,6 +18,9 @@ import type {
   AuthRegisterOtpVerifyPayload,
   AuthRegisterOtpVerifyResponse,
   AuthTokenResponse,
+  AuthUserListResponse,
+  AuthUserResponse,
+  AuthUserUpsertPayload,
   AuthUser,
   CustomerProfileResponse,
   CustomerProfileUpdatePayload,
@@ -65,6 +68,8 @@ import type {
   SetupStatusResponse,
   SystemSettingsResponse,
   SystemSettingsUpdatePayload,
+  SystemEnvironmentResponse,
+  SystemEnvironmentUpdatePayload,
   SystemUpdateRunResponse,
   SystemVersionResponse,
   SystemUpdateCheckResponse,
@@ -237,6 +242,54 @@ export function getCurrentUser(token: string) {
   })
 }
 
+export async function listUsers(token: string) {
+  const response = await request<AuthUserListResponse>('/admin/users', {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.items
+}
+
+export async function getUser(token: string, id: string) {
+  const response = await request<AuthUserResponse>(`/admin/users/${id}`, {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.item
+}
+
+export async function createUser(token: string, payload: AuthUserUpsertPayload) {
+  const response = await request<AuthUserResponse>('/admin/users', {
+    method: 'POST',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
+  })
+  return response.item
+}
+
+export async function updateUser(token: string, id: string, payload: AuthUserUpsertPayload) {
+  const response = await request<AuthUserResponse>(`/admin/users/${id}`, {
+    method: 'PATCH',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
+  })
+  return response.item
+}
+
+export async function deactivateUser(token: string, id: string) {
+  const response = await request<AuthUserResponse>(`/admin/users/${id}`, {
+    method: 'DELETE',
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.item
+}
+
+export async function restoreUser(token: string, id: string) {
+  const response = await request<AuthUserResponse>(`/admin/users/${id}/restore`, {
+    method: 'POST',
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.item
+}
+
 export function changeCustomerPassword(token: string, payload: AuthChangePasswordPayload) {
   return request<AuthChangePasswordResponse>('/customer/account/change-password', {
     method: 'POST',
@@ -285,8 +338,32 @@ export async function updateSystemSettings(token: string, payload: SystemSetting
   return response.settings
 }
 
+export async function getSystemEnvironment(token: string) {
+  const response = await request<SystemEnvironmentResponse>('/admin/settings/environment', {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.environment
+}
+
+export async function updateSystemEnvironment(token: string, payload: SystemEnvironmentUpdatePayload) {
+  const response = await request<SystemEnvironmentResponse>('/admin/settings/environment', {
+    method: 'PATCH',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
+  })
+  return response.environment
+}
+
 export async function runSystemUpdate(token: string, payload: SystemSettingsUpdatePayload) {
   return request<SystemUpdateRunResponse>('/admin/settings/system/update', {
+    method: 'POST',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function runSystemEnvironmentUpdate(token: string, payload: SystemEnvironmentUpdatePayload) {
+  return request<SystemUpdateRunResponse>('/admin/settings/environment/update', {
     method: 'POST',
     headers: createAuthorizationHeaders(token),
     body: JSON.stringify(payload),

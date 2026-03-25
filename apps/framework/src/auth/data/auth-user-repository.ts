@@ -105,32 +105,7 @@ export class AuthUserRepository {
       [email],
     )
 
-    return Promise.all(
-      userRows.map(async (userRow) => {
-        const rolesAndPermissions = await this.getUserRolesAndPermissions(userRow.id)
-
-        return {
-          user: {
-            id: userRow.id,
-            email: userRow.email,
-            phoneNumber: userRow.phone_number,
-            displayName: userRow.display_name,
-            isSuperAdmin: isSuperAdminEmail(userRow.email, userRow.actor_type),
-            avatarUrl: userRow.avatar_url,
-            actorType: userRow.actor_type,
-            isActive: Boolean(userRow.is_active),
-            organizationName: userRow.organization_name,
-            roles: rolesAndPermissions.roles,
-            permissions: rolesAndPermissions.permissions,
-            createdAt: userRow.created_at.toISOString(),
-            updatedAt: userRow.updated_at.toISOString(),
-          },
-          passwordHash: userRow.password_hash,
-          deletionRequestedAt: userRow.deletion_requested_at?.toISOString() ?? null,
-          purgeAfterAt: userRow.purge_after_at?.toISOString() ?? null,
-        } satisfies StoredAuthUser
-      }),
-    )
+    return Promise.all(userRows.map((userRow) => this.toStoredAuthUser(userRow)))
   }
 
   async findByEmailAndActorType(email: string, actorType: ActorType) {
@@ -199,28 +174,7 @@ export class AuthUserRepository {
       return null
     }
 
-    const rolesAndPermissions = await this.getUserRolesAndPermissions(userRow.id)
-
-    return {
-      user: {
-        id: userRow.id,
-        email: userRow.email,
-        phoneNumber: userRow.phone_number,
-        displayName: userRow.display_name,
-        isSuperAdmin: isSuperAdminEmail(userRow.email, userRow.actor_type),
-        avatarUrl: userRow.avatar_url,
-        actorType: userRow.actor_type,
-        isActive: Boolean(userRow.is_active),
-        organizationName: userRow.organization_name,
-        roles: rolesAndPermissions.roles,
-        permissions: rolesAndPermissions.permissions,
-        createdAt: userRow.created_at.toISOString(),
-        updatedAt: userRow.updated_at.toISOString(),
-      },
-        passwordHash: userRow.password_hash,
-        deletionRequestedAt: userRow.deletion_requested_at?.toISOString() ?? null,
-        purgeAfterAt: userRow.purge_after_at?.toISOString() ?? null,
-      } satisfies StoredAuthUser
+    return this.toStoredAuthUser(userRow)
   }
 
   async findByPhoneNumber(phoneNumber: string) {
@@ -248,32 +202,35 @@ export class AuthUserRepository {
       [phoneNumber],
     )
 
-    return Promise.all(
-      userRows.map(async (userRow) => {
-        const rolesAndPermissions = await this.getUserRolesAndPermissions(userRow.id)
+    return Promise.all(userRows.map((userRow) => this.toStoredAuthUser(userRow)))
+  }
 
-        return {
-          user: {
-            id: userRow.id,
-            email: userRow.email,
-            phoneNumber: userRow.phone_number,
-            displayName: userRow.display_name,
-            isSuperAdmin: isSuperAdminEmail(userRow.email, userRow.actor_type),
-            avatarUrl: userRow.avatar_url,
-            actorType: userRow.actor_type,
-            isActive: Boolean(userRow.is_active),
-            organizationName: userRow.organization_name,
-            roles: rolesAndPermissions.roles,
-            permissions: rolesAndPermissions.permissions,
-            createdAt: userRow.created_at.toISOString(),
-            updatedAt: userRow.updated_at.toISOString(),
-          },
-          passwordHash: userRow.password_hash,
-          deletionRequestedAt: userRow.deletion_requested_at?.toISOString() ?? null,
-          purgeAfterAt: userRow.purge_after_at?.toISOString() ?? null,
-        } satisfies StoredAuthUser
-      }),
+  async list() {
+    await ensureDatabaseSchema()
+
+    const userRows = await db.query<UserRow>(
+      `
+        SELECT
+          id,
+          email,
+          phone_number,
+          display_name,
+          avatar_url,
+          actor_type,
+          password_hash,
+          organization_name,
+          is_active,
+          deletion_requested_at,
+          purge_after_at,
+          created_at,
+          updated_at
+        FROM ${authTableNames.users}
+        ORDER BY created_at DESC, email ASC
+      `,
     )
+
+    const storedUsers = await Promise.all(userRows.map((userRow) => this.toStoredAuthUser(userRow)))
+    return storedUsers.map((entry) => entry.user)
   }
 
   async create(input: {
@@ -288,13 +245,7 @@ export class AuthUserRepository {
     await ensureDatabaseSchema()
 
     const id = randomUUID()
-    const roleKeyByActorType: Record<ActorType, RoleKey> = {
-      admin: 'admin_owner',
-      staff: 'staff_operator',
-      customer: 'customer_portal',
-      vendor: 'vendor_portal',
-    }
-    const roleKey = roleKeyByActorType[input.actorType]
+    const roleKey = this.getDefaultRoleKey(input.actorType)
 
     await db.execute(
       `
@@ -322,17 +273,86 @@ export class AuthUserRepository {
       ],
     )
 
-    await db.execute(
-      `
-        INSERT INTO ${authTableNames.userRoles} (id, user_id, role_id)
-        VALUES (?, ?, ?)
-      `,
-      [`${id}:${roleKey}`, id, roleKey],
-    )
+    await this.assignDefaultRole(id, roleKey)
 
     const storedUser = await this.findByEmailAndActorType(input.email, input.actorType)
     if (!storedUser) {
       throw new Error('Expected newly created user to be retrievable.')
+    }
+
+    return storedUser.user
+  }
+
+  async update(input: {
+    id: string
+    email: string
+    phoneNumber: string | null
+    displayName: string
+    actorType: ActorType
+    avatarUrl: string | null
+    organizationName: string | null
+    isActive: boolean
+    passwordHash?: string | null
+  }) {
+    await ensureDatabaseSchema()
+
+    if (input.passwordHash) {
+      await db.execute(
+        `
+          UPDATE ${authTableNames.users}
+          SET email = ?,
+              phone_number = ?,
+              display_name = ?,
+              avatar_url = ?,
+              actor_type = ?,
+              password_hash = ?,
+              organization_name = ?,
+              is_active = ?
+          WHERE id = ?
+        `,
+        [
+          input.email,
+          input.phoneNumber,
+          input.displayName,
+          input.avatarUrl,
+          input.actorType,
+          input.passwordHash,
+          input.organizationName,
+          input.isActive ? 1 : 0,
+          input.id,
+        ],
+      )
+    } else {
+      await db.execute(
+        `
+          UPDATE ${authTableNames.users}
+          SET email = ?,
+              phone_number = ?,
+              display_name = ?,
+              avatar_url = ?,
+              actor_type = ?,
+              organization_name = ?,
+              is_active = ?
+          WHERE id = ?
+        `,
+        [
+          input.email,
+          input.phoneNumber,
+          input.displayName,
+          input.avatarUrl,
+          input.actorType,
+          input.organizationName,
+          input.isActive ? 1 : 0,
+          input.id,
+        ],
+      )
+    }
+
+    await this.assignDefaultRole(input.id, this.getDefaultRoleKey(input.actorType))
+
+    const storedUser = await this.findById(input.id)
+    if (!storedUser) {
+      throw new Error('Expected updated user to be retrievable.')
     }
 
     return storedUser.user
@@ -639,5 +659,62 @@ export class AuthUserRepository {
       roles: Array.from(rolesByKey.values()),
       permissions: Array.from(permissionsByKey.values()),
     }
+  }
+
+  private getDefaultRoleKey(actorType: ActorType): RoleKey {
+    const roleKeyByActorType: Record<ActorType, RoleKey> = {
+      admin: 'admin_owner',
+      staff: 'staff_operator',
+      customer: 'customer_portal',
+      vendor: 'vendor_portal',
+    }
+
+    return roleKeyByActorType[actorType]
+  }
+
+  private async assignDefaultRole(userId: string, roleKey: RoleKey) {
+    await db.execute(
+      `
+        UPDATE ${authTableNames.userRoles}
+        SET is_active = 0
+        WHERE user_id = ?
+      `,
+      [userId],
+    )
+
+    await db.execute(
+      `
+        INSERT INTO ${authTableNames.userRoles} (id, user_id, role_id)
+        VALUES (?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          is_active = 1
+      `,
+      [`${userId}:${roleKey}`, userId, roleKey],
+    )
+  }
+
+  private async toStoredAuthUser(userRow: UserRow) {
+    const rolesAndPermissions = await this.getUserRolesAndPermissions(userRow.id)
+
+    return {
+      user: {
+        id: userRow.id,
+        email: userRow.email,
+        phoneNumber: userRow.phone_number,
+        displayName: userRow.display_name,
+        isSuperAdmin: isSuperAdminEmail(userRow.email, userRow.actor_type),
+        avatarUrl: userRow.avatar_url,
+        actorType: userRow.actor_type,
+        isActive: Boolean(userRow.is_active),
+        organizationName: userRow.organization_name,
+        roles: rolesAndPermissions.roles,
+        permissions: rolesAndPermissions.permissions,
+        createdAt: userRow.created_at.toISOString(),
+        updatedAt: userRow.updated_at.toISOString(),
+      },
+      passwordHash: userRow.password_hash,
+      deletionRequestedAt: userRow.deletion_requested_at?.toISOString() ?? null,
+      purgeAfterAt: userRow.purge_after_at?.toISOString() ?? null,
+    } satisfies StoredAuthUser
   }
 }

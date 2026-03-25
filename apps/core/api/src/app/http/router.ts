@@ -24,9 +24,13 @@ import { CommerceOrderWorkflowService } from '@ecommerce-api/features/commerce/a
 import { CommerceOrderWorkflowRepository } from '@ecommerce-api/features/commerce/data/commerce-order-workflow-repository'
 import { CustomerHelpdeskService } from '@ecommerce-api/features/customer-helpdesk/application/customer-helpdesk-service'
 import { CustomerHelpdeskRepository } from '@ecommerce-api/features/customer-helpdesk/data/customer-helpdesk-repository'
+import { UserManagementService } from '../../features/users/application/user-management-service'
 import {
+  readSystemEnvironment,
   readSystemSettings,
   runManualUpdate,
+  saveSystemEnvironment,
+  saveSystemEnvironmentAndUpdate,
   saveSystemSettings,
 } from '../../features/settings/application/system-settings-service'
 import { GetBootstrapSnapshot } from '../../features/bootstrap/application/get-bootstrap-snapshot'
@@ -47,6 +51,7 @@ import { environment } from '@framework-core/runtime/config/environment'
 const bootstrapUseCase = new GetBootstrapSnapshot(new SystemOverviewRepository())
 const mailboxService = new MailboxService(new MailboxRepository())
 const authService = new AuthService(new AuthUserRepository(), mailboxService)
+const userManagementService = new UserManagementService(new AuthUserRepository())
 const commonModuleService = new CommonModuleService(new CommonModuleRepository())
 const companyService = new CompanyService(new CompanyRepository())
 const contactService = new ContactService(new ContactRepository())
@@ -176,6 +181,11 @@ export async function routeRequest(
       return
     }
 
+    if (method === 'GET' && url.pathname === '/admin/settings/environment') {
+      writeJson(response, 200, readSystemEnvironment(await requireAuthenticatedUser(request)))
+      return
+    }
+
     if (method === 'PATCH' && url.pathname === '/admin/settings/system') {
       writeJson(
         response,
@@ -185,11 +195,29 @@ export async function routeRequest(
       return
     }
 
+    if (method === 'PATCH' && url.pathname === '/admin/settings/environment') {
+      writeJson(
+        response,
+        200,
+        saveSystemEnvironment(await requireAuthenticatedUser(request), await readJsonBody(request)),
+      )
+      return
+    }
+
     if (method === 'POST' && url.pathname === '/admin/settings/system/update') {
       writeJson(
         response,
         202,
         runManualUpdate(await requireAuthenticatedUser(request), await readJsonBody(request)),
+      )
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/admin/settings/environment/update') {
+      writeJson(
+        response,
+        202,
+        saveSystemEnvironmentAndUpdate(await requireAuthenticatedUser(request), await readJsonBody(request)),
       )
       return
     }
@@ -678,6 +706,54 @@ export async function routeRequest(
     if (method === 'GET' && url.pathname === '/auth/me') {
       writeJson(response, 200, await requireAuthenticatedUser(request))
       return
+    }
+
+    if (method === 'GET' && url.pathname === '/admin/users') {
+      writeJson(response, 200, await userManagementService.list(await requireAuthenticatedUser(request)))
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/admin/users') {
+      writeJson(
+        response,
+        201,
+        await userManagementService.create(await requireAuthenticatedUser(request), await readJsonBody(request)),
+      )
+      return
+    }
+
+    const adminUserRestoreMatch = url.pathname.match(/^\/admin\/users\/([^/]+)\/restore$/)
+    if (method === 'POST' && adminUserRestoreMatch) {
+      writeJson(
+        response,
+        200,
+        await userManagementService.restore(await requireAuthenticatedUser(request), adminUserRestoreMatch[1]),
+      )
+      return
+    }
+
+    const adminUserRecordMatch = url.pathname.match(/^\/admin\/users\/([^/]+)$/)
+    if (adminUserRecordMatch) {
+      const userId = adminUserRecordMatch[1]
+
+      if (method === 'GET') {
+        writeJson(response, 200, await userManagementService.getById(await requireAuthenticatedUser(request), userId))
+        return
+      }
+
+      if (method === 'PATCH') {
+        writeJson(
+          response,
+          200,
+          await userManagementService.update(await requireAuthenticatedUser(request), userId, await readJsonBody(request)),
+        )
+        return
+      }
+
+      if (method === 'DELETE') {
+        writeJson(response, 200, await userManagementService.deactivate(await requireAuthenticatedUser(request), userId))
+        return
+      }
     }
 
     if (method === 'GET' && url.pathname === '/customer/profile') {

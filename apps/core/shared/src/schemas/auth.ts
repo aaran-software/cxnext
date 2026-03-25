@@ -47,6 +47,68 @@ export const authUserSchema = z.object({
   updatedAt: z.string().min(1),
 })
 
+export const authUserSummarySchema = authUserSchema
+
+const nullablePhoneInputSchema = z
+  .string()
+  .trim()
+  .max(20)
+  .nullable()
+  .transform((value) => {
+    if (typeof value !== 'string') {
+      return null
+    }
+
+    return value.length === 0 ? null : value
+  })
+
+const nullableUrlInputSchema = z
+  .string()
+  .trim()
+  .nullable()
+  .transform((value) => {
+    if (typeof value !== 'string') {
+      return null
+    }
+
+    return value.length === 0 ? null : value
+  })
+  .refine((value) => value === null || z.url().safeParse(value).success, {
+    message: 'Enter a valid URL.',
+  })
+
+const nullableOrganizationInputSchema = z
+  .string()
+  .trim()
+  .max(120)
+  .nullable()
+  .transform((value) => {
+    if (typeof value !== 'string') {
+      return null
+    }
+
+    return value.length === 0 ? null : value
+  })
+
+export const authUserUpsertPayloadSchema = z.object({
+  email: z.email(),
+  phoneNumber: nullablePhoneInputSchema,
+  displayName: z.string().trim().min(2).max(120),
+  actorType: actorTypeSchema,
+  avatarUrl: nullableUrlInputSchema,
+  organizationName: nullableOrganizationInputSchema,
+  password: z.string().min(8).nullable().optional(),
+  isActive: z.boolean(),
+})
+
+export const authUserResponseSchema = z.object({
+  item: authUserSchema,
+})
+
+export const authUserListResponseSchema = z.object({
+  items: z.array(authUserSummarySchema),
+})
+
 export const authOtpChannelSchema = z.enum(['email', 'mobile'])
 
 export const authRegisterOtpRequestPayloadSchema = z.object({
@@ -173,7 +235,11 @@ export type RoleKey = z.infer<typeof roleKeySchema>
 export type AuthPermission = z.infer<typeof permissionSchema>
 export type AuthRole = z.infer<typeof roleSchema>
 export type AuthUser = z.infer<typeof authUserSchema>
+export type AuthUserSummary = z.infer<typeof authUserSummarySchema>
 export type AuthOtpChannel = z.infer<typeof authOtpChannelSchema>
+export type AuthUserUpsertPayload = z.infer<typeof authUserUpsertPayloadSchema>
+export type AuthUserResponse = z.infer<typeof authUserResponseSchema>
+export type AuthUserListResponse = z.infer<typeof authUserListResponseSchema>
 export type AuthRegisterOtpRequestPayload = z.infer<typeof authRegisterOtpRequestPayloadSchema>
 export type AuthRegisterOtpRequestResponse = z.infer<typeof authRegisterOtpRequestResponseSchema>
 export type AuthRegisterOtpVerifyPayload = z.infer<typeof authRegisterOtpVerifyPayloadSchema>

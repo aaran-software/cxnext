@@ -35,6 +35,7 @@ function formatCommit(value: string | null) {
 export function SystemVersionPage() {
   const { session } = useAuth()
   const accessToken = session?.accessToken ?? null
+  const isSuperAdmin = Boolean(session?.user.isSuperAdmin)
   const [loading, setLoading] = useState(true)
   const [checking, setChecking] = useState(false)
   const [updating, setUpdating] = useState(false)
@@ -44,41 +45,40 @@ export function SystemVersionPage() {
   const [updateCheck, setUpdateCheck] = useState<SystemUpdateCheck | null>(null)
 
   useEffect(() => {
-    const token = accessToken
-    if (typeof token !== 'string') {
-      return
-    }
-
     let cancelled = false
 
     async function load() {
-      const authToken = accessToken
-      if (!authToken) {
-        return
-      }
       setLoading(true)
       setErrorMessage(null)
 
       try {
-        const [versionResult, settingsResult] = await Promise.all([
-          getSystemVersion(),
-          getSystemSettings(authToken),
-        ])
+        const versionResult = await getSystemVersion()
 
         if (cancelled) {
           return
         }
 
         setVersion(versionResult)
-        setSavedSettings({
-          frontendTarget: settingsResult.frontendTarget,
-          update: {
-            gitSyncEnabled: settingsResult.update.gitSyncEnabled,
-            autoUpdateOnStart: settingsResult.update.autoUpdateOnStart,
-            repositoryUrl: settingsResult.update.repositoryUrl,
-            branch: settingsResult.update.branch,
-          },
-        })
+
+        if (isSuperAdmin && accessToken) {
+          const settingsResult = await getSystemSettings(accessToken)
+
+          if (cancelled) {
+            return
+          }
+
+          setSavedSettings({
+            frontendTarget: settingsResult.frontendTarget,
+            update: {
+              gitSyncEnabled: settingsResult.update.gitSyncEnabled,
+              autoUpdateOnStart: settingsResult.update.autoUpdateOnStart,
+              repositoryUrl: settingsResult.update.repositoryUrl,
+              branch: settingsResult.update.branch,
+            },
+          })
+        } else {
+          setSavedSettings(null)
+        }
       } catch (error) {
         if (!cancelled) {
           setErrorMessage(toErrorMessage(error))
@@ -95,7 +95,7 @@ export function SystemVersionPage() {
     return () => {
       cancelled = true
     }
-  }, [accessToken])
+  }, [accessToken, isSuperAdmin])
 
   async function handleCheckUpdate() {
     const token = accessToken
@@ -157,8 +157,8 @@ export function SystemVersionPage() {
       <div className="space-y-4">
         <Card>
           <CardHeader>
-            <CardTitle>Version</CardTitle>
-            <CardDescription>Loading application version details.</CardDescription>
+            <CardTitle>System update</CardTitle>
+            <CardDescription>Loading application version and update details.</CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -171,29 +171,33 @@ export function SystemVersionPage() {
         <CardHeader className="border-b border-border/60">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="space-y-3">
-              <Badge>Version</Badge>
+              <Badge>System update</Badge>
               <div>
-                <CardTitle className="text-3xl">Application and database version</CardTitle>
+                <CardTitle className="text-3xl">System update and version status</CardTitle>
                 <CardDescription className="mt-2 max-w-3xl text-sm leading-6">
                   Review the running application build, the active database schema version, and the configured Git update source before applying a restart.
                 </CardDescription>
               </div>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Button variant="outline" asChild>
-                <Link to={buildAdminPortalPath('/settings')}>
-                  Open settings
-                  <ArrowUpRight className="size-4" />
-                </Link>
-              </Button>
+              {isSuperAdmin ? (
+                <Button variant="outline" asChild>
+                  <Link to={buildAdminPortalPath('/settings')}>
+                    Open settings
+                    <ArrowUpRight className="size-4" />
+                  </Link>
+                </Button>
+              ) : null}
               <Button variant="outline" onClick={() => void handleCheckUpdate()} disabled={checking || updating}>
                 <RefreshCcw className="size-4" />
                 {checking ? 'Checking...' : 'Check for update'}
               </Button>
-              <Button onClick={() => void handleRunUpdate()} disabled={updating || !savedSettings || !updateCheck?.updateAvailable}>
-                <GitBranch className="size-4" />
-                {updating ? 'Scheduling update...' : 'Update and restart'}
-              </Button>
+              {isSuperAdmin ? (
+                <Button onClick={() => void handleRunUpdate()} disabled={updating || !savedSettings || !updateCheck?.updateAvailable}>
+                  <GitBranch className="size-4" />
+                  {updating ? 'Scheduling update...' : 'Update and restart'}
+                </Button>
+              ) : null}
             </div>
           </div>
         </CardHeader>
@@ -263,11 +267,15 @@ export function SystemVersionPage() {
         <CardContent className="grid gap-3 text-sm">
           <div className="flex items-center justify-between gap-4 rounded-xl border border-border/70 p-3">
             <span className="text-muted-foreground">Repository</span>
-            <span className="font-medium text-foreground">{savedSettings?.update.repositoryUrl ?? 'Not configured'}</span>
+            <span className="font-medium text-foreground">
+              {savedSettings?.update.repositoryUrl ?? updateCheck?.repositoryUrl ?? 'Run update check'}
+            </span>
           </div>
           <div className="flex items-center justify-between gap-4 rounded-xl border border-border/70 p-3">
             <span className="text-muted-foreground">Branch</span>
-            <span className="font-medium text-foreground">{savedSettings?.update.branch ?? 'Not configured'}</span>
+            <span className="font-medium text-foreground">
+              {savedSettings?.update.branch ?? updateCheck?.branch ?? 'Run update check'}
+            </span>
           </div>
           <div className="flex items-center justify-between gap-4 rounded-xl border border-border/70 p-3">
             <span className="text-muted-foreground">Remote commit</span>
@@ -288,6 +296,14 @@ export function SystemVersionPage() {
       {errorMessage ? (
         <Card className="border-destructive/40">
           <CardContent className="p-4 text-sm text-destructive">{errorMessage}</CardContent>
+        </Card>
+      ) : null}
+
+      {!isSuperAdmin ? (
+        <Card>
+          <CardContent className="p-4 text-sm text-muted-foreground">
+            This page is read-only for your account. Super admin access is required for settings changes and update restart actions.
+          </CardContent>
         </Card>
       ) : null}
     </div>

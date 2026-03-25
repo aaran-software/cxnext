@@ -497,6 +497,7 @@ function getMenuGroups(appId: SuiteAppId, modules: DeskWorkspaceLink[]): DeskMen
         ]),
         createSharedMenuItem('settings', 'Settings', '/admin/dashboard/settings', 'Cross-app settings and governance.', Settings2, [
           '/admin/dashboard/settings',
+          '/admin/dashboard/system-update',
           '/admin/dashboard/version',
         ]),
       ],
@@ -568,6 +569,47 @@ export function resolveDeskLocation(pathname: string) {
       section: 'Desk',
       title: 'Application desk',
       description: 'Framework shell and app launcher',
+      app: null as DeskAppDefinition | null,
+    }
+  }
+
+  if (pathname === '/admin/dashboard/users' || pathname.startsWith('/admin/dashboard/users/')) {
+    return {
+      section: 'Framework',
+      title: 'Users',
+      description: 'Platform user accounts, actor types, and access status.',
+      app: null as DeskAppDefinition | null,
+    }
+  }
+
+  if (pathname === '/admin/dashboard/settings' || pathname.startsWith('/admin/dashboard/settings/')) {
+    return {
+      section: 'Framework',
+      title: 'Settings',
+      description: 'Cross-app settings and governance.',
+      app: null as DeskAppDefinition | null,
+    }
+  }
+
+  if (pathname === '/admin/dashboard/environment' || pathname.startsWith('/admin/dashboard/environment/')) {
+    return {
+      section: 'Framework',
+      title: 'Environment',
+      description: 'Runtime .env controls, update flow, and restart workflow.',
+      app: null as DeskAppDefinition | null,
+    }
+  }
+
+  if (
+    pathname === '/admin/dashboard/system-update'
+    || pathname.startsWith('/admin/dashboard/system-update/')
+    || pathname === '/admin/dashboard/version'
+    || pathname.startsWith('/admin/dashboard/version/')
+  ) {
+    return {
+      section: 'Framework',
+      title: 'System Update',
+      description: 'System version status, update checks, and restart workflow.',
       app: null as DeskAppDefinition | null,
     }
   }
