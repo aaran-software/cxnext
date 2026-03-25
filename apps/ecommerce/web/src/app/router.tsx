@@ -207,6 +207,7 @@ const StoreHomePage = lazyPage(() => import('@/features/store/pages/store-home-p
 const StoreProductPage = lazyPage(() => import('@/features/store/pages/store-product-page'), 'StoreProductPage')
 const StoreWishlistPage = lazyPage(() => import('@/features/store/pages/store-wishlist-page'), 'StoreWishlistPage')
 const SystemEnvironmentPage = lazyPage(() => import('@/features/settings/pages/system-environment-page'), 'SystemEnvironmentPage')
+const DatabaseManagerPage = lazyPage(() => import('@/features/settings/pages/database-manager-page'), 'DatabaseManagerPage')
 const SystemSettingsPage = lazyPage(() => import('@/features/settings/pages/system-settings-page'), 'SystemSettingsPage')
 const SystemVersionPage = lazyPage(() => import('@/features/settings/pages/system-version-page'), 'SystemVersionPage')
 const UserFormPage = lazyPage(() => import('@/features/users/pages/user-form-page'), 'UserFormPage')
@@ -290,6 +291,7 @@ const adminRoutes = {
         {
           element: <RequireSuperAdmin />,
           children: [
+            { path: 'migration-manager', element: renderLazy(DatabaseManagerPage) },
             { path: 'environment', element: renderLazy(SystemEnvironmentPage) },
             { path: 'settings', element: renderLazy(SystemSettingsPage) },
           ],

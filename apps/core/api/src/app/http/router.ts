@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { ZodError } from 'zod'
 import type { CommonModuleKey } from '@shared/index'
@@ -33,6 +34,15 @@ import {
   saveSystemEnvironmentAndUpdate,
   saveSystemSettings,
 } from '../../features/settings/application/system-settings-service'
+import {
+  backupDatabase,
+  getHardResetConfirmationText,
+  hardResetDatabase,
+  migrateDatabaseToLatest,
+  readDatabaseManager,
+  resolveBackupFilePath,
+  verifyDatabaseManager,
+} from '../../features/settings/application/database-maintenance-service'
 import { GetBootstrapSnapshot } from '../../features/bootstrap/application/get-bootstrap-snapshot'
 import { SystemOverviewRepository } from '../../features/bootstrap/data/system-overview-repository'
 import { ApplicationError } from '@framework-core/runtime/errors/application-error'
@@ -43,7 +53,7 @@ import {
 } from '@framework-core/runtime/database/database'
 import { servePublicMediaAsset } from '@framework-core/runtime/media/storage'
 import { getBearerToken, readJsonBody } from '@framework-core/runtime/http/request'
-import { writeEmpty, writeJson } from '@framework-core/runtime/http/response'
+import { writeDownload, writeEmpty, writeJson } from '@framework-core/runtime/http/response'
 import { serveBuiltWebApp } from '@framework-core/runtime/http/static-web'
 import { getSystemUpdateCheck, getSystemVersion } from '@framework-core/runtime/version/system-version'
 import { environment } from '@framework-core/runtime/config/environment'
@@ -97,6 +107,15 @@ async function requireBackofficeUser(request: IncomingMessage) {
   const user = await requireAuthenticatedUser(request)
   if (user.actorType !== 'admin' && user.actorType !== 'staff') {
     throw new ApplicationError('This route is available only to backoffice users.', { actorType: user.actorType }, 403)
+  }
+
+  return user
+}
+
+async function requireSuperAdminUser(request: IncomingMessage) {
+  const user = await requireAuthenticatedUser(request)
+  if (!user.isSuperAdmin) {
+    throw new ApplicationError('Super admin access is required.', {}, 403)
   }
 
   return user
@@ -186,6 +205,11 @@ export async function routeRequest(
       return
     }
 
+    if (method === 'GET' && url.pathname === '/admin/database-manager') {
+      writeJson(response, 200, await readDatabaseManager(await requireAuthenticatedUser(request)))
+      return
+    }
+
     if (method === 'PATCH' && url.pathname === '/admin/settings/system') {
       writeJson(
         response,
@@ -219,6 +243,50 @@ export async function routeRequest(
         202,
         saveSystemEnvironmentAndUpdate(await requireAuthenticatedUser(request), await readJsonBody(request)),
       )
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/admin/database-manager/verify') {
+      writeJson(response, 200, await verifyDatabaseManager(await requireAuthenticatedUser(request)))
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/admin/database-manager/migrate') {
+      writeJson(response, 200, await migrateDatabaseToLatest(await requireAuthenticatedUser(request)))
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/admin/database-manager/backup') {
+      writeJson(response, 200, await backupDatabase(await requireAuthenticatedUser(request)))
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/admin/database-manager/hard-reset') {
+      writeJson(
+        response,
+        200,
+        await hardResetDatabase(await requireAuthenticatedUser(request), await readJsonBody(request)),
+      )
+      return
+    }
+
+    const databaseBackupMatch = url.pathname.match(/^\/admin\/database-manager\/backups\/([^/]+)$/)
+    if (method === 'GET' && databaseBackupMatch) {
+      await requireSuperAdminUser(request)
+      const fileName = databaseBackupMatch[1]
+      const absolutePath = resolveBackupFilePath(fileName)
+
+      if (!fs.existsSync(absolutePath)) {
+        throw new ApplicationError('Backup file was not found.', { fileName }, 404)
+      }
+
+      writeDownload(response, 200, 'application/json; charset=utf-8', fileName, fs.readFileSync(absolutePath))
+      return
+    }
+
+    if (method === 'GET' && url.pathname === '/admin/database-manager/hard-reset/confirmation') {
+      await requireSuperAdminUser(request)
+      writeJson(response, 200, { confirmation: getHardResetConfirmationText() })
       return
     }
 

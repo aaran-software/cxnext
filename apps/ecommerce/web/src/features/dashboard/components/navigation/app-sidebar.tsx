@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import type { SystemVersion } from "@shared/index"
-import { Blocks, ChevronRight, LayoutDashboard, RefreshCcw, Settings2, SlidersHorizontal, Users } from "lucide-react"
+import { Blocks, ChevronRight, Database, LayoutDashboard, RefreshCcw, Settings2, SlidersHorizontal, Users } from "lucide-react"
 import { Link, NavLink, useLocation } from "react-router-dom"
 import {
   Collapsible,
@@ -288,6 +288,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       <NavLink to={buildAdminPortalPath('/users')}>
                         <Users />
                         <span>Users</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ) : null}
+                {session?.user.isSuperAdmin ? (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip="Migration Manager">
+                      <NavLink to={buildAdminPortalPath('/migration-manager')}>
+                        <Database />
+                        <span>Migration Manager</span>
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

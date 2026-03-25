@@ -23,3 +23,20 @@ export function writeEmpty(response: ServerResponse, statusCode: number) {
   })
   response.end()
 }
+
+export function writeDownload(
+  response: ServerResponse,
+  statusCode: number,
+  mediaType: string,
+  fileName: string,
+  payload: Buffer | string,
+) {
+  response.writeHead(statusCode, {
+    'content-type': mediaType,
+    'content-disposition': `attachment; filename="${fileName}"`,
+    'access-control-allow-origin': environment.corsOrigin,
+    'access-control-allow-headers': 'authorization, content-type',
+    'access-control-allow-methods': 'GET, POST, PATCH, DELETE, OPTIONS',
+  })
+  response.end(payload)
+}

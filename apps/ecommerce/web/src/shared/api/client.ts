@@ -64,6 +64,10 @@ import type {
   CommonModuleMetadataListResponse,
   CommonModuleRecordResponse,
   CommonModuleUpsertPayload,
+  DatabaseBackupResponse,
+  DatabaseHardResetPayload,
+  DatabaseManagerActionResponse,
+  DatabaseManagerResponse,
   DatabaseSetupPayload,
   SetupStatusResponse,
   SystemSettingsResponse,
@@ -165,6 +169,31 @@ function createAuthorizationHeaders(token: string) {
   return {
     authorization: `Bearer ${token}`,
   }
+}
+
+async function downloadAuthorizedFile(token: string, path: string, suggestedFileName?: string) {
+  const response = await fetch(`${resolveApiBaseUrl()}${path}`, {
+    headers: createAuthorizationHeaders(token),
+  })
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null) as { error?: string; context?: unknown } | null
+    throw new HttpError(payload?.error ?? 'Request failed.', response.status, payload?.context)
+  }
+
+  const blob = await response.blob()
+  const objectUrl = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  const fileName = suggestedFileName
+    ?? response.headers.get('content-disposition')?.match(/filename="(.+)"/)?.[1]
+    ?? 'download'
+
+  link.href = objectUrl
+  link.download = fileName
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(objectUrl)
 }
 
 export async function fetchSetupStatus() {
@@ -380,6 +409,46 @@ export async function getSystemUpdateCheck(token: string) {
     headers: createAuthorizationHeaders(token),
   })
   return response.update
+}
+
+export async function getDatabaseManager(token: string) {
+  const response = await request<DatabaseManagerResponse>('/admin/database-manager', {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.report
+}
+
+export function verifyDatabaseManager(token: string) {
+  return request<DatabaseManagerActionResponse>('/admin/database-manager/verify', {
+    method: 'POST',
+    headers: createAuthorizationHeaders(token),
+  })
+}
+
+export function migrateDatabaseManager(token: string) {
+  return request<DatabaseManagerActionResponse>('/admin/database-manager/migrate', {
+    method: 'POST',
+    headers: createAuthorizationHeaders(token),
+  })
+}
+
+export function backupDatabaseManager(token: string) {
+  return request<DatabaseBackupResponse>('/admin/database-manager/backup', {
+    method: 'POST',
+    headers: createAuthorizationHeaders(token),
+  })
+}
+
+export function hardResetDatabaseManager(token: string, payload: DatabaseHardResetPayload) {
+  return request<DatabaseManagerActionResponse>('/admin/database-manager/hard-reset', {
+    method: 'POST',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function downloadDatabaseManagerBackup(token: string, downloadPath: string, fileName?: string) {
+  await downloadAuthorizedFile(token, downloadPath, fileName)
 }
 
 export async function listCommonModuleMetadata() {

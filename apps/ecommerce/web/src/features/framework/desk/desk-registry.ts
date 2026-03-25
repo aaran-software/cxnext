@@ -591,6 +591,15 @@ export function resolveDeskLocation(pathname: string) {
     }
   }
 
+  if (pathname === '/admin/dashboard/migration-manager' || pathname.startsWith('/admin/dashboard/migration-manager/')) {
+    return {
+      section: 'Framework',
+      title: 'Migration Manager',
+      description: 'Database schema verification, backups, hard reset, and migration control.',
+      app: null as DeskAppDefinition | null,
+    }
+  }
+
   if (pathname === '/admin/dashboard/environment' || pathname.startsWith('/admin/dashboard/environment/')) {
     return {
       section: 'Framework',

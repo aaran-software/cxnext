@@ -42,6 +42,11 @@ MariaDB is not started by this compose file. Point `DB_HOST`, `DB_PORT`, `DB_USE
 docker exec -it tmnext-in-app bash
 ```
 
+
+docker logs --tail 100 tirupur-direct-app
+
+
+
 ## 6. Inspect or edit the runtime env inside the container
 
 ```bash
