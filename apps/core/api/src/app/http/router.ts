@@ -27,6 +27,16 @@ import { CustomerHelpdeskService } from '@ecommerce-api/features/customer-helpde
 import { CustomerHelpdeskRepository } from '@ecommerce-api/features/customer-helpdesk/data/customer-helpdesk-repository'
 import { UserManagementService } from '../../features/users/application/user-management-service'
 import {
+  readFrappeSettings,
+  saveFrappeSettings,
+  verifyFrappeSettings,
+} from '../../features/frappe/application/frappe-settings-service'
+import {
+  createFrappeTodo,
+  listFrappeTodos,
+  updateFrappeTodo,
+} from '../../features/frappe/application/frappe-todo-service'
+import {
   readSystemEnvironment,
   readSystemSettings,
   runManualUpdate,
@@ -205,6 +215,16 @@ export async function routeRequest(
       return
     }
 
+    if (method === 'GET' && url.pathname === '/admin/frappe/settings') {
+      writeJson(response, 200, readFrappeSettings(await requireAuthenticatedUser(request)))
+      return
+    }
+
+    if (method === 'GET' && url.pathname === '/admin/frappe/todos') {
+      writeJson(response, 200, await listFrappeTodos(await requireAuthenticatedUser(request)))
+      return
+    }
+
     if (method === 'GET' && url.pathname === '/admin/database-manager') {
       writeJson(response, 200, await readDatabaseManager(await requireAuthenticatedUser(request)))
       return
@@ -228,6 +248,24 @@ export async function routeRequest(
       return
     }
 
+    if (method === 'PATCH' && url.pathname === '/admin/frappe/settings') {
+      writeJson(
+        response,
+        200,
+        saveFrappeSettings(await requireAuthenticatedUser(request), await readJsonBody(request)),
+      )
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/admin/frappe/todos') {
+      writeJson(
+        response,
+        201,
+        await createFrappeTodo(await requireAuthenticatedUser(request), await readJsonBody(request)),
+      )
+      return
+    }
+
     if (method === 'POST' && url.pathname === '/admin/settings/system/update') {
       writeJson(
         response,
@@ -242,6 +280,29 @@ export async function routeRequest(
         response,
         202,
         saveSystemEnvironmentAndUpdate(await requireAuthenticatedUser(request), await readJsonBody(request)),
+      )
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/admin/frappe/settings/verify') {
+      writeJson(
+        response,
+        200,
+        await verifyFrappeSettings(await requireAuthenticatedUser(request), await readJsonBody(request)),
+      )
+      return
+    }
+
+    const frappeTodoRecordMatch = url.pathname.match(/^\/admin\/frappe\/todos\/([^/]+)$/)
+    if (frappeTodoRecordMatch && method === 'PATCH') {
+      writeJson(
+        response,
+        200,
+        await updateFrappeTodo(
+          await requireAuthenticatedUser(request),
+          decodeURIComponent(frappeTodoRecordMatch[1]),
+          await readJsonBody(request),
+        ),
       )
       return
     }

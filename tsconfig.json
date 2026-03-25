@@ -26,6 +26,7 @@
       "@ecommerce-api/*": ["apps/ecommerce/api/src/*"],
       "@core-domain/*": ["apps/core/domain/src/*"],
       "@ecommerce-domain/*": ["apps/ecommerce/domain/src/*"],
+      "@frappe-domain/*": ["apps/frappe/domain/src/*"],
       "@billing-core/*": ["apps/billing/core/src/*"],
       "@shared/*": ["apps/core/shared/src/*"],
       "@ui/*": ["apps/ui/src/*"]

@@ -17,7 +17,7 @@ export interface FrameworkServiceDefinition {
   readiness: 'scaffold' | 'active'
 }
 
-export type SuiteAppId = 'core' | 'ecommerce' | 'billing' | 'crm' | 'site' | 'custom'
+export type SuiteAppId = 'core' | 'ecommerce' | 'billing' | 'crm' | 'site' | 'frappe' | 'custom'
 
 export interface SuiteAppDefinition {
   id: SuiteAppId
@@ -125,6 +125,13 @@ export const suiteApps: SuiteAppDefinition[] = [
     summary: 'Static presentation surface reusing the shared design system and UI primitives.',
     mode: 'presentation-surface',
     readiness: 'foundation',
+  },
+  {
+    id: 'frappe',
+    name: 'Frappe',
+    summary: 'ERPNext connection, integration defaults, and operational bridge into the shared framework shell.',
+    mode: 'standalone-app',
+    readiness: 'active',
   },
   {
     id: 'custom',

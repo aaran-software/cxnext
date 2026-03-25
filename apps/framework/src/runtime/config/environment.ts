@@ -34,6 +34,11 @@ const defaultFalseBooleanFlag = z
   .string()
   .optional()
   .transform((value) => ['1', 'true', 'yes', 'on'].includes((value ?? '').trim().toLowerCase()))
+const defaultTrimmedString = (fallback = '') =>
+  z
+    .string()
+    .optional()
+    .transform((value) => value?.trim() ?? fallback)
 const defaultNonEmptyString = (fallback: string) =>
   z
     .string()
@@ -119,6 +124,17 @@ const environmentSchema = z.object({
   RAZORPAY_CHECKOUT_IMAGE: optionalNonEmptyString,
   RAZORPAY_THEME_COLOR: optionalNonEmptyString,
   PAYMENT_TEST_BYPASS: defaultFalseBooleanFlag,
+  FRAPPE_ENABLED: defaultFalseBooleanFlag,
+  FRAPPE_BASE_URL: defaultTrimmedString(''),
+  FRAPPE_SITE_NAME: defaultTrimmedString(''),
+  FRAPPE_API_KEY: defaultTrimmedString(''),
+  FRAPPE_API_SECRET: defaultTrimmedString(''),
+  FRAPPE_TIMEOUT_SECONDS: defaultIntegerString(15),
+  FRAPPE_DEFAULT_COMPANY: defaultTrimmedString(''),
+  FRAPPE_DEFAULT_WAREHOUSE: defaultTrimmedString(''),
+  FRAPPE_DEFAULT_PRICE_LIST: defaultTrimmedString(''),
+  FRAPPE_DEFAULT_CUSTOMER_GROUP: defaultTrimmedString(''),
+  FRAPPE_DEFAULT_ITEM_GROUP: defaultTrimmedString(''),
   SUPER_ADMIN_EMAILS: z.string().optional().transform((value) => value ?? ''),
   GIT_SYNC_ENABLED: defaultFalseBooleanFlag,
   GIT_AUTO_UPDATE_ON_START: defaultFalseBooleanFlag,
@@ -142,6 +158,32 @@ const environmentSchema = z.object({
       message: 'GIT_REPOSITORY_URL is required when GIT_SYNC_ENABLED=true.',
       path: ['GIT_REPOSITORY_URL'],
     })
+  }
+
+  if (value.FRAPPE_ENABLED) {
+    if (!value.FRAPPE_BASE_URL) {
+      context.addIssue({
+        code: 'custom',
+        message: 'FRAPPE_BASE_URL is required when FRAPPE_ENABLED=true.',
+        path: ['FRAPPE_BASE_URL'],
+      })
+    }
+
+    if (!value.FRAPPE_API_KEY) {
+      context.addIssue({
+        code: 'custom',
+        message: 'FRAPPE_API_KEY is required when FRAPPE_ENABLED=true.',
+        path: ['FRAPPE_API_KEY'],
+      })
+    }
+
+    if (!value.FRAPPE_API_SECRET) {
+      context.addIssue({
+        code: 'custom',
+        message: 'FRAPPE_API_SECRET is required when FRAPPE_ENABLED=true.',
+        path: ['FRAPPE_API_SECRET'],
+      })
+    }
   }
 })
 
@@ -195,6 +237,17 @@ export const managedEnvironmentKeys = [
   'RAZORPAY_CHECKOUT_IMAGE',
   'RAZORPAY_THEME_COLOR',
   'PAYMENT_TEST_BYPASS',
+  'FRAPPE_ENABLED',
+  'FRAPPE_BASE_URL',
+  'FRAPPE_SITE_NAME',
+  'FRAPPE_API_KEY',
+  'FRAPPE_API_SECRET',
+  'FRAPPE_TIMEOUT_SECONDS',
+  'FRAPPE_DEFAULT_COMPANY',
+  'FRAPPE_DEFAULT_WAREHOUSE',
+  'FRAPPE_DEFAULT_PRICE_LIST',
+  'FRAPPE_DEFAULT_CUSTOMER_GROUP',
+  'FRAPPE_DEFAULT_ITEM_GROUP',
   'SUPER_ADMIN_EMAILS',
   'GIT_SYNC_ENABLED',
   'GIT_AUTO_UPDATE_ON_START',
@@ -372,6 +425,19 @@ function resolveEnvironment() {
         themeColor: parsedEnvironment.RAZORPAY_THEME_COLOR ?? '',
       },
       testBypass: parsedEnvironment.PAYMENT_TEST_BYPASS,
+    },
+    frappe: {
+      enabled: parsedEnvironment.FRAPPE_ENABLED,
+      baseUrl: parsedEnvironment.FRAPPE_BASE_URL.replace(/\/$/, ''),
+      siteName: parsedEnvironment.FRAPPE_SITE_NAME,
+      apiKey: parsedEnvironment.FRAPPE_API_KEY,
+      apiSecret: parsedEnvironment.FRAPPE_API_SECRET,
+      timeoutSeconds: parsedEnvironment.FRAPPE_TIMEOUT_SECONDS,
+      defaultCompany: parsedEnvironment.FRAPPE_DEFAULT_COMPANY,
+      defaultWarehouse: parsedEnvironment.FRAPPE_DEFAULT_WAREHOUSE,
+      defaultPriceList: parsedEnvironment.FRAPPE_DEFAULT_PRICE_LIST,
+      defaultCustomerGroup: parsedEnvironment.FRAPPE_DEFAULT_CUSTOMER_GROUP,
+      defaultItemGroup: parsedEnvironment.FRAPPE_DEFAULT_ITEM_GROUP,
     },
     runtime: {
       git: {

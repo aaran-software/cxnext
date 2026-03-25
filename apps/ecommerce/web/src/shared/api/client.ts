@@ -69,6 +69,12 @@ import type {
   DatabaseManagerActionResponse,
   DatabaseManagerResponse,
   DatabaseSetupPayload,
+  FrappeConnectionVerificationResponse,
+  FrappeSettingsResponse,
+  FrappeSettingsUpdatePayload,
+  FrappeTodoListResponse,
+  FrappeTodoResponse,
+  FrappeTodoUpsertPayload,
   SetupStatusResponse,
   SystemSettingsResponse,
   SystemSettingsUpdatePayload,
@@ -372,6 +378,56 @@ export async function getSystemEnvironment(token: string) {
     headers: createAuthorizationHeaders(token),
   })
   return response.environment
+}
+
+export async function getFrappeSettings(token: string) {
+  const response = await request<FrappeSettingsResponse>('/admin/frappe/settings', {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.settings
+}
+
+export async function updateFrappeSettings(token: string, payload: FrappeSettingsUpdatePayload) {
+  const response = await request<FrappeSettingsResponse>('/admin/frappe/settings', {
+    method: 'PATCH',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
+  })
+  return response.settings
+}
+
+export async function verifyFrappeConnection(token: string, payload: FrappeSettingsUpdatePayload) {
+  const response = await request<FrappeConnectionVerificationResponse>('/admin/frappe/settings/verify', {
+    method: 'POST',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
+  })
+  return response.verification
+}
+
+export async function listFrappeTodos(token: string) {
+  const response = await request<FrappeTodoListResponse>('/admin/frappe/todos', {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.todos
+}
+
+export async function createFrappeTodo(token: string, payload: FrappeTodoUpsertPayload) {
+  const response = await request<FrappeTodoResponse>('/admin/frappe/todos', {
+    method: 'POST',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
+  })
+  return response.item
+}
+
+export async function updateFrappeTodo(token: string, todoId: string, payload: FrappeTodoUpsertPayload) {
+  const response = await request<FrappeTodoResponse>(`/admin/frappe/todos/${encodeURIComponent(todoId)}`, {
+    method: 'PATCH',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
+  })
+  return response.item
 }
 
 export async function updateSystemEnvironment(token: string, payload: SystemEnvironmentUpdatePayload) {

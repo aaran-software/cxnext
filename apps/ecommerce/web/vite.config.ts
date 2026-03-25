@@ -57,6 +57,7 @@ export default defineConfig(({ mode }) => {
         '@framework-core': path.resolve(import.meta.dirname, '../../framework/src'),
         '@core-domain': path.resolve(import.meta.dirname, '../../core/domain/src'),
         '@ecommerce-domain': path.resolve(import.meta.dirname, '../domain/src'),
+        '@frappe-domain': path.resolve(import.meta.dirname, '../../frappe/domain/src'),
         '@shared': path.resolve(import.meta.dirname, '../../core/shared/src'),
         '@ui': path.resolve(import.meta.dirname, '../../ui/src'),
       },

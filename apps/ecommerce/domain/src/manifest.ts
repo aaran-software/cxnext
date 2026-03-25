@@ -42,4 +42,10 @@ export const ecommerceWorkspaceItems: EcommerceWorkspaceItem[] = [
     route: '/admin/dashboard/storefront-designer',
     summary: 'Storefront layout, campaign, and merchandising surfaces.',
   },
+  {
+    id: 'slider-themes',
+    name: 'Storefront Slider',
+    route: '/admin/dashboard/slider-themes',
+    summary: 'Slider themes, hero motion, and storefront banner settings.',
+  },
 ]

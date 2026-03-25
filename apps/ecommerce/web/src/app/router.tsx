@@ -108,6 +108,10 @@ const CrmWorkspacePage = lazyPage(
   () => import('@/features/framework/pages/crm-workspace-page'),
   'CrmWorkspacePage',
 )
+const FrappeWorkspacePage = lazyPage(
+  () => import('@/features/framework/pages/frappe-workspace-page'),
+  'FrappeWorkspacePage',
+)
 const SiteWorkspacePage = lazyPage(
   () => import('@/features/framework/pages/site-workspace-page'),
   'SiteWorkspacePage',
@@ -206,6 +210,8 @@ const StoreCheckoutPage = lazyPage(() => import('@/features/store/pages/store-ch
 const StoreHomePage = lazyPage(() => import('@/features/store/pages/store-home-page'), 'StoreHomePage')
 const StoreProductPage = lazyPage(() => import('@/features/store/pages/store-product-page'), 'StoreProductPage')
 const StoreWishlistPage = lazyPage(() => import('@/features/store/pages/store-wishlist-page'), 'StoreWishlistPage')
+const FrappeConnectionPage = lazyPage(() => import('@/features/frappe/pages/frappe-connection-page'), 'FrappeConnectionPage')
+const FrappeTodoPage = lazyPage(() => import('@/features/frappe/pages/frappe-todo-page'), 'FrappeTodoPage')
 const SystemEnvironmentPage = lazyPage(() => import('@/features/settings/pages/system-environment-page'), 'SystemEnvironmentPage')
 const DatabaseManagerPage = lazyPage(() => import('@/features/settings/pages/database-manager-page'), 'DatabaseManagerPage')
 const SystemSettingsPage = lazyPage(() => import('@/features/settings/pages/system-settings-page'), 'SystemSettingsPage')
@@ -249,6 +255,9 @@ const adminRoutes = {
         { path: 'billing/contra', element: renderLazy(BillingContraVoucherPage) },
         { path: 'billing/gst', element: renderLazy(BillingGstCenterPage) },
         { path: 'crm', element: renderLazy(CrmWorkspacePage) },
+        { path: 'frappe', element: renderLazy(FrappeWorkspacePage) },
+        { path: 'frappe/connection', element: renderLazy(FrappeConnectionPage) },
+        { path: 'frappe/todos', element: renderLazy(FrappeTodoPage) },
         { path: 'site', element: renderLazy(SiteWorkspacePage) },
         { path: 'orders', element: renderLazy(OrderOperationsPage) },
         { path: 'orders/:orderId', element: renderLazy(OrderShowPage) },

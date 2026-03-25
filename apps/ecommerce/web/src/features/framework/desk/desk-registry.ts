@@ -26,6 +26,7 @@ import type { FrameworkServiceDefinition, SuiteAppDefinition, SuiteAppId } from 
 import { frameworkServices, suiteApps } from '@framework-core/index'
 import { coreWorkspaceItems } from '@core-domain/index'
 import { ecommerceWorkspaceItems } from '@ecommerce-domain/index'
+import { frappeWorkspaceItems } from '@frappe-domain/index'
 import { commonModuleMenuGroups, getCommonModuleHref } from '@/features/common-modules/config/common-module-navigation'
 
 export interface DeskWorkspaceLink {
@@ -93,7 +94,10 @@ const workspaceIconMap: Record<string, LucideIcon> = {
   customers: BriefcaseBusiness,
   products: Package,
   mailbox: Mail,
+  todos: ClipboardList,
   'storefront-designer': Store,
+  'slider-themes': Zap,
+  connection: Cog,
 }
 
 const appIconMap: Record<SuiteAppId, LucideIcon> = {
@@ -102,6 +106,7 @@ const appIconMap: Record<SuiteAppId, LucideIcon> = {
   billing: Wallet,
   crm: BriefcaseBusiness,
   site: Globe,
+  frappe: Database,
   custom: Blocks,
 }
 
@@ -111,6 +116,7 @@ const appRouteMap: Record<SuiteAppId, string> = {
   billing: '/admin/dashboard/billing',
   crm: '/admin/dashboard/crm',
   site: '/admin/dashboard/site',
+  frappe: '/admin/dashboard/frappe',
   custom: '/admin/dashboard/custom',
 }
 
@@ -120,6 +126,7 @@ const appBadgeMap: Record<SuiteAppId, string> = {
   billing: 'Scaffold app',
   crm: 'Scaffold app',
   site: 'Presentation surface',
+  frappe: 'Integration app',
   custom: 'Extension app',
 }
 
@@ -129,10 +136,11 @@ const appAccentClassMap: Record<SuiteAppId, string> = {
   billing: 'from-emerald-500/18 via-green-500/10 to-transparent',
   crm: 'from-fuchsia-500/18 via-pink-500/10 to-transparent',
   site: 'from-cyan-500/18 via-teal-500/10 to-transparent',
+  frappe: 'from-blue-500/18 via-sky-500/10 to-transparent',
   custom: 'from-violet-500/18 via-indigo-500/10 to-transparent',
 }
 
-const placeholderModules: Record<Exclude<SuiteAppId, 'core' | 'ecommerce'>, DeskWorkspaceLink[]> = {
+const placeholderModules: Record<Exclude<SuiteAppId, 'core' | 'ecommerce' | 'frappe'>, DeskWorkspaceLink[]> = {
   billing: [
     {
       id: 'billing-overview',
@@ -303,6 +311,10 @@ function getWorkspaceContent(appId: SuiteAppId) {
     return ecommerceWorkspaceItems.map(toWorkspaceLink)
   }
 
+  if (appId === 'frappe') {
+    return frappeWorkspaceItems.map(toWorkspaceLink)
+  }
+
   return placeholderModules[appId]
 }
 
@@ -325,6 +337,10 @@ function getWorkspaceTitle(app: SuiteAppDefinition) {
 
   if (app.id === 'site') {
     return 'Site'
+  }
+
+  if (app.id === 'frappe') {
+    return 'Frappe'
   }
 
   if (app.id === 'custom') {
@@ -353,6 +369,10 @@ function getWorkspaceSummary(app: SuiteAppDefinition) {
 
   if (app.id === 'site') {
     return 'Public pages and presentation surfaces connected to the shared framework shell.'
+  }
+
+  if (app.id === 'frappe') {
+    return 'ERPNext connection, company defaults, and integration setup managed from one workspace.'
   }
 
   return 'Future app extension point with workspace hooks, desk icon, and framework contract.'
@@ -409,8 +429,6 @@ function getMenuGroups(appId: SuiteAppId, modules: DeskWorkspaceLink[]): DeskMen
         items: [
           createSharedMenuItem('common', 'Common Modules', '/admin/dashboard/common', 'Reusable master data across apps.', Blocks, [
             '/admin/dashboard/common',
-            '/admin/dashboard/storefront-designer',
-            '/admin/dashboard/slider-themes',
           ]),
           createSharedMenuItem('media', 'Media', '/admin/dashboard/media', 'Shared media and asset storage.', FileImage),
         ],
@@ -476,6 +494,17 @@ function getMenuGroups(appId: SuiteAppId, modules: DeskWorkspaceLink[]): DeskMen
         items: [
           createSharedMenuItem('media', 'Media', '/admin/dashboard/media', 'Shared assets and media delivery.', FileImage),
         ],
+      },
+    ]
+  }
+
+  if (appId === 'frappe') {
+    return [
+      {
+        id: 'frappe-workspace',
+        label: 'Frappe',
+        shared: false,
+        items: modules.map((item) => createMenuItem(item)),
       },
     ]
   }
