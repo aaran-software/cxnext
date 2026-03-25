@@ -546,12 +546,22 @@ function normalizeUploadedBackupFileName(fileName: string) {
 }
 
 function saveBackupFile(input: { fileName: string; content: string }) {
-  ensureBackupDirectory()
   parseBackupContent(input.content, input.fileName)
 
   const normalizedFileName = normalizeUploadedBackupFileName(input.fileName)
   const absolutePath = resolveBackupFilePath(normalizedFileName)
-  fs.writeFileSync(absolutePath, input.content, 'utf8')
+  try {
+    ensureBackupDirectory()
+    fs.writeFileSync(absolutePath, input.content, 'utf8')
+  } catch (error) {
+    const nodeError = error as NodeJS.ErrnoException
+    throw new ApplicationError('Uploaded backup could not be saved.', {
+      fileName: normalizedFileName,
+      backupDirectory: getBackupDirectoryPath(),
+      fsCode: nodeError.code ?? 'UNKNOWN',
+      fsMessage: nodeError.message,
+    }, 500)
+  }
 
   const backup = buildBackupSummary(normalizedFileName)
   if (!backup) {

@@ -63,9 +63,16 @@ function toErrorMessage(error: unknown) {
     const detail = context && typeof context === 'object' && 'detail' in context
       ? String((context as { detail?: unknown }).detail ?? '')
       : ''
+    const fsMessage = context && typeof context === 'object' && 'fsMessage' in context
+      ? String((context as { fsMessage?: unknown }).fsMessage ?? '')
+      : ''
 
     if (detail) {
       return detail
+    }
+
+    if (fsMessage) {
+      return fsMessage
     }
 
     return error.message
@@ -1073,6 +1080,26 @@ export function DatabaseManagerPage() {
                           <RotateCcw className="size-4" />
                           Hard reset managed schema
                         </Button>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-amber-300/60 bg-amber-50/40 dark:border-amber-700/60 dark:bg-amber-950/20">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          <AlertTriangle className="size-5" />
+                          Upload detail warning
+                        </CardTitle>
+                        <CardDescription>
+                          If backup upload fails on the live server, capture the error response or the matching server log line so the root cause can be identified.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-2 text-sm">
+                        <p className="text-muted-foreground">
+                          Share the live server response or log line that appears during upload. The file write step depends on the server path <span className="font-medium text-foreground">storage/backups/database</span>.
+                        </p>
+                        <div className="rounded-lg border border-border/70 bg-background/80 p-3 text-muted-foreground">
+                          {errorMessage ?? 'No upload error has been captured yet.'}
+                        </div>
                       </CardContent>
                     </Card>
                   </div>
