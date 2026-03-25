@@ -284,7 +284,13 @@ export function SystemVersionPage() {
           <div className="flex items-center justify-between gap-4 rounded-xl border border-border/70 p-3">
             <span className="text-muted-foreground">Update availability</span>
             <span className="font-medium text-foreground">
-              {updateCheck ? (updateCheck.updateAvailable ? 'Available' : 'No update') : 'Not checked'}
+              {!updateCheck
+                ? 'Not checked'
+                : !updateCheck.canAutoCompare
+                  ? 'Comparison unavailable'
+                  : updateCheck.updateAvailable
+                    ? 'Available'
+                    : 'No update'}
             </span>
           </div>
           <div className="rounded-xl border border-border/70 p-3 text-muted-foreground">

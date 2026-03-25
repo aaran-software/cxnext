@@ -24,6 +24,10 @@ const execFileAsync = promisify(execFile)
 const runtimeGitDirectory = path.resolve(process.cwd(), '../runtime/source/.git')
 
 async function readCurrentGitCommitSha() {
+  if (!environment.runtime.git.syncEnabled) {
+    return null
+  }
+
   if (!fs.existsSync(runtimeGitDirectory)) {
     return null
   }
@@ -153,7 +157,9 @@ export async function getSystemUpdateCheck() {
       detail: !remoteCommitSha
         ? 'Unable to resolve the remote branch head.'
         : !currentCommitSha
-          ? 'Current build commit is not embedded. Update check can still use the configured Git source.'
+          ? environment.runtime.git.syncEnabled
+            ? 'The runtime Git source is not available for direct commit comparison yet.'
+            : 'The running app uses the embedded image, so Git commit comparison is unavailable for the current build.'
           : updateAvailable
             ? 'A newer commit is available on the configured branch.'
             : 'The running source matches the configured remote branch head.',
