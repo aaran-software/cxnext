@@ -34,6 +34,10 @@ import {
   updateFrappeItem,
 } from '../../features/frappe/application/frappe-item-service'
 import {
+  listFrappePurchaseReceipts,
+  syncFrappePurchaseReceipts,
+} from '../../features/frappe/application/frappe-purchase-receipt-service'
+import {
   readFrappeSettings,
   saveFrappeSettings,
   verifyFrappeSettings,
@@ -233,6 +237,11 @@ export async function routeRequest(
       return
     }
 
+    if (method === 'GET' && url.pathname === '/admin/frappe/purchase-receipts') {
+      writeJson(response, 200, await listFrappePurchaseReceipts(await requireAuthenticatedUser(request)))
+      return
+    }
+
     if (method === 'GET' && url.pathname === '/admin/database-manager') {
       writeJson(response, 200, await readDatabaseManager(await requireAuthenticatedUser(request)))
       return
@@ -288,6 +297,15 @@ export async function routeRequest(
         response,
         200,
         await syncFrappeItemsToProducts(await requireAuthenticatedUser(request), await readJsonBody(request)),
+      )
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/admin/frappe/purchase-receipts/sync') {
+      writeJson(
+        response,
+        200,
+        await syncFrappePurchaseReceipts(await requireAuthenticatedUser(request), await readJsonBody(request)),
       )
       return
     }

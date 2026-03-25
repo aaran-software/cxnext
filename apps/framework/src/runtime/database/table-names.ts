@@ -110,3 +110,8 @@ export const mailboxTableNames = {
   messages: 'mailbox_messages',
   recipients: 'mailbox_message_recipients',
 } as const
+
+export const frappeTableNames = {
+  purchaseReceipts: 'frappe_purchase_receipts',
+  purchaseReceiptItems: 'frappe_purchase_receipt_items',
+} as const

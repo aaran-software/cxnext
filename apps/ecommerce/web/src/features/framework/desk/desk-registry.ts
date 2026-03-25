@@ -96,6 +96,7 @@ const workspaceIconMap: Record<string, LucideIcon> = {
   mailbox: Mail,
   todos: ClipboardList,
   items: Package,
+  'purchase-receipts': Receipt,
   'storefront-designer': Store,
   'slider-themes': Zap,
   connection: Cog,

@@ -171,6 +171,90 @@ export const frappeItemProductSyncResponseSchema = z.object({
   }),
 })
 
+export const frappePurchaseReceiptItemSchema = z.object({
+  id: z.string().trim().min(1),
+  itemCode: z.string().trim().min(1),
+  itemName: z.string().trim().min(1),
+  description: z.string().trim(),
+  warehouse: z.string().trim(),
+  uom: z.string().trim(),
+  stockUom: z.string().trim(),
+  quantity: z.number(),
+  receivedQuantity: z.number(),
+  rejectedQuantity: z.number(),
+  rate: z.number(),
+  amount: z.number(),
+  productId: z.string().trim(),
+  productName: z.string().trim(),
+  productSlug: z.string().trim(),
+  isSyncedToProduct: z.boolean(),
+})
+
+export const frappePurchaseReceiptSchema = z.object({
+  id: z.string().trim().min(1),
+  receiptNumber: z.string().trim().min(1),
+  supplier: z.string().trim(),
+  supplierName: z.string().trim(),
+  company: z.string().trim(),
+  warehouse: z.string().trim(),
+  billNo: z.string().trim(),
+  currency: z.string().trim(),
+  postingDate: z.string().trim(),
+  postingTime: z.string().trim(),
+  status: z.string().trim(),
+  isReturn: z.boolean(),
+  grandTotal: z.number(),
+  roundedTotal: z.number(),
+  itemCount: z.number().int().nonnegative(),
+  linkedProductCount: z.number().int().nonnegative(),
+  modifiedAt: z.string().trim(),
+  syncedRecordId: z.string().trim(),
+  syncedAt: z.string().trim(),
+  isSyncedLocally: z.boolean(),
+  items: z.array(frappePurchaseReceiptItemSchema),
+})
+
+export const frappePurchaseReceiptReferencesSchema = z.object({
+  suppliers: z.array(frappeReferenceOptionSchema),
+  companies: z.array(frappeReferenceOptionSchema),
+  warehouses: z.array(frappeReferenceOptionSchema),
+  statuses: z.array(frappeReferenceOptionSchema),
+  defaults: z.object({
+    company: z.string().trim(),
+    warehouse: z.string().trim(),
+  }),
+})
+
+export const frappePurchaseReceiptManagerSchema = z.object({
+  items: z.array(frappePurchaseReceiptSchema),
+  references: frappePurchaseReceiptReferencesSchema,
+  syncedAt: z.string().trim().min(1),
+})
+
+export const frappePurchaseReceiptManagerResponseSchema = z.object({
+  manager: frappePurchaseReceiptManagerSchema,
+})
+
+export const frappePurchaseReceiptSyncPayloadSchema = z.object({
+  receiptIds: z.array(z.string().trim().min(1)).min(1),
+})
+
+export const frappePurchaseReceiptSyncResultSchema = z.object({
+  frappeReceiptId: z.string().trim().min(1),
+  receiptNumber: z.string().trim().min(1),
+  syncedRecordId: z.string().trim().min(1),
+  itemCount: z.number().int().nonnegative(),
+  linkedProductCount: z.number().int().nonnegative(),
+  mode: z.enum(['create', 'update']),
+})
+
+export const frappePurchaseReceiptSyncResponseSchema = z.object({
+  sync: z.object({
+    items: z.array(frappePurchaseReceiptSyncResultSchema),
+    syncedAt: z.string().trim().min(1),
+  }),
+})
+
 export type FrappeSettings = z.infer<typeof frappeSettingsSchema>
 export type FrappeSettingsResponse = z.infer<typeof frappeSettingsResponseSchema>
 export type FrappeSettingsUpdatePayload = z.infer<typeof frappeSettingsUpdatePayloadSchema>
@@ -193,3 +277,11 @@ export type FrappeItemResponse = z.infer<typeof frappeItemResponseSchema>
 export type FrappeItemProductSyncPayload = z.infer<typeof frappeItemProductSyncPayloadSchema>
 export type FrappeItemProductSyncResult = z.infer<typeof frappeItemProductSyncResultSchema>
 export type FrappeItemProductSyncResponse = z.infer<typeof frappeItemProductSyncResponseSchema>
+export type FrappePurchaseReceiptItem = z.infer<typeof frappePurchaseReceiptItemSchema>
+export type FrappePurchaseReceipt = z.infer<typeof frappePurchaseReceiptSchema>
+export type FrappePurchaseReceiptReferences = z.infer<typeof frappePurchaseReceiptReferencesSchema>
+export type FrappePurchaseReceiptManager = z.infer<typeof frappePurchaseReceiptManagerSchema>
+export type FrappePurchaseReceiptManagerResponse = z.infer<typeof frappePurchaseReceiptManagerResponseSchema>
+export type FrappePurchaseReceiptSyncPayload = z.infer<typeof frappePurchaseReceiptSyncPayloadSchema>
+export type FrappePurchaseReceiptSyncResult = z.infer<typeof frappePurchaseReceiptSyncResultSchema>
+export type FrappePurchaseReceiptSyncResponse = z.infer<typeof frappePurchaseReceiptSyncResponseSchema>

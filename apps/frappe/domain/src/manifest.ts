@@ -30,4 +30,10 @@ export const frappeWorkspaceItems: FrappeWorkspaceItem[] = [
     route: '/admin/dashboard/frappe/items',
     summary: 'Sync ERPNext Item masters, manage dependencies, and create or update inventory records.',
   },
+  {
+    id: 'purchase-receipts',
+    name: 'Purchase Receipts',
+    route: '/admin/dashboard/frappe/purchase-receipts',
+    summary: 'Review ERPNext Purchase Receipts, linked items, and sync them into local purchase snapshots.',
+  },
 ]
