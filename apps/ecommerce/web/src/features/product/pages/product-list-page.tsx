@@ -298,12 +298,16 @@ export function ProductListPage() {
               header: 'Product',
               sortable: true,
               accessor: (item) => item.name,
+              className: 'min-w-0 max-w-[24rem]',
+              headerClassName: 'max-w-[24rem]',
               cell: (item) => (
-                <div>
+                <div className="min-w-0 max-w-[24rem]">
                   <Link to={`/admin/dashboard/products/${item.id}`} className="font-medium text-foreground underline-offset-4 hover:underline">
                     {item.name}
                   </Link>
-                  <p className="text-sm text-muted-foreground">{item.shortDescription ?? item.slug}</p>
+                  <p className="line-clamp-2 break-words text-sm text-muted-foreground">
+                    {item.shortDescription ?? item.slug}
+                  </p>
                 </div>
               ),
             },
