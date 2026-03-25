@@ -6,7 +6,8 @@ import {
   useContext,
   useState,
 } from 'react'
-import { getCurrentUser, login, register } from '@/shared/api/client'
+import { getCurrentUser, login, recoveryLogin, register } from '@/shared/api/client'
+import { useSetup } from '@/features/setup/components/setup-provider'
 
 const STORAGE_KEY = 'cxnext-auth-session-v2'
 
@@ -20,6 +21,7 @@ interface AuthContextValue {
   session: AuthSession | null
   isAuthenticated: boolean
   login: (payload: AuthLoginPayload) => Promise<AuthSession>
+  recoveryLogin: (payload: AuthLoginPayload) => Promise<AuthSession>
   register: (payload: AuthRegisterPayload) => Promise<AuthSession>
   refreshUser: () => Promise<void>
   logout: () => void
@@ -65,12 +67,21 @@ function getStoredSession(): AuthSession | null {
 }
 
 export function AuthProvider({ children }: PropsWithChildren) {
+  const { status } = useSetup()
   const [session, setSession] = useState<AuthSession | null>(() => getStoredSession())
 
   function resetSession() {
     clearStoredSession()
     setSession(null)
   }
+
+  useEffect(() => {
+    if (status?.status !== 'ready' && session && session.user.id !== 'fallback-recovery-admin') {
+      clearStoredSession()
+      setSession(null)
+      return
+    }
+  }, [session, status])
 
   useEffect(() => {
     if (!session?.accessToken || !session.user || typeof session.user !== 'object') {
@@ -110,6 +121,19 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   async function handleLogin(payload: AuthLoginPayload) {
     const response = await login(payload)
+    const nextSession = {
+      accessToken: response.accessToken,
+      expiresInSeconds: response.expiresInSeconds,
+      user: response.user,
+    } satisfies AuthSession
+
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession))
+    setSession(nextSession)
+    return nextSession
+  }
+
+  async function handleRecoveryLogin(payload: AuthLoginPayload) {
+    const response = await recoveryLogin(payload)
     const nextSession = {
       accessToken: response.accessToken,
       expiresInSeconds: response.expiresInSeconds,
@@ -162,6 +186,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     session,
     isAuthenticated: Boolean(session),
     login: handleLogin,
+    recoveryLogin: handleRecoveryLogin,
     register: handleRegister,
     refreshUser,
     logout,

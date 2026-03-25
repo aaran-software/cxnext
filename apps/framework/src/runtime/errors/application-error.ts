@@ -1,7 +1,7 @@
 export class ApplicationError extends Error {
   constructor(
     message: string,
-    readonly context: Record<string, string | number | boolean> = {},
+    readonly context: Record<string, unknown> = {},
     readonly statusCode = 500,
   ) {
     super(message)

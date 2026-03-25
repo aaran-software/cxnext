@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ComponentType, type LazyExoticComponent } from 'react'
+import { lazy, Suspense, useMemo, type ComponentType, type LazyExoticComponent } from 'react'
 import { createBrowserRouter, Navigate, RouterProvider, useLocation } from 'react-router-dom'
 import { GlobalLoader } from '@/components/ui/global-loader'
 import { RequireAuth } from '@framework-core/web/auth/components/require-auth'
@@ -7,6 +7,7 @@ import { frontendTarget } from '@/config/frontend'
 import { buildAdminPortalPath, buildCustomerPortalPath, customerPortalRoot } from '@framework-core/web/auth/lib/portal-routing'
 import { useAuth } from '@framework-core/web/auth/components/auth-provider'
 import { NotFoundPage } from '@/features/marketing/pages/not-found-page'
+import { useSetup } from '@/features/setup/components/setup-provider'
 
 function lazyPage<TModule extends Record<string, ComponentType<object>>>(
   loader: () => Promise<TModule>,
@@ -197,7 +198,9 @@ const SliderThemeShowPage = lazyPage(
   'SliderThemeShowPage',
 )
 const LoginPage = lazyPage(() => import('@framework-core/web/auth/pages/login-page'), 'LoginPage')
+const RecoveryLoginPage = lazyPage(() => import('@framework-core/web/auth/pages/recovery-login-page'), 'RecoveryLoginPage')
 const ForgotPasswordPage = lazyPage(() => import('@framework-core/web/auth/pages/forgot-password-page'), 'ForgotPasswordPage')
+const InitialSetupPage = lazyPage(() => import('@/features/setup/pages/initial-setup-page'), 'InitialSetupPage')
 const PortfolioHomePage = lazyPage(
   () => import('@/features/marketing/pages/portfolio-home-page'),
   'PortfolioHomePage',
@@ -368,12 +371,17 @@ const authRoutes = {
   element: renderLazy(AuthLayout),
   children: [
     { path: 'login', element: renderLazy(LoginPage) },
+    { path: 'recovery', element: renderLazy(RecoveryLoginPage) },
     { path: 'forgot-password', element: renderLazy(ForgotPasswordPage) },
     { path: 'register', element: renderLazy(RegisterPage) },
   ],
 }
 
 const webRoutes = [
+  {
+    path: 'setup',
+    element: renderLazy(InitialSetupPage),
+  },
   {
     element: renderLazy(WebLayout),
     children: [
@@ -394,6 +402,10 @@ const webRoutes = [
 ]
 
 const shopRoutes = [
+  {
+    path: 'setup',
+    element: renderLazy(InitialSetupPage),
+  },
   {
     element: renderLazy(ShopLayout),
     children: [
@@ -432,6 +444,10 @@ const appRoutes = [
     path: '/',
     element: <Navigate to="/login" replace />,
   },
+  {
+    path: '/setup',
+    element: renderLazy(InitialSetupPage),
+  },
   customerPortalRoutes,
   adminRoutes,
   legacyAdminRoutes,
@@ -442,10 +458,48 @@ const appRoutes = [
   },
 ]
 
-const router = createBrowserRouter(
-  frontendTarget === 'app' ? appRoutes : frontendTarget === 'shop' ? shopRoutes : webRoutes,
-)
+const recoveryRoutes = [
+  {
+    path: '/',
+    element: <Navigate to="/setup" replace />,
+  },
+  {
+    path: '/setup',
+    element: renderLazy(InitialSetupPage),
+  },
+  {
+    element: renderLazy(AuthLayout),
+    children: [
+      { path: '/login', element: renderLazy(LoginPage) },
+      { path: '/recovery', element: renderLazy(RecoveryLoginPage) },
+    ],
+  },
+  {
+    element: <RequireAuth allow={['admin', 'staff', 'vendor']} />,
+    children: [
+      {
+        path: '/admin/dashboard',
+        element: <Navigate to="/admin/dashboard/migration-manager" replace />,
+      },
+      {
+        path: '/admin/dashboard/migration-manager',
+        element: renderLazy(DatabaseManagerPage),
+      },
+    ],
+  },
+  {
+    path: '*',
+    element: <Navigate to="/setup" replace />,
+  },
+]
 
 export function AppRouter() {
+  const { status } = useSetup()
+  const router = useMemo(() => createBrowserRouter(
+    status?.status === 'ready'
+      ? (frontendTarget === 'app' ? appRoutes : frontendTarget === 'shop' ? shopRoutes : webRoutes)
+      : recoveryRoutes,
+  ), [status?.status])
+
   return <RouterProvider router={router} />
 }

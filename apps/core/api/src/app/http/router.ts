@@ -53,11 +53,15 @@ import {
 } from '../../features/settings/application/system-settings-service'
 import {
   backupDatabase,
+  deleteDatabaseBackup,
   getHardResetConfirmationText,
   hardResetDatabase,
   migrateDatabaseToLatest,
   readDatabaseManager,
+  restoreDatabase,
+  readRestoreDatabaseJob,
   resolveBackupFilePath,
+  uploadDatabaseBackup,
   verifyDatabaseManager,
 } from '../../features/settings/application/database-maintenance-service'
 import { GetBootstrapSnapshot } from '../../features/bootstrap/application/get-bootstrap-snapshot'
@@ -109,6 +113,48 @@ function resolveMediaPublicBaseUrl(request: IncomingMessage) {
     : forwardedProto ?? 'http'
   const host = request.headers.host ?? `localhost:4000`
   return `${protocol}://${host}/media/public`
+}
+
+function isBlockedDuringSetupRecovery(pathname: string) {
+  if (pathname.startsWith('/admin/dashboard')) {
+    return false
+  }
+
+  if (
+    pathname === '/admin/database-manager'
+    || pathname === '/admin/database-manager/verify'
+    || pathname === '/admin/database-manager/migrate'
+    || pathname === '/admin/database-manager/backup'
+    || pathname === '/admin/database-manager/restore'
+    || pathname === '/admin/database-manager/hard-reset'
+    || pathname === '/admin/database-manager/hard-reset/confirmation'
+    || /^\/admin\/database-manager\/backups\/[^/]+$/.test(pathname)
+  ) {
+    return false
+  }
+
+  const blockedPrefixes = [
+    '/admin/settings',
+    '/admin/frappe',
+    '/admin/system',
+    '/admin/users',
+    '/admin/commerce',
+    '/admin/customers',
+    '/bootstrap',
+    '/companies',
+    '/contacts',
+    '/products',
+    '/mailbox',
+    '/storefront',
+    '/customer',
+    '/common',
+    '/media',
+    '/auth/register',
+    '/auth/account-recovery',
+    '/auth/password-reset',
+  ]
+
+  return blockedPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
 }
 
 async function requireAuthenticatedUser(request: IncomingMessage) {
@@ -189,6 +235,14 @@ export async function routeRequest(
     }
 
     if (method === 'GET' && url.pathname === '/admin/system/update-check') {
+      if (getSetupStatus().status !== 'ready') {
+        throw new ApplicationError(
+          'CXNext is running in setup recovery mode. Only setup and database migration tools are available.',
+          { setupStatus: getSetupStatus().status, detail: getSetupStatus().detail },
+          503,
+        )
+      }
+
       await requireAuthenticatedUser(request)
       writeJson(response, 200, await getSystemUpdateCheck())
       return
@@ -210,6 +264,29 @@ export async function routeRequest(
         }),
       )
       return
+    }
+
+    if (method === 'POST' && url.pathname === '/auth/login') {
+      writeJson(response, 200, await authService.login(await readJsonBody(request)))
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/auth/recovery-login') {
+      writeJson(response, 200, await authService.recoveryLogin(await readJsonBody(request)))
+      return
+    }
+
+    if (method === 'GET' && url.pathname === '/auth/me') {
+      writeJson(response, 200, await requireAuthenticatedUser(request))
+      return
+    }
+
+    if (getSetupStatus().status !== 'ready' && isBlockedDuringSetupRecovery(url.pathname)) {
+      throw new ApplicationError(
+        'CXNext is running in setup recovery mode. Only setup and database migration tools are available.',
+        { setupStatus: getSetupStatus().status, detail: getSetupStatus().detail },
+        503,
+      )
     }
 
     if (method === 'GET' && url.pathname === '/admin/settings/system') {
@@ -393,6 +470,30 @@ export async function routeRequest(
       return
     }
 
+    if (method === 'POST' && url.pathname === '/admin/database-manager/backups/upload') {
+      writeJson(response, 200, await uploadDatabaseBackup(await requireAuthenticatedUser(request), await readJsonBody(request)))
+      return
+    }
+
+    const databaseBackupMatch = url.pathname.match(/^\/admin\/database-manager\/backups\/([^/]+)$/)
+    if (method === 'DELETE' && databaseBackupMatch) {
+      const fileName = decodeURIComponent(databaseBackupMatch[1])
+      writeJson(response, 200, await deleteDatabaseBackup(await requireAuthenticatedUser(request), fileName))
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/admin/database-manager/restore') {
+      writeJson(response, 200, await restoreDatabase(await requireAuthenticatedUser(request), await readJsonBody(request)))
+      return
+    }
+
+    const databaseRestoreJobMatch = url.pathname.match(/^\/admin\/database-manager\/restore\/jobs\/([^/]+)$/)
+    if (method === 'GET' && databaseRestoreJobMatch) {
+      const jobId = decodeURIComponent(databaseRestoreJobMatch[1])
+      writeJson(response, 200, await readRestoreDatabaseJob(await requireAuthenticatedUser(request), jobId))
+      return
+    }
+
     if (method === 'POST' && url.pathname === '/admin/database-manager/hard-reset') {
       writeJson(
         response,
@@ -402,7 +503,6 @@ export async function routeRequest(
       return
     }
 
-    const databaseBackupMatch = url.pathname.match(/^\/admin\/database-manager\/backups\/([^/]+)$/)
     if (method === 'GET' && databaseBackupMatch) {
       await requireSuperAdminUser(request)
       const fileName = databaseBackupMatch[1]
@@ -898,16 +998,6 @@ export async function routeRequest(
       return
     }
 
-    if (method === 'POST' && url.pathname === '/auth/login') {
-      writeJson(response, 200, await authService.login(await readJsonBody(request)))
-      return
-    }
-
-    if (method === 'GET' && url.pathname === '/auth/me') {
-      writeJson(response, 200, await requireAuthenticatedUser(request))
-      return
-    }
-
     if (method === 'GET' && url.pathname === '/admin/users') {
       writeJson(response, 200, await userManagementService.list(await requireAuthenticatedUser(request)))
       return
@@ -997,7 +1087,7 @@ export async function routeRequest(
 
     const unknownError = error instanceof Error ? error.message : 'Unknown error'
     writeJson(response, 500, {
-      error: 'Unhandled server error.',
+      error: environment.app.debug ? unknownError : 'Unhandled server error.',
       context: environment.app.debug ? { detail: unknownError } : undefined,
     })
   }

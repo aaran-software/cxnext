@@ -64,10 +64,15 @@ import type {
   CommonModuleMetadataListResponse,
   CommonModuleRecordResponse,
   CommonModuleUpsertPayload,
+  DatabaseBackupDeleteResponse,
   DatabaseBackupResponse,
+  DatabaseBackupUploadPayload,
+  DatabaseBackupUploadResponse,
   DatabaseHardResetPayload,
   DatabaseManagerActionResponse,
   DatabaseManagerResponse,
+  DatabaseRestorePayload,
+  DatabaseRestoreResponse,
   DatabaseSetupPayload,
   FrappeConnectionVerificationResponse,
   FrappeItemManagerResponse,
@@ -150,12 +155,18 @@ export async function request<T>(path: string, init?: RequestInit) {
     | null
 
   if (!response.ok) {
+    const context = payload && typeof payload === 'object' && 'context' in payload ? payload.context : undefined
+    const detail =
+      context
+      && typeof context === 'object'
+      && 'detail' in context
+      && typeof (context as { detail?: unknown }).detail === 'string'
+        ? String((context as { detail?: unknown }).detail)
+        : undefined
     const message =
       payload && typeof payload === 'object' && 'error' in payload && payload.error
-        ? payload.error
+        ? (payload.error === 'Unhandled server error.' && detail ? detail : payload.error)
         : 'Request failed.'
-    const context =
-      payload && typeof payload === 'object' && 'context' in payload ? payload.context : undefined
     throw new HttpError(message, response.status, context)
   }
 
@@ -225,6 +236,13 @@ export async function saveDatabaseSetup(payload: DatabaseSetupPayload) {
 
 export function login(payload: AuthLoginPayload) {
   return request<AuthTokenResponse>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function recoveryLogin(payload: AuthLoginPayload) {
+  return request<AuthTokenResponse>('/auth/recovery-login', {
     method: 'POST',
     body: JSON.stringify(payload),
   })
@@ -560,11 +578,40 @@ export function backupDatabaseManager(token: string) {
   })
 }
 
+export function uploadDatabaseManagerBackup(token: string, payload: DatabaseBackupUploadPayload) {
+  return request<DatabaseBackupUploadResponse>('/admin/database-manager/backups/upload', {
+    method: 'POST',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
+  })
+}
+
+export function deleteDatabaseManagerBackup(token: string, fileName: string) {
+  return request<DatabaseBackupDeleteResponse>(`/admin/database-manager/backups/${encodeURIComponent(fileName)}`, {
+    method: 'DELETE',
+    headers: createAuthorizationHeaders(token),
+  })
+}
+
 export function hardResetDatabaseManager(token: string, payload: DatabaseHardResetPayload) {
   return request<DatabaseManagerActionResponse>('/admin/database-manager/hard-reset', {
     method: 'POST',
     headers: createAuthorizationHeaders(token),
     body: JSON.stringify(payload),
+  })
+}
+
+export function restoreDatabaseManager(token: string, payload: DatabaseRestorePayload) {
+  return request<DatabaseRestoreResponse>('/admin/database-manager/restore', {
+    method: 'POST',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
+  })
+}
+
+export function getRestoreDatabaseManagerJob(token: string, jobId: string) {
+  return request<DatabaseRestoreResponse>(`/admin/database-manager/restore/jobs/${encodeURIComponent(jobId)}`, {
+    headers: createAuthorizationHeaders(token),
   })
 }
 

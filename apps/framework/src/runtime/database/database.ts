@@ -94,6 +94,10 @@ export function isApplicationSetupReady() {
   return setupStatus.status === 'ready'
 }
 
+export function isSetupRecoveryMode() {
+  return !environment.app.skipSetupCheck && setupStatus.status !== 'ready'
+}
+
 export function isDatabaseEnabled() {
   return isApplicationSetupReady()
 }
@@ -123,6 +127,29 @@ export async function ensureDatabaseSchema() {
   }
 
   await runMigrations()
+}
+
+export async function ensureConfiguredDatabaseConnection(options?: { createDatabaseIfMissing?: boolean }) {
+  const configuration = environment.database.enabled ? environment.database : null
+
+  if (!configuration) {
+    throw new ApplicationError('Database settings are missing.', {}, 409)
+  }
+
+  try {
+    if (options?.createDatabaseIfMissing) {
+      await verifyOrCreateConfiguredDatabase()
+      return
+    }
+
+    await db.query('SELECT 1')
+  } catch (error) {
+    throw new ApplicationError(
+      error instanceof Error ? error.message : 'Unable to connect to the configured database.',
+      { database: configuration.name },
+      503,
+    )
+  }
 }
 
 export async function closeDatabasePool() {

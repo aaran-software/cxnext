@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import type { SystemVersion } from "@shared/index"
-import { Blocks, ChevronRight, Database, LayoutDashboard, RefreshCcw, Settings2, SlidersHorizontal, Users } from "lucide-react"
+import { Blocks, ChevronRight, LayoutDashboard, RefreshCcw, Settings2 } from "lucide-react"
 import { Link, NavLink, useLocation } from "react-router-dom"
 import {
   Collapsible,
@@ -272,46 +272,57 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <SidebarMenu>
                 {services.map((service) => {
                   const ServiceIcon = service.icon
+                  const isDatabaseService = service.id === 'database'
+                  const isAuthService = service.id === 'auth'
+                  const isConfigService = service.id === 'config'
+                  const canOpenDatabaseManager = isDatabaseService && Boolean(session?.user.isSuperAdmin)
+                  const canOpenUsers = isAuthService && canManageUsers
+                  const canOpenEnvironment = isConfigService && Boolean(session?.user.isSuperAdmin)
 
                   return (
                     <SidebarMenuItem key={service.id}>
-                      <SidebarMenuButton disabled tooltip={service.name} className="cursor-default opacity-80">
-                        <ServiceIcon />
-                        <span>{service.name}</span>
-                      </SidebarMenuButton>
+                      {canOpenDatabaseManager ? (
+                        <SidebarMenuButton
+                          asChild
+                          tooltip={service.name}
+                          isActive={location.pathname === buildAdminPortalPath('/migration-manager') || location.pathname.startsWith(`${buildAdminPortalPath('/migration-manager')}/`)}
+                        >
+                          <NavLink to={buildAdminPortalPath('/migration-manager')}>
+                            <ServiceIcon />
+                            <span>{service.name}</span>
+                          </NavLink>
+                        </SidebarMenuButton>
+                      ) : canOpenUsers ? (
+                        <SidebarMenuButton
+                          asChild
+                          tooltip={service.name}
+                          isActive={location.pathname === buildAdminPortalPath('/users') || location.pathname.startsWith(`${buildAdminPortalPath('/users')}/`)}
+                        >
+                          <NavLink to={buildAdminPortalPath('/users')}>
+                            <ServiceIcon />
+                            <span>{service.name}</span>
+                          </NavLink>
+                        </SidebarMenuButton>
+                      ) : canOpenEnvironment ? (
+                        <SidebarMenuButton
+                          asChild
+                          tooltip={service.name}
+                          isActive={location.pathname === buildAdminPortalPath('/environment') || location.pathname.startsWith(`${buildAdminPortalPath('/environment')}/`)}
+                        >
+                          <NavLink to={buildAdminPortalPath('/environment')}>
+                            <ServiceIcon />
+                            <span>{service.name}</span>
+                          </NavLink>
+                        </SidebarMenuButton>
+                      ) : (
+                        <SidebarMenuButton disabled tooltip={service.name} className="cursor-default opacity-80">
+                          <ServiceIcon />
+                          <span>{service.name}</span>
+                        </SidebarMenuButton>
+                      )}
                     </SidebarMenuItem>
                   )
                 })}
-                {canManageUsers ? (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="Users">
-                      <NavLink to={buildAdminPortalPath('/users')}>
-                        <Users />
-                        <span>Users</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ) : null}
-                {session?.user.isSuperAdmin ? (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="Migration Manager">
-                      <NavLink to={buildAdminPortalPath('/migration-manager')}>
-                        <Database />
-                        <span>Migration Manager</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ) : null}
-                {session?.user.isSuperAdmin ? (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="Environment">
-                      <NavLink to={buildAdminPortalPath('/environment')}>
-                        <SlidersHorizontal />
-                        <span>Environment</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ) : null}
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild tooltip="Settings">
                     <NavLink to={buildAdminPortalPath('/settings')}>

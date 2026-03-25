@@ -1,7 +1,6 @@
 import { AppRouter } from '@/app/router'
 import { GlobalLoader } from '@/components/ui/global-loader'
 import { AppToaster } from '@/components/ui/sonner'
-import { InitialSetupPage } from '@/features/setup/pages/initial-setup-page'
 import { useSetup } from '@/features/setup/components/setup-provider'
 
 export function App() {
@@ -13,10 +12,6 @@ export function App() {
         <GlobalLoader/>
       </main>
     )
-  }
-
-  if (status.status !== 'ready') {
-    return <InitialSetupPage />
   }
 
   return (

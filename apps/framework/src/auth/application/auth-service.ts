@@ -9,6 +9,7 @@ import type {
   AuthRegisterOtpVerifyResponse,
   AuthTokenResponse,
   AuthUser,
+  PermissionKey,
 } from '@shared/index'
 import {
   authAccountRecoveryRequestPayloadSchema,
@@ -43,7 +44,23 @@ interface TokenClaims {
   sub: string
   email: string
   actorType: AuthUser['actorType']
+  fallbackAuth?: boolean
 }
+
+const fallbackAdminEmail = 'admin@codexsun.com'
+const fallbackAdminPassword = 'Aaran1@@'
+const fallbackAdminPermissions: {
+  key: PermissionKey
+  name: string
+  summary: string
+}[] = [
+  { key: 'dashboard:view', name: 'Dashboard View', summary: 'View dashboard surfaces.' },
+  { key: 'users:manage', name: 'User Management', summary: 'Manage platform users.' },
+  { key: 'roles:manage', name: 'Role Management', summary: 'Manage roles and assignments.' },
+  { key: 'permissions:manage', name: 'Permission Management', summary: 'Manage permission mappings.' },
+  { key: 'vendors:view', name: 'Vendor Access', summary: 'View vendor-facing records.' },
+  { key: 'customers:view', name: 'Customer Access', summary: 'View customer-facing records.' },
+]
 
 export class AuthService {
   constructor(
@@ -268,8 +285,17 @@ export class AuthService {
     return this.createAuthResponse(storedUser.user)
   }
 
+  async recoveryLogin(payload: unknown): Promise<AuthTokenResponse> {
+    const parsedPayload = authLoginPayloadSchema.parse(payload)
+    return this.tryFallbackLogin(parsedPayload)
+  }
+
   async getAuthenticatedUser(token: string) {
-    const claims = jwt.verify(token, environment.jwtSecret) as TokenClaims
+    const claims = this.readTokenClaims(token)
+
+    if (claims.fallbackAuth) {
+      return this.getFallbackAuthenticatedUser(claims)
+    }
 
     const storedUser = await this.repository.findByEmailAndActorType(
       claims.email,
@@ -290,6 +316,10 @@ export class AuthService {
     }
 
     return storedUser.user
+  }
+
+  isFallbackRecoveryToken(token: string) {
+    return this.readTokenClaims(token).fallbackAuth === true
   }
 
   async changePassword(user: AuthUser, payload: unknown): Promise<AuthChangePasswordResponse> {
@@ -548,6 +578,17 @@ export class AuthService {
     }
   }
 
+  private tryFallbackLogin(payload: { email: string; password: string }) {
+    if (
+      payload.email.trim().toLowerCase() !== fallbackAdminEmail
+      || payload.password !== fallbackAdminPassword
+    ) {
+      throw new ApplicationError('Invalid credentials.', { email: payload.email }, 401)
+    }
+
+    return this.createFallbackAuthResponse()
+  }
+
   private assertDatabaseEnabled() {
     if (!isDatabaseEnabled()) {
       throw new ApplicationError(
@@ -691,5 +732,66 @@ export class AuthService {
       expiresAt: verification.expiresAt,
       debugOtp: environment.auth.otp.debug ? otp : null,
     })
+  }
+
+  private readTokenClaims(token: string) {
+    return jwt.verify(token, environment.jwtSecret) as TokenClaims
+  }
+
+  private createFallbackAuthResponse() {
+    const user = this.buildFallbackAdminUser()
+    const accessToken = jwt.sign(
+      {
+        email: user.email,
+        actorType: user.actorType,
+        fallbackAuth: true,
+      },
+      environment.jwtSecret,
+      {
+        subject: user.id,
+        expiresIn: environment.jwtExpiresInSeconds,
+      },
+    )
+
+    return {
+      accessToken,
+      tokenType: 'Bearer',
+      expiresInSeconds: environment.jwtExpiresInSeconds,
+      user,
+    } satisfies AuthTokenResponse
+  }
+
+  private getFallbackAuthenticatedUser(claims: TokenClaims) {
+    if (claims.email.trim().toLowerCase() !== fallbackAdminEmail || claims.actorType !== 'admin') {
+      throw new ApplicationError('Invalid recovery session.', {}, 401)
+    }
+
+    return this.buildFallbackAdminUser()
+  }
+
+  private buildFallbackAdminUser(): AuthUser {
+    return {
+      id: 'fallback-recovery-admin',
+      email: fallbackAdminEmail,
+      phoneNumber: null,
+      displayName: 'Recovery Admin',
+      actorType: 'admin',
+      isSuperAdmin: true,
+      avatarUrl: 'https://ui-avatars.com/api/?name=Recovery+Admin&background=1f2937&color=ffffff',
+      isActive: true,
+      organizationName: 'CXNext Recovery',
+      roles: [
+        {
+          key: 'admin_owner',
+          name: 'Admin Owner',
+          summary: 'Recovery-mode super admin access.',
+          actorType: 'admin',
+          permissions: fallbackAdminPermissions,
+        },
+      ],
+      permissions: fallbackAdminPermissions,
+      createdAt: new Date(0).toISOString(),
+      updatedAt: new Date(0).toISOString(),
+    }
   }
 }

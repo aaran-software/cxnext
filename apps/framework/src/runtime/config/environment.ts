@@ -30,6 +30,24 @@ const optionalPositiveInteger = z
     return parsed
   })
 
+const defaultHourInteger = (fallback: number) =>
+  z
+    .string()
+    .optional()
+    .transform((value) => {
+      const normalized = value?.trim()
+      if (!normalized) {
+        return fallback
+      }
+
+      const parsed = Number(normalized)
+      if (!Number.isInteger(parsed) || parsed < 0 || parsed > 23) {
+        throw new Error('Expected an hour between 0 and 23.')
+      }
+
+      return parsed
+    })
+
 const defaultFalseBooleanFlag = z
   .string()
   .optional()
@@ -143,6 +161,14 @@ const environmentSchema = z.object({
   GIT_BRANCH: defaultNonEmptyString('main'),
   INSTALL_DEPS_ON_START: defaultFalseBooleanFlag,
   BUILD_ON_START: defaultFalseBooleanFlag,
+  BACKUP_AUTO_ENABLED: defaultFalseBooleanFlag,
+  BACKUP_AUTO_HOUR: defaultHourInteger(1),
+  BACKUP_RETENTION_COUNT: defaultIntegerString(5),
+  BACKUP_EMAIL_TO: z.string().optional().transform((value) => value?.trim() ?? ''),
+  BACKUP_GOOGLE_DRIVE_CLIENT_ID: optionalNonEmptyString,
+  BACKUP_GOOGLE_DRIVE_CLIENT_SECRET: optionalNonEmptyString,
+  BACKUP_GOOGLE_DRIVE_REFRESH_TOKEN: optionalNonEmptyString,
+  BACKUP_GOOGLE_DRIVE_FOLDER_ID: optionalNonEmptyString,
 }).superRefine((value, context) => {
   if (value.DB_ENABLED && (!value.DB_HOST || !value.DB_PORT || !value.DB_USER || value.DB_PASSWORD === undefined || !value.DB_NAME)) {
     context.addIssue({
@@ -256,6 +282,14 @@ export const managedEnvironmentKeys = [
   'GIT_BRANCH',
   'INSTALL_DEPS_ON_START',
   'BUILD_ON_START',
+  'BACKUP_AUTO_ENABLED',
+  'BACKUP_AUTO_HOUR',
+  'BACKUP_RETENTION_COUNT',
+  'BACKUP_EMAIL_TO',
+  'BACKUP_GOOGLE_DRIVE_CLIENT_ID',
+  'BACKUP_GOOGLE_DRIVE_CLIENT_SECRET',
+  'BACKUP_GOOGLE_DRIVE_REFRESH_TOKEN',
+  'BACKUP_GOOGLE_DRIVE_FOLDER_ID',
 ] as const
 
 export type ManagedEnvironmentKey = typeof managedEnvironmentKeys[number]
@@ -450,6 +484,27 @@ function resolveEnvironment() {
       startup: {
         installDepsOnStart: parsedEnvironment.INSTALL_DEPS_ON_START,
         buildOnStart: parsedEnvironment.BUILD_ON_START,
+      },
+      backups: {
+        auto: {
+          enabled: parsedEnvironment.BACKUP_AUTO_ENABLED,
+          hour: parsedEnvironment.BACKUP_AUTO_HOUR,
+        },
+        retentionCount: parsedEnvironment.BACKUP_RETENTION_COUNT,
+        emailRecipients: parsedEnvironment.BACKUP_EMAIL_TO.split(',')
+          .map((entry) => entry.trim())
+          .filter(Boolean),
+        googleDrive: {
+          enabled: Boolean(
+            parsedEnvironment.BACKUP_GOOGLE_DRIVE_CLIENT_ID
+              && parsedEnvironment.BACKUP_GOOGLE_DRIVE_CLIENT_SECRET
+              && parsedEnvironment.BACKUP_GOOGLE_DRIVE_REFRESH_TOKEN,
+          ),
+          clientId: parsedEnvironment.BACKUP_GOOGLE_DRIVE_CLIENT_ID ?? '',
+          clientSecret: parsedEnvironment.BACKUP_GOOGLE_DRIVE_CLIENT_SECRET ?? '',
+          refreshToken: parsedEnvironment.BACKUP_GOOGLE_DRIVE_REFRESH_TOKEN ?? '',
+          folderId: parsedEnvironment.BACKUP_GOOGLE_DRIVE_FOLDER_ID ?? '',
+        },
       },
     },
   }

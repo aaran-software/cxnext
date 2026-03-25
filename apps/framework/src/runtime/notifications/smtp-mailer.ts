@@ -16,6 +16,11 @@ interface SendSmtpMailInput {
   subject: string
   text?: string | null
   html?: string | null
+  attachments?: Array<{
+    filename: string
+    content: Buffer | string
+    contentType?: string
+  }>
 }
 
 let transporter: ReturnType<typeof nodemailer.createTransport> | null = null
@@ -53,6 +58,11 @@ export async function sendSmtpMail(input: SendSmtpMailInput) {
     subject: input.subject,
     text: input.text ?? undefined,
     html: input.html ?? undefined,
+    attachments: input.attachments?.map((attachment) => ({
+      filename: attachment.filename,
+      content: attachment.content,
+      contentType: attachment.contentType,
+    })),
   })
 
   return {

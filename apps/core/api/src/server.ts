@@ -3,6 +3,7 @@ import { routeRequest } from './app/http/router'
 import { closeDatabasePool, initializeApplicationSetup } from '@framework-core/runtime/database/database'
 import { environment } from '@framework-core/runtime/config/environment'
 import { ensureMediaStorage } from '@framework-core/runtime/media/storage'
+import { startAutomatedDatabaseBackupScheduler } from './features/settings/application/database-maintenance-service'
 
 const server = createServer((request, response) => {
   void routeRequest(request, response)
@@ -92,6 +93,7 @@ process.once('unhandledRejection', (reason) => {
 async function startServer() {
   await ensureMediaStorage()
   await initializeApplicationSetup()
+  startAutomatedDatabaseBackupScheduler()
 
   await new Promise<void>((resolve) => {
     server.listen(environment.port, () => {

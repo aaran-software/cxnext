@@ -4,7 +4,7 @@
 
 ### Title
 
-`Add unified docs app and suite CLI`
+`Improve database restore and automated backups`
 
 ### Checklist
 
@@ -16,6 +16,8 @@
 - [x] Run `npm run typecheck`
 - [x] Run full build validation
 - [ ] Run `npm run lint`
+- [ ] Finish validation for the database restore and backup scheduler changes
+- [ ] Confirm the restore UI and error reporting changes are behaving as expected
 
 ### Validation Note
 

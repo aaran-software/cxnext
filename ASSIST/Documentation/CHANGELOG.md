@@ -13,3 +13,6 @@
 7. added the `@ecommerce-api/*` TypeScript path alias for clean backend app boundaries
 8. added `apps/docs` as the unified documentation root for the whole suite
 9. added `apps/cli` as the suite control CLI for server-side operations
+10. improved database restore with incremental and fresh modes plus chunked row processing
+11. added nightly automated backup scheduling with retention and external delivery hooks
+12. surfaced database error details in the restore and maintenance flow instead of a generic unhandled message

@@ -2,7 +2,7 @@ import type { PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/prom
 import mysql from 'mysql2/promise'
 import { environment } from '../config/environment'
 
-type SqlPrimitive = string | number | boolean | Date | null
+type SqlPrimitive = string | number | boolean | Date | Buffer | null
 type SqlRecord = Record<string, SqlPrimitive>
 
 export type TransactionClient = {
