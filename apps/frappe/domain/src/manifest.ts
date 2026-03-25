@@ -24,4 +24,10 @@ export const frappeWorkspaceItems: FrappeWorkspaceItem[] = [
     route: '/admin/dashboard/frappe/todos',
     summary: 'Create, update, and live-sync ERPNext ToDo records from the Frappe workspace.',
   },
+  {
+    id: 'items',
+    name: 'Item Manager',
+    route: '/admin/dashboard/frappe/items',
+    summary: 'Sync ERPNext Item masters, manage dependencies, and create or update inventory records.',
+  },
 ]

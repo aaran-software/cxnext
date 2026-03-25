@@ -70,6 +70,9 @@ import type {
   DatabaseManagerResponse,
   DatabaseSetupPayload,
   FrappeConnectionVerificationResponse,
+  FrappeItemManagerResponse,
+  FrappeItemResponse,
+  FrappeItemUpsertPayload,
   FrappeSettingsResponse,
   FrappeSettingsUpdatePayload,
   FrappeTodoListResponse,
@@ -410,6 +413,38 @@ export async function listFrappeTodos(token: string) {
     headers: createAuthorizationHeaders(token),
   })
   return response.todos
+}
+
+export async function listFrappeItems(token: string) {
+  const response = await request<FrappeItemManagerResponse>('/admin/frappe/items', {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.manager
+}
+
+export async function getFrappeItem(token: string, itemId: string) {
+  const response = await request<FrappeItemResponse>(`/admin/frappe/items/${encodeURIComponent(itemId)}`, {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.item
+}
+
+export async function createFrappeItem(token: string, payload: FrappeItemUpsertPayload) {
+  const response = await request<FrappeItemResponse>('/admin/frappe/items', {
+    method: 'POST',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
+  })
+  return response.item
+}
+
+export async function updateFrappeItem(token: string, itemId: string, payload: FrappeItemUpsertPayload) {
+  const response = await request<FrappeItemResponse>(`/admin/frappe/items/${encodeURIComponent(itemId)}`, {
+    method: 'PATCH',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
+  })
+  return response.item
 }
 
 export async function createFrappeTodo(token: string, payload: FrappeTodoUpsertPayload) {

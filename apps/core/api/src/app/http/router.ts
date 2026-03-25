@@ -27,15 +27,17 @@ import { CustomerHelpdeskService } from '@ecommerce-api/features/customer-helpde
 import { CustomerHelpdeskRepository } from '@ecommerce-api/features/customer-helpdesk/data/customer-helpdesk-repository'
 import { UserManagementService } from '../../features/users/application/user-management-service'
 import {
+  createFrappeItem,
+  getFrappeItem,
+  listFrappeItems,
+  updateFrappeItem,
+} from '../../features/frappe/application/frappe-item-service'
+import {
   readFrappeSettings,
   saveFrappeSettings,
   verifyFrappeSettings,
 } from '../../features/frappe/application/frappe-settings-service'
-import {
-  createFrappeTodo,
-  listFrappeTodos,
-  updateFrappeTodo,
-} from '../../features/frappe/application/frappe-todo-service'
+import { createFrappeTodo, listFrappeTodos, updateFrappeTodo } from '../../features/frappe/application/frappe-todo-service'
 import {
   readSystemEnvironment,
   readSystemSettings,
@@ -225,6 +227,11 @@ export async function routeRequest(
       return
     }
 
+    if (method === 'GET' && url.pathname === '/admin/frappe/items') {
+      writeJson(response, 200, await listFrappeItems(await requireAuthenticatedUser(request)))
+      return
+    }
+
     if (method === 'GET' && url.pathname === '/admin/database-manager') {
       writeJson(response, 200, await readDatabaseManager(await requireAuthenticatedUser(request)))
       return
@@ -262,6 +269,15 @@ export async function routeRequest(
         response,
         201,
         await createFrappeTodo(await requireAuthenticatedUser(request), await readJsonBody(request)),
+      )
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/admin/frappe/items') {
+      writeJson(
+        response,
+        201,
+        await createFrappeItem(await requireAuthenticatedUser(request), await readJsonBody(request)),
       )
       return
     }
@@ -305,6 +321,33 @@ export async function routeRequest(
         ),
       )
       return
+    }
+
+    const frappeItemRecordMatch = url.pathname.match(/^\/admin\/frappe\/items\/([^/]+)$/)
+    if (frappeItemRecordMatch) {
+      const itemId = decodeURIComponent(frappeItemRecordMatch[1])
+
+      if (method === 'GET') {
+        writeJson(
+          response,
+          200,
+          await getFrappeItem(await requireAuthenticatedUser(request), itemId),
+        )
+        return
+      }
+
+      if (method === 'PATCH') {
+        writeJson(
+          response,
+          200,
+          await updateFrappeItem(
+            await requireAuthenticatedUser(request),
+            itemId,
+            await readJsonBody(request),
+          ),
+        )
+        return
+      }
     }
 
     if (method === 'POST' && url.pathname === '/admin/database-manager/verify') {

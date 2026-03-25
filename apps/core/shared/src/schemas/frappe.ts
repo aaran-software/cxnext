@@ -81,6 +81,72 @@ export const frappeTodoResponseSchema = z.object({
   item: frappeTodoSchema,
 })
 
+export const frappeReferenceOptionSchema = z.object({
+  id: z.string().trim().min(1),
+  label: z.string().trim().min(1),
+  description: z.string().trim(),
+  disabled: z.boolean(),
+  isGroup: z.boolean(),
+})
+
+export const frappeItemSchema = z.object({
+  id: z.string().trim().min(1),
+  itemCode: z.string().trim().min(1),
+  itemName: z.string().trim().min(1),
+  description: z.string().trim(),
+  itemGroup: z.string().trim(),
+  stockUom: z.string().trim(),
+  brand: z.string().trim(),
+  gstHsnCode: z.string().trim(),
+  defaultCompany: z.string().trim(),
+  defaultWarehouse: z.string().trim(),
+  disabled: z.boolean(),
+  isStockItem: z.boolean(),
+  hasVariants: z.boolean(),
+  modifiedAt: z.string().trim(),
+})
+
+export const frappeItemReferencesSchema = z.object({
+  itemGroups: z.array(frappeReferenceOptionSchema),
+  stockUoms: z.array(frappeReferenceOptionSchema),
+  warehouses: z.array(frappeReferenceOptionSchema),
+  brands: z.array(frappeReferenceOptionSchema),
+  gstHsnCodes: z.array(frappeReferenceOptionSchema),
+  defaults: z.object({
+    company: z.string().trim(),
+    warehouse: z.string().trim(),
+    itemGroup: z.string().trim(),
+    priceList: z.string().trim(),
+  }),
+})
+
+export const frappeItemManagerSchema = z.object({
+  items: z.array(frappeItemSchema),
+  references: frappeItemReferencesSchema,
+  syncedAt: z.string().trim().min(1),
+})
+
+export const frappeItemManagerResponseSchema = z.object({
+  manager: frappeItemManagerSchema,
+})
+
+export const frappeItemUpsertPayloadSchema = z.object({
+  itemCode: z.string().trim().min(1),
+  itemName: z.string().trim().min(1),
+  description: z.string().trim(),
+  itemGroup: z.string().trim().min(1),
+  stockUom: z.string().trim().min(1),
+  brand: z.string().trim().min(1),
+  gstHsnCode: z.string().trim().min(1),
+  defaultWarehouse: z.string().trim(),
+  disabled: z.boolean(),
+  isStockItem: z.boolean(),
+})
+
+export const frappeItemResponseSchema = z.object({
+  item: frappeItemSchema,
+})
+
 export type FrappeSettings = z.infer<typeof frappeSettingsSchema>
 export type FrappeSettingsResponse = z.infer<typeof frappeSettingsResponseSchema>
 export type FrappeSettingsUpdatePayload = z.infer<typeof frappeSettingsUpdatePayloadSchema>
@@ -93,3 +159,10 @@ export type FrappeTodoList = z.infer<typeof frappeTodoListSchema>
 export type FrappeTodoListResponse = z.infer<typeof frappeTodoListResponseSchema>
 export type FrappeTodoUpsertPayload = z.infer<typeof frappeTodoUpsertPayloadSchema>
 export type FrappeTodoResponse = z.infer<typeof frappeTodoResponseSchema>
+export type FrappeReferenceOption = z.infer<typeof frappeReferenceOptionSchema>
+export type FrappeItem = z.infer<typeof frappeItemSchema>
+export type FrappeItemReferences = z.infer<typeof frappeItemReferencesSchema>
+export type FrappeItemManager = z.infer<typeof frappeItemManagerSchema>
+export type FrappeItemManagerResponse = z.infer<typeof frappeItemManagerResponseSchema>
+export type FrappeItemUpsertPayload = z.infer<typeof frappeItemUpsertPayloadSchema>
+export type FrappeItemResponse = z.infer<typeof frappeItemResponseSchema>
