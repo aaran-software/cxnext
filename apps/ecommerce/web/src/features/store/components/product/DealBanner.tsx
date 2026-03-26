@@ -93,7 +93,7 @@ export function DealBanner() {
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.34, delay: 0.08 }}
-                    className="mt-4 text-2xl font-bold tracking-tight text-foreground sm:text-3xl md:text-4xl"
+                    className="mt-4 line-clamp-1 text-2xl font-bold tracking-tight text-foreground sm:text-3xl md:text-4xl"
                   >
                     {activeSlide.name}
                   </motion.h2>
@@ -102,7 +102,7 @@ export function DealBanner() {
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.34, delay: 0.12 }}
-                    className="mt-3 max-w-2xl text-sm leading-relaxed text-foreground/70 sm:text-base"
+                    className="mt-3 line-clamp-2 max-w-2xl text-sm leading-relaxed text-foreground/70 sm:text-base"
                   >
                     {activeSlide.shortDescription ?? activeSlide.description ?? 'Promotional storefront feature.'}
                   </motion.p>
