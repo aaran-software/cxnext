@@ -19,7 +19,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "@framework-core/web/auth/components/auth-provider"
 import { buildCustomerPortalPath, getPortalHomeHref } from "@framework-core/web/auth/lib/portal-routing"
 import { BrandMark } from "@/shared/branding/brand-mark"
-import { StorefrontMobileMenu } from "@/features/store/components/navigation/storefront-mobile-menu"
+import { StorefrontMobileHeader } from "@/features/store/components/navigation/storefront-mobile-header"
 import { StorefrontSearchBar } from "@/features/store/components/navigation/storefront-search-bar"
 import { ThemeSwitcher } from "@/shared/theme/theme-switcher"
 import { Badge } from "@/components/ui/badge"
@@ -70,14 +70,15 @@ export function StorefrontHeader({ categories }: { categories: HeaderCategory[] 
   const dashboardHref = getPortalHomeHref(auth.session?.user)
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/70 bg-background/90 backdrop-blur-xl">
-      <div className="flex w-full items-center gap-3 px-4 py-3 sm:px-6">
-        <StorefrontMobileMenu links={[]} categories={categories.slice(0, 6)} wishlistCount={wishlistCount} cartCount={cartItemsCount} />
+    <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-xl lg:border-b lg:border-border/70">
+      <StorefrontMobileHeader categories={categories} />
+
+      <div className="hidden w-full items-center gap-3 px-4 py-3 sm:px-6 lg:flex">
         <Link to="/" className="shrink-0">
           <BrandMark compact />
         </Link>
 
-        <div className="hidden flex-1 lg:block">
+        <div className="flex-1">
           <StorefrontSearchBar />
         </div>
 
@@ -306,9 +307,6 @@ export function StorefrontHeader({ categories }: { categories: HeaderCategory[] 
             <ThemeSwitcher />
           </div>
         </div>
-      </div>
-      <div className="border-t border-border/60 px-4 py-3 lg:hidden">
-        <StorefrontSearchBar />
       </div>
     </header>
   )

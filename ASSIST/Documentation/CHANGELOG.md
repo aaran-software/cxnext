@@ -16,3 +16,7 @@
 10. improved database restore with incremental and fresh modes plus chunked row processing
 11. added nightly automated backup scheduling with retention and external delivery hooks
 12. surfaced database error details in the restore and maintenance flow instead of a generic unhandled message
+13. refined the storefront mobile header to remove duplicated top actions, move the drawer to the right side, and keep search in the sticky header
+14. documented a human-readable implementation style rule in `ASSIST/AI_RULES.md`
+15. removed the storefront floating contact action and bottom nav, moving contact access into the drawer menu instead
+16. adjusted the storefront hero slider image frame to use padded, top-aligned image fitting instead of aggressive center cropping

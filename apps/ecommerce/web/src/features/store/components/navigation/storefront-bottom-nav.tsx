@@ -12,11 +12,11 @@ export function StorefrontBottomNav() {
   const auth = useAuth()
   const { wishlistProductIds, cartCount } = useStorefront()
   const items = [
-    { label: "Home", url: "/", icon: HomeIcon },
-    { label: "Search", url: "/search", icon: SearchIcon },
-    { label: "Wishlist", url: "/wishlist", icon: HeartIcon },
-    { label: "Cart", url: "/cart", icon: ShoppingCartIcon },
-    { label: "Account", url: getPortalHomeHref(auth.session?.user), icon: UserCircle2Icon },
+    { label: "Home", url: "/", icon: HomeIcon, fillWhenHighlighted: false },
+    { label: "Search", url: "/search", icon: SearchIcon, fillWhenHighlighted: false },
+    { label: "Wishlist", url: "/wishlist", icon: HeartIcon, fillWhenHighlighted: true },
+    { label: "Cart", url: "/cart", icon: ShoppingCartIcon, fillWhenHighlighted: true },
+    { label: "Account", url: getPortalHomeHref(auth.session?.user), icon: UserCircle2Icon, fillWhenHighlighted: false },
   ]
 
   return (
@@ -41,6 +41,7 @@ export function StorefrontBottomNav() {
               location.pathname === "/admin/dashboard" ||
               location.pathname.startsWith("/account/") ||
               location.pathname === "/account")
+          const shouldHighlight = isActive || wishlistActive || cartActive || accountActive
 
           return (
             <Link
@@ -62,7 +63,7 @@ export function StorefrontBottomNav() {
               <Icon
                 className={cn(
                   "size-4 transition-all duration-300 ease-out",
-                  wishlistActive || cartActive || accountActive ? "fill-current text-current" : "",
+                  shouldHighlight && item.fillWhenHighlighted ? "fill-current text-current" : "",
                 )}
                 strokeWidth={isWishlistItem || isCartItem || isAccountItem ? 1.9 : undefined}
               />

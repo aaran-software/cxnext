@@ -52,6 +52,13 @@ This repository is organized under one `apps/` root:
 9. Update docs, task tracking, and changelog in the same batch as architecture changes.
 10. Make boundary changes in small, validation-backed increments.
 
+## Implementation Style
+
+1. Write code the way a strong human engineer would structure it: clear names, direct flow, and readable files.
+2. Split dense UI or state logic into smaller components or helpers instead of stacking unrelated behavior into one block.
+3. Add short comments or docs only when the logic is genuinely heavy or non-obvious.
+4. Avoid AI-looking repetition, vague helper names, or placeholder-style abstractions that hide intent.
+
 ## Prohibited Actions
 
 1. Do not let `apps/core` become a dumping ground for unclear ownership.

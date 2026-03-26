@@ -186,13 +186,15 @@ export function HeroSlider() {
                 animate={{ opacity: 1, x: 0, scale: 1 }}
                 exit={{ opacity: 0, x: direction > 0 ? -40 : 40, scale: 0.985 }}
                 transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                className="relative aspect-[4/3] w-full max-w-[320px] overflow-hidden rounded-[1.7rem] border border-white/60 bg-white/35 shadow-[0_24px_60px_-34px_rgba(38,27,19,0.28)] backdrop-blur-md lg:aspect-square lg:max-w-[420px]"
+                className="relative aspect-[4/3] w-full max-w-[320px] overflow-hidden rounded-[1.7rem] border border-white/60 bg-white/25 p-3 shadow-[0_24px_60px_-34px_rgba(38,27,19,0.28)] backdrop-blur-md sm:p-4 lg:aspect-square lg:max-w-[420px]"
               >
-                <img
-                  src={getPrimaryProductImage(activeProduct)}
-                  alt={activeProduct.name}
-                  className="h-full w-full object-cover"
-                />
+                <div className="flex h-full w-full items-start justify-center overflow-hidden rounded-[1.35rem] border border-white/45 bg-white/18">
+                  <img
+                    src={getPrimaryProductImage(activeProduct)}
+                    alt={activeProduct.name}
+                    className="h-full w-full object-contain object-top"
+                  />
+                </div>
               </motion.div>
             </AnimatePresence>
           </div>

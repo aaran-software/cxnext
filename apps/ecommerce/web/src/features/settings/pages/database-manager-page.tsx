@@ -230,13 +230,14 @@ export function DatabaseManagerPage() {
     ) {
       return
     }
+    const resolvedToken = token
     const restoreJobKey = activeJobId as string
 
     let cancelled = false
 
     async function pollRestoreJob() {
       try {
-        const result = await getRestoreDatabaseManagerJob(token, restoreJobKey)
+        const result = await getRestoreDatabaseManagerJob(resolvedToken, restoreJobKey)
         if (cancelled) {
           return
         }

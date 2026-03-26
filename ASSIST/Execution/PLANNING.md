@@ -4,27 +4,26 @@
 
 ### Goal
 
-Improve database restore behavior and automated backup handling:
+Refine the ecommerce storefront mobile navigation:
 
-1. chunk restore work into smaller pieces with fresh and incremental modes
-2. surface database errors instead of a generic unhandled message
-3. add nightly automated backups with retention and external delivery hooks
-4. update the restore page UI to expose the new mode controls
+1. remove duplicated mobile navigation actions from the sticky top header
+2. add a right-side hamburger drawer for secondary storefront shortcuts
+3. keep the mobile search bar at the top inside the sticky header
+4. keep account access readable in the bottom nav without the filled icon state
+5. remove floating overlay actions that compete with storefront content
+6. make hero slider imagery fit inside the frame without center-cropping the product
 
 ### Execution Checklist
 
-- [x] patch the backup/restore service
-- [x] wire scheduler startup into the API
-- [x] update the restore page controls
-- [x] update environment example and task tracking
-- [ ] run typecheck
-- [ ] run a focused build or validation pass
+- [x] patch `ASSIST/AI_RULES.md` with the requested coding style guidance
+- [x] add a dedicated storefront mobile header component
+- [x] update the storefront drawer and bottom nav behavior
+- [x] remove floating contact and bottom nav from the storefront shell
+- [x] update the hero slider image framing
+- [x] run typecheck
+- [x] run `npm run build:web`
 
 ### Validation Status
 
 1. `npm run typecheck` passed.
-2. `npm run build` passed.
-3. `npm run build:billing-api` passed.
-4. `npm run build:billing-web` passed.
-5. `npm run build:billing-desktop` passed.
-6. `npm run lint` not yet rerun in this batch.
+2. `npm run build:web` passed.
