@@ -11,7 +11,7 @@ export function StorefrontCategories({ className }: { className?: string }) {
   }
 
   return (
-    <div className={cn('w-full border-b border-border/40 bg-background/50 pb-4 pt-6 shadow-sm', className)}>
+    <div className={cn('w-full border-b border-border/40 bg-background/50 pb-2 pt-4 shadow-sm sm:pb-4 sm:pt-6', className)}>
       <div
         className="mx-auto w-full max-w-7xl overflow-x-auto pb-2"
         style={{

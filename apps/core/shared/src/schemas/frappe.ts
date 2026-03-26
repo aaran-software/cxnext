@@ -165,9 +165,50 @@ export const frappeItemProductSyncResultSchema = z.object({
   mode: z.enum(['create', 'update', 'skipped']),
 })
 
+export const frappeItemProductSyncLogItemSchema = z.object({
+  frappeItemId: z.string().trim().min(1),
+  frappeItemCode: z.string().trim().min(1),
+  productId: z.string().trim().nullable(),
+  productName: z.string().trim().nullable(),
+  productSlug: z.string().trim().nullable(),
+  mode: z.enum(['create', 'update', 'skipped', 'failed']),
+  reason: z.string().trim(),
+})
+
+export const frappeItemProductSyncLogSchema = z.object({
+  id: z.string().trim().min(1),
+  duplicateMode: z.enum(['overwrite', 'skip']),
+  requestedCount: z.number().int().nonnegative(),
+  successCount: z.number().int().nonnegative(),
+  skippedCount: z.number().int().nonnegative(),
+  failureCount: z.number().int().nonnegative(),
+  startedAt: z.string().trim().min(1),
+  finishedAt: z.string().trim().min(1),
+  syncedAt: z.string().trim().min(1),
+  createdByUserId: z.string().trim().nullable(),
+  summary: z.string().trim(),
+  items: z.array(frappeItemProductSyncLogItemSchema),
+})
+
+export const frappeItemProductSyncLogManagerSchema = z.object({
+  items: z.array(frappeItemProductSyncLogSchema),
+  syncedAt: z.string().trim().min(1),
+})
+
+export const frappeItemProductSyncLogManagerResponseSchema = z.object({
+  manager: frappeItemProductSyncLogManagerSchema,
+})
+
 export const frappeItemProductSyncResponseSchema = z.object({
   sync: z.object({
     items: z.array(frappeItemProductSyncResultSchema),
+    summary: z.object({
+      logId: z.string().trim().min(1),
+      requestedCount: z.number().int().nonnegative(),
+      successCount: z.number().int().nonnegative(),
+      skippedCount: z.number().int().nonnegative(),
+      failureCount: z.number().int().nonnegative(),
+    }),
     syncedAt: z.string().trim().min(1),
   }),
 })
@@ -281,6 +322,10 @@ export type FrappeItemUpsertPayload = z.infer<typeof frappeItemUpsertPayloadSche
 export type FrappeItemResponse = z.infer<typeof frappeItemResponseSchema>
 export type FrappeItemProductSyncPayload = z.infer<typeof frappeItemProductSyncPayloadSchema>
 export type FrappeItemProductSyncResult = z.infer<typeof frappeItemProductSyncResultSchema>
+export type FrappeItemProductSyncLogItem = z.infer<typeof frappeItemProductSyncLogItemSchema>
+export type FrappeItemProductSyncLog = z.infer<typeof frappeItemProductSyncLogSchema>
+export type FrappeItemProductSyncLogManager = z.infer<typeof frappeItemProductSyncLogManagerSchema>
+export type FrappeItemProductSyncLogManagerResponse = z.infer<typeof frappeItemProductSyncLogManagerResponseSchema>
 export type FrappeItemProductSyncResponse = z.infer<typeof frappeItemProductSyncResponseSchema>
 export type FrappePurchaseReceiptItem = z.infer<typeof frappePurchaseReceiptItemSchema>
 export type FrappePurchaseReceipt = z.infer<typeof frappePurchaseReceiptSchema>

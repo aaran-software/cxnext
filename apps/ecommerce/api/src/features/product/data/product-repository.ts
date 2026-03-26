@@ -48,9 +48,13 @@ interface ProductSummaryRow extends RowDataPacket {
   description: string | null
   short_description: string | null
   brand_id: string | null
+  brand_name: string | null
   category_id: string | null
+  category_name: string | null
   product_group_id: string | null
+  product_group_name: string | null
   product_type_id: string | null
+  product_type_name: string | null
   unit_id: string | null
   hsn_code_id: string | null
   style_id: string | null
@@ -176,9 +180,13 @@ function toProductSummary(row: ProductSummaryRow): ProductSummary {
     description: row.description,
     shortDescription: row.short_description,
     brandId: row.brand_id,
+    brandName: row.brand_name,
     categoryId: row.category_id,
+    categoryName: row.category_name,
     productGroupId: row.product_group_id,
+    productGroupName: row.product_group_name,
     productTypeId: row.product_type_id,
+    productTypeName: row.product_type_name,
     unitId: row.unit_id,
     hsnCodeId: row.hsn_code_id,
     styleId: row.style_id,
@@ -416,6 +424,10 @@ export class ProductRepository {
     const rows = await db.query<ProductSummaryRow>(`
       SELECT
         p.*,
+        brand.name AS brand_name,
+        category.name AS category_name,
+        product_group.name AS product_group_name,
+        product_type.name AS product_type_name,
         sf.department AS storefront_department,
         sf.home_slider_enabled,
         sf.promo_slider_enabled,
@@ -442,6 +454,10 @@ export class ProductRepository {
         ) AS tag_count
       FROM ${productTableNames.products} p
       LEFT JOIN ${productTableNames.storefront} sf ON sf.product_id = p.id AND sf.is_active = 1
+      LEFT JOIN ${commonTableNames.brands} brand ON brand.id = p.brand_id
+      LEFT JOIN ${commonTableNames.productCategories} category ON category.id = p.category_id
+      LEFT JOIN ${commonTableNames.productGroups} product_group ON product_group.id = p.product_group_id
+      LEFT JOIN ${commonTableNames.productTypes} product_type ON product_type.id = p.product_type_id
       ORDER BY p.created_at DESC
     `)
 
@@ -454,6 +470,10 @@ export class ProductRepository {
     const row = await db.first<ProductRow>(`
       SELECT
         p.*,
+        brand.name AS brand_name,
+        category.name AS category_name,
+        product_group.name AS product_group_name,
+        product_type.name AS product_type_name,
         sf.department AS storefront_department,
         sf.home_slider_enabled,
         sf.promo_slider_enabled,
@@ -480,6 +500,10 @@ export class ProductRepository {
         ) AS tag_count
       FROM ${productTableNames.products} p
       LEFT JOIN ${productTableNames.storefront} sf ON sf.product_id = p.id AND sf.is_active = 1
+      LEFT JOIN ${commonTableNames.brands} brand ON brand.id = p.brand_id
+      LEFT JOIN ${commonTableNames.productCategories} category ON category.id = p.category_id
+      LEFT JOIN ${commonTableNames.productGroups} product_group ON product_group.id = p.product_group_id
+      LEFT JOIN ${commonTableNames.productTypes} product_type ON product_type.id = p.product_type_id
       WHERE p.id = ?
       LIMIT 1
     `, [id])

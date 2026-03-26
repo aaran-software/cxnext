@@ -77,6 +77,7 @@ import type {
   FrappeConnectionVerificationResponse,
   FrappeItemManagerResponse,
   FrappeItemProductSyncPayload,
+  FrappeItemProductSyncLogManagerResponse,
   FrappeItemProductSyncResponse,
   FrappeItemResponse,
   FrappeItemUpsertPayload,
@@ -459,6 +460,13 @@ export async function listFrappeTodos(token: string) {
 
 export async function listFrappeItems(token: string) {
   const response = await request<FrappeItemManagerResponse>('/admin/frappe/items', {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.manager
+}
+
+export async function listFrappeItemProductSyncLogs(token: string) {
+  const response = await request<FrappeItemProductSyncLogManagerResponse>('/admin/frappe/items/sync-logs', {
     headers: createAuthorizationHeaders(token),
   })
   return response.manager

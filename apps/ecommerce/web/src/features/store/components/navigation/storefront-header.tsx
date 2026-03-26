@@ -19,7 +19,6 @@ import { Link, useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "@framework-core/web/auth/components/auth-provider"
 import { buildCustomerPortalPath, getPortalHomeHref } from "@framework-core/web/auth/lib/portal-routing"
 import { BrandMark } from "@/shared/branding/brand-mark"
-import { StorefrontMobileHeader } from "@/features/store/components/navigation/storefront-mobile-header"
 import { StorefrontSearchBar } from "@/features/store/components/navigation/storefront-search-bar"
 import { ThemeSwitcher } from "@/shared/theme/theme-switcher"
 import { Badge } from "@/components/ui/badge"
@@ -34,12 +33,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-type HeaderCategory = {
-  label: string
-  slug: string
-}
-
-export function StorefrontHeader({ categories }: { categories: HeaderCategory[] }) {
+export function StorefrontHeader() {
   const auth = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
@@ -71,7 +65,16 @@ export function StorefrontHeader({ categories }: { categories: HeaderCategory[] 
 
   return (
     <header className="sticky top-0 z-50 bg-background/90 backdrop-blur-xl lg:border-b lg:border-border/70">
-      <StorefrontMobileHeader categories={categories} />
+      <div className="border-b border-border/60 px-4 py-3 sm:px-6 lg:hidden">
+        <div className="flex items-center gap-3">
+          <Link to="/" aria-label="Go to storefront home" className="shrink-0">
+            <BrandMark compact />
+          </Link>
+          <div className="min-w-0 flex-1">
+            <StorefrontSearchBar className="w-full" />
+          </div>
+        </div>
+      </div>
 
       <div className="hidden w-full items-center gap-3 px-4 py-3 sm:px-6 lg:flex">
         <Link to="/" className="shrink-0">

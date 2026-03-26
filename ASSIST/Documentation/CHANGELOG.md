@@ -20,3 +20,29 @@
 14. documented a human-readable implementation style rule in `ASSIST/AI_RULES.md`
 15. removed the storefront floating contact action and bottom nav, moving contact access into the drawer menu instead
 16. adjusted the storefront hero slider image frame to use padded, top-aligned image fitting instead of aggressive center cropping
+17. restored the storefront mobile bottom navigation, then moved the hamburger drawer trigger into the bottom bar and removed the mobile top search strip
+18. restored the storefront mobile top search bar with branding above the fold
+19. expanded the storefront hero slider to full-bleed mobile width and tightened its mobile padding so the slide fills the screen gap
+20. brightened the storefront hero slider image treatment on mobile by reducing overlay density and pulling the image closer to the frame edge
+21. placed the storefront mobile logo and search bar in a single row above the fold
+22. tightened mobile storefront spacing so the category rail sits closer to the hero content
+23. trimmed the remaining mobile-only spacer above the hero slider without affecting tablet or desktop spacing
+24. hid the category title and description on mobile while keeping the badge and nudged the Explore CTA upward
+25. clamped the hero slider product title and description to tighter mobile line counts
+26. expanded the hero slider line clamps on tablet and desktop to three lines for title and five for description
+27. switched the hero slider image to cover the frame on mobile while preserving the desktop contain fit
+28. hid the hero slider secondary action on mobile, renamed the primary CTA to Buy now, and centered the arrow controls vertically
+29. pinned the hero slider mobile nav row to a fixed top line and tightened the mobile image size so the controls stay level with the badge
+30. matched the mobile hero image shell to the reference crop with a wider frame and lower image placement
+31. nudged the mobile hero image further downward to refine the slider crop
+32. aligned the mobile category Explore CTA with the badge and moved it to the right edge
+33. hid the storefront designer presentation tab on mobile while keeping it visible on larger screens
+34. increased the hero slider bottom padding on tablet and desktop to add more space below the content
+35. moved the hero slider nav slightly lower again on tablet and desktop
+36. clamped the deal banner title to one line and the description to two lines
+37. synced ERPNext item codes into product SKUs and regenerated product slugs from item names during item-to-product sync
+38. sorted the Frappe item sync list by ERPNext item id and added compact category, brand, product group, and type metadata to the product list
+39. added a persistent Frappe item-to-product sync log table, API, and review panel with success, skipped, and failure counts, then moved the log manager into a dedicated tab beside the product table
+40. added a sync progress bar to the Frappe item sync action area and moved the reference and total/selected summaries above the product table
+41. slimmed the Frappe item sync progress bar and made it appear only while selected items are syncing to ecommerce
+40. captured exact persistence error details in Frappe sync failure logs instead of only the generic wrapper message
