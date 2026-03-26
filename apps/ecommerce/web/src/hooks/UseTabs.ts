@@ -4,6 +4,8 @@ export interface Tab {
   label: string
   value: string
   subRoutes?: string[]
+  className?: string
+  contentClassName?: string
 }
 
 export function useTabs({

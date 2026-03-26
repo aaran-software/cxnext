@@ -14,9 +14,31 @@
 - [x] Move the mobile hamburger trigger to the right-side drawer
 - [x] Keep mobile search inside the sticky top header
 - [x] Update the mobile bottom account icon to stay outlined
-- [x] Remove the storefront floating contact button and bottom nav
+- [x] Restore the storefront mobile bottom menu mount in the shell
+- [x] Remove the mobile search and top hamburger from the storefront header
+- [x] Move the hamburger trigger into the bottom navigation
+- [x] Add safe-area spacing so the bottom navigation works with mobile gestures
+- [x] Restore the mobile search bar with storefront branding at the top
+- [x] Place the mobile logo and search bar in a single row
 - [x] Add contact access to the storefront drawer menu
 - [x] Adjust the hero slider image frame to avoid harsh mobile cropping
+- [x] Expand the hero slider to full-bleed mobile width and tighten its padding
+- [x] Make the hero slider image larger, brighter, and closer to the edge on mobile
+- [x] Reduce the mobile gap between the category rail and hero content
+- [x] Trim the remaining mobile-only spacer above the hero slider
+- [x] Hide the category title and description on mobile while keeping the badge
+- [x] Clamp hero slider product title to two mobile lines and description to three
+- [x] Expand hero slider clamps to three lines for title and five for description on tablet and desktop
+- [x] Make the hero slider image cover the frame on mobile only
+- [x] Hide the hero slider secondary action on mobile, rename the primary CTA to Buy now, and center the arrows vertically
+- [x] Pin the hero slider mobile nav row so it stays aligned with the badge and does not drift per slide
+- [x] Match the mobile hero image shell to the reference crop with a wider frame and lower image placement
+- [x] Nudge the mobile hero image down another two steps for the slider crop
+- [x] Move the category Explore CTA to the right and align it with the badge on mobile
+- [x] Hide the presentation tab on mobile in the storefront designer
+- [x] Increase tablet and desktop bottom padding under the hero slider
+- [x] Move the tablet and desktop hero slider nav a little lower again
+- [x] Clamp the deal banner title to one line and the description to two lines
 - [x] Run storefront validation commands
 
 ### Validation Note

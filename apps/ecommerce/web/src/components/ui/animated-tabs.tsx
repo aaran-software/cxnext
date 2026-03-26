@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils'
 
 export interface AnimatedContentTab extends Tab {
   content: React.ReactNode
+  className?: string
+  contentClassName?: string
 }
 
 interface AnimatedTabsProps {
@@ -34,7 +36,7 @@ function TabContent({ tab }: { tab: AnimatedContentTab }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
       transition={transition}
-      className="mt-3 rounded-xl border border-border/60 bg-card p-3 md:p-4"
+      className={cn("mt-3 rounded-xl border border-border/60 bg-card p-3 md:p-4", tab.contentClassName)}
     >
       <div className="space-y-4">{tab.content}</div>
     </motion.div>
@@ -86,7 +88,10 @@ function Tabs({
         return (
           <button
             key={item.value}
-            className="relative z-20 flex h-8 cursor-pointer select-none items-center rounded-md bg-transparent px-3 text-sm transition-colors"
+            className={cn(
+              "relative z-20 flex h-8 cursor-pointer select-none items-center rounded-md bg-transparent px-3 text-sm transition-colors",
+              item.className,
+            )}
             onPointerEnter={() => setHoveredTabIndex(i)}
             onFocus={() => setHoveredTabIndex(i)}
             onClick={() => {

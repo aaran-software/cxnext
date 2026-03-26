@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import type { LucideIcon } from "lucide-react"
 import { MenuIcon } from "lucide-react"
 import { Link } from "react-router-dom"
@@ -25,6 +26,7 @@ export function StorefrontMobileMenu({
   wishlistCount = 0,
   cartCount = 0,
   side = "left",
+  trigger,
 }: {
   title?: string
   description?: string
@@ -33,6 +35,7 @@ export function StorefrontMobileMenu({
   wishlistCount?: number
   cartCount?: number
   side?: "left" | "right"
+  trigger?: ReactNode
 }) {
   const quickLinks = [
     { title: "Wishlist", url: "/wishlist", count: wishlistCount },
@@ -42,9 +45,11 @@ export function StorefrontMobileMenu({
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="outline" size="icon" className="rounded-full border-border/70 bg-background lg:hidden" aria-label={title}>
-          <MenuIcon className="size-5" />
-        </Button>
+        {trigger ?? (
+          <Button variant="outline" size="icon" className="rounded-full border-border/70 bg-background lg:hidden" aria-label={title}>
+            <MenuIcon className="size-5" />
+          </Button>
+        )}
       </SheetTrigger>
       <SheetContent side={side} className="w-[320px]">
         <SheetHeader>

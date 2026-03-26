@@ -333,23 +333,23 @@ export function StoreHomePage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-10 px-4 py-8 sm:px-6 sm:py-10">
+    <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 pt-2 pb-6 sm:px-6 sm:py-10">
       <HeroSlider />
 
       <section className="space-y-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex items-center justify-between gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-2">
-            {homeCategory.badgeText ? <Badge variant="outline" className="w-fit">{homeCategory.badgeText}</Badge> : null}
-            <h2 className="text-3xl font-semibold tracking-tight">{homeCategory.title}</h2>
+            {homeCategory.badgeText ? <Badge variant="outline" className="h-8 w-fit items-center rounded-full px-3 text-[10px] uppercase tracking-[0.16em]">{homeCategory.badgeText}</Badge> : null}
+            <h2 className="hidden text-3xl font-semibold tracking-tight sm:block">{homeCategory.title}</h2>
             {homeCategory.description ? (
-              <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+              <p className="hidden max-w-3xl text-sm leading-6 text-muted-foreground sm:block">
                 {homeCategory.description}
                 {templateError ? " Fallback copy is currently active." : ""}
               </p>
             ) : null}
           </div>
           {homeCategory.primaryCtaLabel && homeCategory.primaryCtaHref ? (
-            <Button asChild variant="ghost" className="justify-start px-0 sm:justify-center">
+            <Button asChild variant="ghost" className="mt-0 h-8 justify-end px-0 text-sm whitespace-nowrap sm:h-auto sm:justify-center sm:px-0">
               <Link to={homeCategory.primaryCtaHref}>
                 {homeCategory.primaryCtaLabel}
                 <ArrowRightIcon className="size-4" />
@@ -360,14 +360,16 @@ export function StoreHomePage() {
         <CategoryGrid categories={categories} />
       </section>
 
-      <DealBanner />
+      <div className="hidden md:block">
+        <DealBanner />
+      </div>
 
       <section className="space-y-5">
         <div className="space-y-2">
           {homeFeatured.badgeText ? <Badge variant="outline" className="w-fit">{homeFeatured.badgeText}</Badge> : null}
-          <h2 className="text-3xl font-semibold tracking-tight">{homeFeatured.title}</h2>
+          <h2 className="hidden text-3xl font-semibold tracking-tight sm:block">{homeFeatured.title}</h2>
           {homeFeatured.description ? (
-            <p className="max-w-3xl text-sm leading-6 text-muted-foreground">{homeFeatured.description}</p>
+            <p className="hidden max-w-3xl text-sm leading-6 text-muted-foreground sm:block">{homeFeatured.description}</p>
           ) : null}
         </div>
         <ProductGrid products={featuredProducts} />
