@@ -1,12 +1,16 @@
 import {
   frappeItemManagerResponseSchema,
   frappeItemProductSyncPayloadSchema,
+  frappeItemProductSyncLogManagerResponseSchema,
+  frappeItemProductSyncLogSchema,
   frappeItemProductSyncResponseSchema,
   frappeItemResponseSchema,
   frappeItemSchema,
   frappeItemUpsertPayloadSchema,
   frappeReferenceOptionSchema,
   type AuthUser,
+  type FrappeItemProductSyncLog,
+  type FrappeItemProductSyncLogItem,
   type Product,
   type ProductUpsertPayload,
   type StorefrontDepartment,
@@ -16,7 +20,7 @@ import type { RowDataPacket } from 'mysql2'
 import { ApplicationError } from '@framework-core/runtime/errors/application-error'
 import { environment } from '@framework-core/runtime/config/environment'
 import { ensureDatabaseSchema } from '@framework-core/runtime/database/database'
-import { commonTableNames, productTableNames } from '@framework-core/runtime/database/table-names'
+import { commonTableNames, frappeTableNames, productTableNames } from '@framework-core/runtime/database/table-names'
 import { db } from '@framework-core/runtime/database/orm'
 import { ProductService } from '@ecommerce-api/features/product/application/product-service'
 import { ProductRepository } from '@ecommerce-api/features/product/data/product-repository'
@@ -34,6 +38,24 @@ interface ProductSyncRow extends RowDataPacket {
   name: string
   slug: string
   sku: string
+}
+
+interface ProductSyncLogRow extends RowDataPacket {
+  id: string
+  duplicate_mode: 'overwrite' | 'skip'
+  requested_count: number
+  success_count: number
+  skipped_count: number
+  failure_count: number
+  started_at: Date
+  finished_at: Date
+  synced_at: Date
+  created_by_user_id: string | null
+  summary: string
+  items_json: string
+  failure_json: string
+  created_at: Date
+  updated_at: Date
 }
 
 interface CommonNameRow extends RowDataPacket {
@@ -101,6 +123,23 @@ function extractRows(payload: Record<string, unknown> | null) {
   return Array.isArray(payload?.data)
     ? payload.data as Record<string, unknown>[]
     : []
+}
+
+function parseJsonArray<T>(value: unknown): T[] {
+  if (Array.isArray(value)) {
+    return value as T[]
+  }
+
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    return []
+  }
+
+  try {
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed) ? parsed as T[] : []
+  } catch {
+    return []
+  }
 }
 
 async function listFrappeDoctype(
@@ -192,6 +231,117 @@ async function listSyncedProductsBySku(itemCodes: string[]) {
   )
 
   return new Map(rows.map((row) => [row.sku.trim(), row] as const))
+}
+
+function toSyncLogSummary(
+  requestedCount: number,
+  successCount: number,
+  skippedCount: number,
+  failureCount: number,
+) {
+  return `Synced ${successCount} of ${requestedCount} item${requestedCount === 1 ? '' : 's'}${skippedCount > 0 ? `, skipped ${skippedCount}` : ''}${failureCount > 0 ? `, failed ${failureCount}` : ''}.`
+}
+
+function toSyncLogItemOutcomes(items: FrappeItemProductSyncLogItem[]) {
+  return JSON.stringify(items)
+}
+
+async function createFrappeItemProductSyncLog(entry: {
+  duplicateMode: 'overwrite' | 'skip'
+  requestedCount: number
+  successCount: number
+  skippedCount: number
+  failureCount: number
+  startedAt: Date
+  finishedAt: Date
+  syncedAt: Date
+  createdByUserId: string | null
+  items: FrappeItemProductSyncLogItem[]
+  failures: Array<Pick<FrappeItemProductSyncLogItem, 'frappeItemId' | 'frappeItemCode' | 'mode' | 'reason'>>
+}) {
+  await ensureDatabaseSchema()
+
+  const id = `frappe-item-sync-log:${randomUUID()}`
+  await db.execute(
+    `INSERT INTO ${frappeTableNames.itemProductSyncLogs} (
+      id,
+      duplicate_mode,
+      requested_count,
+      success_count,
+      skipped_count,
+      failure_count,
+      started_at,
+      finished_at,
+      synced_at,
+      created_by_user_id,
+      summary,
+      items_json,
+      failure_json
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      entry.duplicateMode,
+      entry.requestedCount,
+      entry.successCount,
+      entry.skippedCount,
+      entry.failureCount,
+      entry.startedAt,
+      entry.finishedAt,
+      entry.syncedAt,
+      entry.createdByUserId,
+      toSyncLogSummary(entry.requestedCount, entry.successCount, entry.skippedCount, entry.failureCount),
+      toSyncLogItemOutcomes(entry.items),
+      JSON.stringify(entry.failures),
+    ],
+  )
+
+  return id
+}
+
+function toSyncLogRow(row: ProductSyncLogRow): FrappeItemProductSyncLog {
+  return frappeItemProductSyncLogSchema.parse({
+    id: row.id,
+    duplicateMode: row.duplicate_mode,
+    requestedCount: Number(row.requested_count),
+    successCount: Number(row.success_count),
+    skippedCount: Number(row.skipped_count),
+    failureCount: Number(row.failure_count),
+    startedAt: row.started_at.toISOString(),
+    finishedAt: row.finished_at.toISOString(),
+    syncedAt: row.synced_at.toISOString(),
+    createdByUserId: row.created_by_user_id,
+    summary: row.summary,
+    items: parseJsonArray<FrappeItemProductSyncLogItem>(row.items_json),
+  })
+}
+
+async function readFrappeItemProductSyncLogs(limit = 20) {
+  await ensureDatabaseSchema()
+
+  const rows = await db.query<ProductSyncLogRow>(
+    `SELECT
+      id,
+      duplicate_mode,
+      requested_count,
+      success_count,
+      skipped_count,
+      failure_count,
+      started_at,
+      finished_at,
+      synced_at,
+      created_by_user_id,
+      summary,
+      items_json,
+      failure_json,
+      created_at,
+      updated_at
+    FROM ${frappeTableNames.itemProductSyncLogs}
+    ORDER BY synced_at DESC, created_at DESC
+    LIMIT ?`,
+    [limit],
+  )
+
+  return rows.map(toSyncLogRow)
 }
 
 async function findCommonRecordIdByCodeOrName(
@@ -829,6 +979,7 @@ export async function syncFrappeItemsToProducts(user: AuthUser, payload: unknown
   assertSuperAdmin(user)
 
   const parsedPayload = frappeItemProductSyncPayloadSchema.parse(payload)
+  const startedAt = new Date()
   const results: Array<{
     frappeItemId: string
     frappeItemCode: string
@@ -837,42 +988,123 @@ export async function syncFrappeItemsToProducts(user: AuthUser, payload: unknown
     productSlug: string
     mode: 'create' | 'update' | 'skipped'
   }> = []
+  const logItems: FrappeItemProductSyncLogItem[] = []
+  const failureEntries: Array<Pick<FrappeItemProductSyncLogItem, 'frappeItemId' | 'frappeItemCode' | 'mode' | 'reason'>> = []
+  let successCount = 0
+  let skippedCount = 0
+  let failureCount = 0
 
   for (const itemId of parsedPayload.itemIds) {
-    const record = await readFrappeItemRecordById(itemId)
-    const itemCode = toStringValue(record.item_code || record.name).trim()
-    const existingProduct = await productRepository.findBySku(itemCode)
-    const refs = await ensureProductReferenceIds(record)
-    const productPayload = buildProductPayloadFromFrappe(record, refs, existingProduct)
-    if (existingProduct && parsedPayload.duplicateMode === 'skip') {
-      results.push({
+    let itemCode = itemId
+    let itemName = itemId
+
+    try {
+      const record = await readFrappeItemRecordById(itemId)
+      itemCode = toStringValue(record.item_code || record.name).trim() || itemId
+      itemName = toStringValue(record.item_name || record.name).trim() || itemCode
+      const existingProduct = await productRepository.findBySku(itemCode)
+
+      if (existingProduct && parsedPayload.duplicateMode === 'skip') {
+        skippedCount += 1
+        const skippedResult = {
+          frappeItemId: itemId,
+          frappeItemCode: itemCode,
+          productId: existingProduct.id,
+          productName: existingProduct.name,
+          productSlug: existingProduct.slug,
+          mode: 'skipped' as const,
+        }
+
+        results.push(skippedResult)
+        logItems.push({
+          ...skippedResult,
+          reason: 'Duplicate product exists and overwrite was skipped.',
+        })
+        continue
+      }
+
+      const refs = await ensureProductReferenceIds(record)
+      const productPayload = buildProductPayloadFromFrappe(record, refs, existingProduct)
+      const response = existingProduct
+        ? await productService.update(existingProduct.id, productPayload)
+        : await productService.create(productPayload)
+
+      successCount += 1
+      const syncedResult = {
         frappeItemId: itemId,
         frappeItemCode: itemCode,
-        productId: existingProduct.id,
-        productName: existingProduct.name,
-        productSlug: existingProduct.slug,
-        mode: 'skipped',
+        productId: response.item.id,
+        productName: response.item.name,
+        productSlug: response.item.slug,
+        mode: existingProduct ? 'update' as const : 'create' as const,
+      }
+
+      results.push(syncedResult)
+      logItems.push({
+        ...syncedResult,
+        reason: '',
       })
-      continue
+    } catch (error) {
+      failureCount += 1
+      const reason = error instanceof Error ? error.message : 'Failed to sync item.'
+      const failedEntry = {
+        frappeItemId: itemId,
+        frappeItemCode: itemCode,
+        mode: 'failed' as const,
+        reason,
+      }
+
+      failureEntries.push(failedEntry)
+      logItems.push({
+        frappeItemId: itemId,
+        frappeItemCode: itemCode,
+        productId: null,
+        productName: itemName,
+        productSlug: null,
+        mode: 'failed',
+        reason,
+      })
     }
-
-    const response = existingProduct
-      ? await productService.update(existingProduct.id, productPayload)
-      : await productService.create(productPayload)
-
-    results.push({
-      frappeItemId: itemId,
-      frappeItemCode: itemCode,
-      productId: response.item.id,
-      productName: response.item.name,
-      productSlug: response.item.slug,
-      mode: existingProduct ? 'update' : 'create',
-    })
   }
+
+  const finishedAt = new Date()
+  const logId = await createFrappeItemProductSyncLog({
+    duplicateMode: parsedPayload.duplicateMode,
+    requestedCount: parsedPayload.itemIds.length,
+    successCount,
+    skippedCount,
+    failureCount,
+    startedAt,
+    finishedAt,
+    syncedAt: finishedAt,
+    createdByUserId: user.id,
+    items: logItems,
+    failures: failureEntries,
+  })
 
   return frappeItemProductSyncResponseSchema.parse({
     sync: {
       items: results,
+      summary: {
+        logId,
+        requestedCount: parsedPayload.itemIds.length,
+        successCount,
+        skippedCount,
+        failureCount,
+      },
+      syncedAt: finishedAt.toISOString(),
+    },
+  })
+}
+
+export async function listFrappeItemProductSyncLogs(user: AuthUser) {
+  assertSuperAdmin(user)
+
+  const logs = await readFrappeItemProductSyncLogs(20)
+
+  return frappeItemProductSyncLogManagerResponseSchema.parse({
+    manager: {
+      items: logs,
       syncedAt: new Date().toISOString(),
     },
   })

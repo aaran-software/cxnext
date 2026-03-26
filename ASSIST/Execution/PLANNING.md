@@ -45,6 +45,7 @@ Refine the ecommerce storefront mobile navigation:
 - [x] sync ERPNext item codes into product SKUs and regenerate slugs from item names
 - [x] sort the Frappe item sync list by ERPNext item id
 - [x] show category, brand, product group, and type on two compact lines in the product list
+- [x] add a persistent sync log manager for Frappe item-to-product sessions
 - [x] run typecheck
 - [x] run `npm run build:web`
 

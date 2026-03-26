@@ -42,6 +42,7 @@
 - [x] Sync ERPNext item codes into product SKUs and regenerate product slugs from item names
 - [x] Sort Frappe item sync listings by ERPNext item id
 - [x] Show category, brand, product group, and type in a compact two-line product list layout
+- [x] Add a persistent Frappe item-to-product sync log manager with failure review details
 - [x] Run storefront validation commands
 
 ### Validation Note

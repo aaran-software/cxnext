@@ -30,6 +30,7 @@ import {
   createFrappeItem,
   getFrappeItem,
   listFrappeItems,
+  listFrappeItemProductSyncLogs,
   syncFrappeItemsToProducts,
   updateFrappeItem,
 } from '../../features/frappe/application/frappe-item-service'
@@ -321,6 +322,11 @@ export async function routeRequest(
 
     if (method === 'GET' && url.pathname === '/admin/frappe/items') {
       writeJson(response, 200, await listFrappeItems(await requireAuthenticatedUser(request)))
+      return
+    }
+
+    if (method === 'GET' && url.pathname === '/admin/frappe/items/sync-logs') {
+      writeJson(response, 200, await listFrappeItemProductSyncLogs(await requireAuthenticatedUser(request)))
       return
     }
 

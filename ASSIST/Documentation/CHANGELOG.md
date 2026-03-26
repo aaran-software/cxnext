@@ -42,3 +42,4 @@
 36. clamped the deal banner title to one line and the description to two lines
 37. synced ERPNext item codes into product SKUs and regenerated product slugs from item names during item-to-product sync
 38. sorted the Frappe item sync list by ERPNext item id and added compact category, brand, product group, and type metadata to the product list
+39. added a persistent Frappe item-to-product sync log table, API, and review panel with success, skipped, and failure counts

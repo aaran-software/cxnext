@@ -1,6 +1,7 @@
 import type {
   FrappeItem,
   FrappeItemManager,
+  FrappeItemProductSyncLog,
   FrappeItemUpsertPayload,
   FrappeReferenceOption,
 } from '@shared/index'
@@ -45,6 +46,7 @@ import {
   getFrappeItem,
   HttpError,
   listFrappeItems,
+  listFrappeItemProductSyncLogs,
   syncFrappeItemsToProducts,
   updateFrappeItem,
 } from '@/shared/api/client'
@@ -178,6 +180,7 @@ export function FrappeItemPage() {
   const isSuperAdmin = Boolean(session?.user.isSuperAdmin)
   const [items, setItems] = useState<FrappeItem[]>([])
   const [references, setReferences] = useState<FrappeItemManager['references'] | null>(null)
+  const [syncLogs, setSyncLogs] = useState<FrappeItemProductSyncLog[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [syncing, setSyncing] = useState(false)
@@ -213,10 +216,21 @@ export function FrappeItemPage() {
     }
 
     try {
-      const response = await listFrappeItems(token)
-      setItems(response.items.map(normalizeItem))
-      setReferences(response.references)
-      setLastSyncedAt(response.syncedAt)
+      const [responseResult, syncLogResult] = await Promise.allSettled([
+        listFrappeItems(token),
+        listFrappeItemProductSyncLogs(token),
+      ])
+      if (responseResult.status === 'rejected') {
+        throw responseResult.reason
+      }
+
+      setItems(responseResult.value.items.map(normalizeItem))
+      setReferences(responseResult.value.references)
+      setLastSyncedAt(responseResult.value.syncedAt)
+
+      if (syncLogResult.status === 'fulfilled') {
+        setSyncLogs(syncLogResult.value.items)
+      }
       setErrorMessage(null)
       return true
     } catch (error) {
@@ -539,13 +553,15 @@ export function FrappeItemPage() {
       })
       const createCount = sync.items.filter((item) => item.mode === 'create').length
       const updateCount = sync.items.filter((item) => item.mode === 'update').length
-      const skippedCount = sync.items.filter((item) => item.mode === 'skipped').length
-      const syncedCount = createCount + updateCount
+      const skippedCount = sync.summary.skippedCount
+      const failedCount = sync.summary.failureCount
 
       showSuccessToast({
         title: 'Products synced from Frappe',
-        description: skippedCount > 0
-          ? `${syncedCount} products synced, ${skippedCount} duplicates skipped.`
+        description: failedCount > 0
+          ? `${createCount} created, ${updateCount} updated, ${skippedCount} skipped, ${failedCount} failed.`
+          : skippedCount > 0
+            ? `${createCount} created, ${updateCount} updated, ${skippedCount} duplicates skipped.`
           : sync.items.length === 1
             ? `${sync.items[0].productName} is now synced to ecommerce and visible in the storefront.`
             : `${sync.items.length} products were synced to ecommerce and are storefront-visible.`,
@@ -702,6 +718,72 @@ export function FrappeItemPage() {
           </CardContent>
         </Card>
       ) : null}
+
+      <Card className="rounded-md">
+        <CardHeader className="pb-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle className="text-base">Sync log manager</CardTitle>
+              <CardDescription>
+                Review recent Frappe item to product sync sessions, success counts, skipped items, and failure reasons.
+              </CardDescription>
+            </div>
+            <Badge variant="outline">{syncLogs.length} sessions</Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {syncLogs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No sync sessions recorded yet.</p>
+          ) : syncLogs.slice(0, 5).map((log) => {
+            const failedItems = log.items.filter((item) => item.mode === 'failed')
+
+            return (
+              <div key={log.id} className="rounded-xl border border-border/70 bg-muted/20 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-foreground">{formatDateTime(log.syncedAt)}</p>
+                    <p className="text-xs text-muted-foreground">{log.summary}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline">{log.duplicateMode}</Badge>
+                    <Badge variant="secondary">Success {log.successCount}</Badge>
+                    <Badge variant="secondary">Skipped {log.skippedCount}</Badge>
+                    <Badge
+                      variant="outline"
+                      className={log.failureCount > 0 ? 'border-destructive/40 bg-destructive/10 text-destructive' : undefined}
+                    >
+                      Failed {log.failureCount}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="mt-3 grid gap-2 text-xs text-muted-foreground md:grid-cols-4">
+                  <span>Total requested: <span className="font-medium text-foreground">{log.requestedCount}</span></span>
+                  <span>Started: <span className="font-medium text-foreground">{formatDateTime(log.startedAt)}</span></span>
+                  <span>Finished: <span className="font-medium text-foreground">{formatDateTime(log.finishedAt)}</span></span>
+                  <span>By: <span className="font-medium text-foreground">{log.createdByUserId || 'System'}</span></span>
+                </div>
+
+                {failedItems.length > 0 ? (
+                  <details className="mt-3 rounded-lg border border-border/60 bg-background/80 p-3">
+                    <summary className="cursor-pointer text-sm font-medium text-foreground">
+                      Failed items ({failedItems.length})
+                    </summary>
+                    <div className="mt-3 space-y-2">
+                      {failedItems.map((item) => (
+                        <div key={`${log.id}-${item.frappeItemId}`} className="rounded-md bg-muted/40 p-3 text-sm">
+                          <p className="font-medium text-foreground">{item.frappeItemCode}</p>
+                          <p className="text-muted-foreground">{item.reason}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                ) : null}
+              </div>
+            )
+          })}
+        </CardContent>
+      </Card>
 
       <Card className="rounded-md">
         <CardHeader className="pb-3">

@@ -114,4 +114,5 @@ export const mailboxTableNames = {
 export const frappeTableNames = {
   purchaseReceipts: 'frappe_purchase_receipts',
   purchaseReceiptItems: 'frappe_purchase_receipt_items',
+  itemProductSyncLogs: 'frappe_item_product_sync_logs',
 } as const
