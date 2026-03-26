@@ -39,6 +39,9 @@
 - [x] Increase tablet and desktop bottom padding under the hero slider
 - [x] Move the tablet and desktop hero slider nav a little lower again
 - [x] Clamp the deal banner title to one line and the description to two lines
+- [x] Sync ERPNext item codes into product SKUs and regenerate product slugs from item names
+- [x] Sort Frappe item sync listings by ERPNext item id
+- [x] Show category, brand, product group, and type in a compact two-line product list layout
 - [x] Run storefront validation commands
 
 ### Validation Note

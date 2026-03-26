@@ -50,6 +50,17 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, '')
 }
 
+function buildFrappeItemSku(record: Record<string, unknown>) {
+  return toStringValue(record.item_code || record.name).trim() || 'FRAPPE-ITEM'
+}
+
+function buildFrappeItemSlug(record: Record<string, unknown>) {
+  const itemName = toStringValue(record.item_name || record.name).trim()
+  const itemCode = buildFrappeItemSku(record)
+
+  return slugify(itemName) || slugify(itemCode) || 'frappe-item'
+}
+
 function normalizeMatchValue(value: string) {
   return value.trim().toLowerCase()
 }
@@ -554,7 +565,7 @@ function buildProductPayloadFromFrappe(
   } satisfies ProductUpsertPayload
 
   const itemName = toStringValue(record.item_name || record.name).trim() || 'Frappe Item'
-  const itemCode = toStringValue(record.item_code || record.name).trim() || slugify(itemName).toUpperCase() || 'FRAPPE-ITEM'
+  const itemCode = buildFrappeItemSku(record)
   const description = stripHtml(toStringValue(record.description)) || itemName
   const basePrice = Number(record.standard_rate ?? basePayload.basePrice ?? 0) || 0
   const costPrice = Number(record.valuation_rate ?? basePayload.costPrice ?? 0) || 0
@@ -565,7 +576,7 @@ function buildProductPayloadFromFrappe(
   return {
     ...basePayload,
     name: itemName,
-    slug: basePayload.slug || slugify(itemName),
+    slug: buildFrappeItemSlug(record),
     description,
     shortDescription: truncateText(description, 160) || itemName,
     brandId: refs.brandId,
@@ -747,7 +758,7 @@ export async function listFrappeItems(user: AuthUser) {
       ['name', 'item_code', 'item_name', 'description', 'item_group', 'stock_uom', 'brand', 'gst_hsn_code', 'disabled', 'is_stock_item', 'has_variants', 'modified'],
       {
         limitPageLength: 1000,
-        orderBy: 'modified desc',
+        orderBy: 'name asc',
       },
     ),
     readFrappeItemReferences(),

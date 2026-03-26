@@ -40,3 +40,5 @@
 34. increased the hero slider bottom padding on tablet and desktop to add more space below the content
 35. moved the hero slider nav slightly lower again on tablet and desktop
 36. clamped the deal banner title to one line and the description to two lines
+37. synced ERPNext item codes into product SKUs and regenerated product slugs from item names during item-to-product sync
+38. sorted the Frappe item sync list by ERPNext item id and added compact category, brand, product group, and type metadata to the product list

@@ -31,6 +31,10 @@ function toErrorMessage(error: unknown) {
   return 'Failed to load products.'
 }
 
+function resolveSummaryLabel(label: string | null | undefined, fallbackId: string | null | undefined) {
+  return label?.trim() || fallbackId?.trim() || '-'
+}
+
 type PublishingFilterKey =
   | 'homeSliderEnabled'
   | 'promoSliderEnabled'
@@ -355,8 +359,11 @@ export function ProductListPage() {
                   <Link to={`/admin/dashboard/products/${item.id}`} className="font-medium text-foreground underline-offset-4 hover:underline">
                     {item.name}
                   </Link>
-                  <p className="line-clamp-2 break-words text-sm text-muted-foreground">
-                    {item.shortDescription ?? item.slug}
+                  <p className="mt-1 line-clamp-1 break-words text-xs text-muted-foreground">
+                    Category: {resolveSummaryLabel(item.categoryName, item.categoryId)} · Brand: {resolveSummaryLabel(item.brandName, item.brandId)}
+                  </p>
+                  <p className="line-clamp-1 break-words text-xs text-muted-foreground">
+                    Group: {resolveSummaryLabel(item.productGroupName, item.productGroupId)} · Type: {resolveSummaryLabel(item.productTypeName, item.productTypeId)}
                   </p>
                 </div>
               ),

@@ -42,6 +42,9 @@ Refine the ecommerce storefront mobile navigation:
 - [x] increase tablet and desktop bottom padding under the hero slider
 - [x] move the tablet and desktop hero slider nav a little lower again
 - [x] clamp the deal banner title to one line and the description to two lines
+- [x] sync ERPNext item codes into product SKUs and regenerate slugs from item names
+- [x] sort the Frappe item sync list by ERPNext item id
+- [x] show category, brand, product group, and type on two compact lines in the product list
 - [x] run typecheck
 - [x] run `npm run build:web`
 
