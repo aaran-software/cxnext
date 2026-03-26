@@ -186,14 +186,13 @@ const environmentTabs: EnvironmentTab[] = [
     sections: [
       {
         title: 'Razorpay',
-        description: 'Payment gateway keys, brand settings, and test bypass behavior.',
+        description: 'Payment gateway keys and brand settings for live storefront checkout.',
         fields: [
           { key: 'RAZORPAY_KEY_ID', label: 'Razorpay Key ID', type: 'text', description: 'Public Razorpay key ID.' },
           { key: 'RAZORPAY_KEY_SECRET', label: 'Razorpay Key Secret', type: 'password', description: 'Private Razorpay secret.' },
           { key: 'RAZORPAY_BUSINESS_NAME', label: 'Business Name', type: 'text', description: 'Brand name shown in Razorpay checkout.' },
           { key: 'RAZORPAY_CHECKOUT_IMAGE', label: 'Checkout Image', type: 'text', description: 'Optional checkout logo/image URL.' },
           { key: 'RAZORPAY_THEME_COLOR', label: 'Theme Color', type: 'text', description: 'Checkout accent color.' },
-          { key: 'PAYMENT_TEST_BYPASS', label: 'Payment Test Bypass', type: 'boolean', options: booleanOptions, description: 'Allows test bypass behavior in supported payment flows.' },
         ],
       },
     ],

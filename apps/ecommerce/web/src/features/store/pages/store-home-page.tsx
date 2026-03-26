@@ -313,6 +313,7 @@ export function StoreHomePage() {
     .filter((product) => product.featureSection)
     .sort((left, right) => left.featureSectionOrder - right.featureSectionOrder || right.rating - left.rating)
     .slice(0, 6)
+  const catalogSectionCategories = categories.filter((category) => category.showInCatalogSection)
   const newArrivals = products.filter((product) => product.newArrival).slice(0, 2)
   const bestsellingProducts = products.filter((product) => product.bestseller).slice(0, 2)
   const featuredBrands = brands.filter((brand) => brand.featuredLabel)
@@ -357,7 +358,7 @@ export function StoreHomePage() {
             </Button>
           ) : null}
         </div>
-        <CategoryGrid categories={categories} />
+        <CategoryGrid categories={catalogSectionCategories} />
       </section>
 
       <div className="hidden md:block">

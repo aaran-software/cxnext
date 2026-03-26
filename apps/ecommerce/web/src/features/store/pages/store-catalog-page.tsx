@@ -4,6 +4,7 @@ import { BarChart3Icon, SlidersHorizontalIcon } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { StorefrontSearchBar } from "@/features/store/components/navigation/storefront-search-bar"
+import { CatalogMobileFilterSheet } from "@/features/store/components/product/catalog-mobile-filter-sheet"
 import { FilterSidebar } from "@/features/store/components/product/FilterSidebar"
 import { ProductGrid } from "@/features/store/components/product/ProductGrid"
 import { SortDropdown } from "@/features/store/components/product/SortDropdown"
@@ -79,7 +80,7 @@ export function StoreCatalogPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-2">
+      <section className="hidden gap-4 md:grid lg:grid-cols-2">
         <div className="rounded-[1.7rem] border border-[#e8dccd] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(247,241,233,0.92)_100%)] p-5 shadow-[0_22px_48px_-42px_rgba(45,29,19,0.24)]">
           <div className="flex items-start gap-4">
             <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[#f5ebdd] text-foreground">
@@ -120,6 +121,7 @@ export function StoreCatalogPage() {
           options={filterOptions}
           onChange={setFilters}
           onReset={() => setFilters(buildDefaultFilters(slug))}
+          className="hidden md:block"
         />
 
         <section className="space-y-5">
@@ -142,6 +144,30 @@ export function StoreCatalogPage() {
                 initialValue={query}
                 initialDepartment={selectedDepartment}
                 className="w-full"
+              />
+            </div>
+          </div>
+
+          <div className="rounded-[1.5rem] border border-[#eee3d3] bg-white/92 p-4 shadow-[0_18px_38px_-34px_rgba(45,29,19,0.24)] md:hidden">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                  Results
+                </div>
+                <div className="mt-1 text-2xl font-semibold text-foreground">{filteredProducts.length}</div>
+              </div>
+              <div className="rounded-full bg-[#f4ede3] px-3 py-1 text-xs font-medium text-foreground/75">
+                {routeCategory ? routeCategory.name : "Catalog"}
+              </div>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+              <SortDropdown value={sort} onChange={setSort} />
+              <CatalogMobileFilterSheet
+                filters={filters}
+                categories={categories}
+                options={filterOptions}
+                onChange={setFilters}
+                onReset={() => setFilters(buildDefaultFilters(slug))}
               />
             </div>
           </div>

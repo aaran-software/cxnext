@@ -1,7 +1,7 @@
-import type { StorefrontOrder } from '@/features/store/types/storefront'
+import type { StorefrontOrder, CommerceOrderWorkflow } from '@/features/store/types/storefront'
 import { useEffect, useState } from 'react'
 import { useAuth } from '@framework-core/web/auth/components/auth-provider'
-import { HttpError, listCustomerOrders } from '@/shared/api/client'
+import { HttpError, listCustomerOrders, getCustomerOrderWorkflow } from '@/shared/api/client'
 
 export type CustomerOrderNotification = {
   id: string
@@ -134,5 +134,55 @@ export function useCustomerOrders() {
     isLoading,
     errorMessage,
     notifications: buildCustomerNotifications(orders),
+  }
+}
+
+export function useCustomerOrderWorkflow(orderId: string | undefined) {
+  const { session } = useAuth()
+  const token = session?.accessToken ?? null
+  const [workflow, setWorkflow] = useState<CommerceOrderWorkflow | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!token || !orderId || session?.user.actorType !== 'customer') {
+      setWorkflow(null)
+      setIsLoading(false)
+      setErrorMessage(null)
+      return
+    }
+
+    let cancelled = false
+
+    async function load() {
+      setIsLoading(true)
+      setErrorMessage(null)
+
+      try {
+        const data = await getCustomerOrderWorkflow(token!, orderId!)
+        if (!cancelled) {
+          setWorkflow(data)
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setErrorMessage(toErrorMessage(error))
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [session?.user.actorType, token, orderId])
+
+  return {
+    workflow,
+    isLoading,
+    errorMessage,
   }
 }

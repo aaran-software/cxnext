@@ -83,7 +83,7 @@ function createBrandingSnapshot(company: Company | CompanySummary | null): Brand
   return {
     brandName,
     legalName,
-    tagline: legalName ?? defaultBrandingSnapshot.tagline,
+    tagline: defaultBrandingSnapshot.tagline,
     summary: description ?? defaultBrandingSnapshot.summary,
     email: normalizeText(company?.primaryEmail) ?? defaultBrandingSnapshot.email,
     phone: normalizeText(company?.primaryPhone) ?? defaultBrandingSnapshot.phone,

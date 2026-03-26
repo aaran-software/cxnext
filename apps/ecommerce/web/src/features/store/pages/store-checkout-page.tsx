@@ -323,7 +323,7 @@ const defaultFormValues: CheckoutFormValues = {
   postalCode: "",
   note: "",
   deliveryMethod: "standard",
-  paymentMethod: "cod",
+  paymentMethod: "upi",
 }
 
 function resolveLookupLabel(items: CommonModuleItem[], value: string) {
@@ -389,7 +389,7 @@ const deliveryOptions: Array<{ value: StorefrontDeliveryMethod; label: string; d
 const paymentOptions: Array<{ value: StorefrontPaymentMethod; label: string; detail: string; disabled?: boolean }> = [
   { value: "upi", label: "UPI / Wallet", detail: "Opens Razorpay Checkout with UPI and wallet payment methods." },
   { value: "card", label: "Credit or debit card", detail: "Opens Razorpay Checkout and completes payment before confirmation." },
-  { value: "cod", label: "Cash on delivery", detail: "Pay in cash when the order is delivered." },
+  { value: "cod", label: "Cash on delivery", detail: "Show this option to clients while checkout stays on Razorpay.", disabled: true },
 ]
 
 function toErrorMessage(error: unknown) {
@@ -424,10 +424,10 @@ function getPaymentSummaryLabel(order: StorefrontOrder) {
   }
 
   if (order.paymentGateway === "test_bypass") {
-    return "Test bypass"
+    return "Razorpay"
   }
 
-  return "Cash on delivery"
+  return "Order payment"
 }
 
 function hasUsableAddress(address: CustomerAddress) {
@@ -875,14 +875,16 @@ export function StoreCheckoutPage() {
         })),
       })
 
-      const order = checkout.requiresPayment && checkout.paymentSession
-        ? await openRazorpayCheckout(checkout.paymentSession, values, checkout.order.id)
-        : checkout.order
+      if (!checkout.requiresPayment || !checkout.paymentSession) {
+        throw new Error("Online checkout did not return a Razorpay session.")
+      }
+
+      const order = await openRazorpayCheckout(checkout.paymentSession, values, checkout.order.id)
 
       setPlacedOrder(order)
       clearCart()
       showSuccessToast({
-        title: checkout.requiresPayment ? "Payment received" : "Order placed",
+        title: "Payment received",
         description: `Storefront order ${order.orderNumber} is confirmed.`,
       })
     } catch (error) {
@@ -931,16 +933,12 @@ export function StoreCheckoutPage() {
                 <CheckCircle2Icon className="size-4" />
                 {placedOrder.paymentGateway === "razorpay"
                   ? "Payment verified"
-                  : placedOrder.paymentGateway === "test_bypass"
-                    ? "Test payment bypassed"
                     : "Order confirmed"}
               </div>
               <h2 className="text-3xl font-semibold tracking-tight text-emerald-950">Order {placedOrder.orderNumber} has been placed.</h2>
               <p className="max-w-2xl text-sm leading-6 text-emerald-900/80">
                 {placedOrder.paymentGateway === "razorpay"
                   ? "Razorpay payment was verified on the backend and the cart has been cleared."
-                  : placedOrder.paymentGateway === "test_bypass"
-                    ? "Test mode bypassed Razorpay so you can validate the rest of the checkout flow end to end."
                     : "Cash-on-delivery checkout was stored in the backend order tables and the cart has been cleared."}
               </p>
             </div>
@@ -1225,7 +1223,7 @@ export function StoreCheckoutPage() {
               <div className="flex items-center justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(cartSubtotal)}</span></div>
               <div className="flex items-center justify-between"><span className="text-muted-foreground">Shipping</span><span>{shipping === 0 ? "Free" : formatCurrency(shipping)}</span></div>
               <div className="flex items-center justify-between"><span className="text-muted-foreground">Handling</span><span>{formatCurrency(handling)}</span></div>
-              <div className="flex items-center justify-between"><span className="text-muted-foreground">Payment</span><span>{isOnlinePayment ? "Razorpay Checkout" : "Cash on delivery"}</span></div>
+              <div className="flex items-center justify-between"><span className="text-muted-foreground">Payment</span><span>Razorpay Checkout</span></div>
               <div className="flex items-center justify-between border-t border-border pt-3 text-base font-semibold"><span>Total</span><span>{formatCurrency(total)}</span></div>
             </div>
 
@@ -1233,10 +1231,10 @@ export function StoreCheckoutPage() {
               {submitting ? (
                 <>
                   <LoaderCircleIcon className="size-4 animate-spin" />
-                  {isOnlinePayment ? "Preparing payment..." : "Placing order..."}
+                  Preparing payment...
                 </>
               ) : (
-                isOnlinePayment ? "Continue to pay" : "Place order"
+                "Continue to pay"
               )}
             </Button>
           </div>

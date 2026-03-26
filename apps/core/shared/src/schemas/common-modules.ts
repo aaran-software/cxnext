@@ -55,7 +55,7 @@ export const commonModuleUpsertPayloadSchema = z
 export const commonModuleMetadataColumnSchema = z.object({
   key: z.string().min(1),
   label: z.string().min(1),
-  type: z.enum(['string', 'number']),
+  type: z.enum(['string', 'number', 'boolean']),
   required: z.boolean(),
   nullable: z.boolean(),
   referenceModule: commonModuleKeySchema.optional(),

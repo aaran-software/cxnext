@@ -290,19 +290,6 @@ export class StorefrontOrderRepository {
     })
   }
 
-  async createBypassedPaymentOrder(payload: StorefrontCheckoutPayload) {
-    const prepared = await this.prepareCheckout(payload)
-    return this.persistOrder(prepared, {
-      status: 'paid',
-      paymentStatus: 'captured',
-      paymentGateway: 'test_bypass',
-      paymentGatewayOrderId: null,
-      paymentGatewayPaymentId: `test-payment-${prepared.orderId.slice(0, 8)}`,
-      paymentGatewaySignature: null,
-      paymentCapturedAt: new Date(),
-    })
-  }
-
   async createPendingPaymentOrder(prepared: PreparedCheckout, gatewayOrderId: string) {
     return this.persistOrder(prepared, {
       status: 'pending_payment',

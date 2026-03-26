@@ -45,6 +45,10 @@ const CustomerOrdersPage = lazyPage(
   () => import('@/features/customer-portal/pages/customer-orders-page'),
   'CustomerOrdersPage',
 )
+const CustomerOrderTrackingPage = lazyPage(
+  () => import('@/features/customer-portal/pages/customer-order-tracking-page'),
+  'CustomerOrderTrackingPage',
+)
 const CustomerProfilePage = lazyPage(
   () => import('@/features/customer-portal/pages/customer-profile-page'),
   'CustomerProfilePage',
@@ -157,6 +161,9 @@ const MediaListPage = lazyPage(() => import('@/features/media/pages/media-list-p
 const ProductFormPage = lazyPage(() => import('@/features/product/pages/product-form-page'), 'ProductFormPage')
 const ProductListPage = lazyPage(() => import('@/features/product/pages/product-list-page'), 'ProductListPage')
 const ProductShowPage = lazyPage(() => import('@/features/product/pages/product-show-page'), 'ProductShowPage')
+const ProductCategoryFormPage = lazyPage(() => import('@/features/product-categories/pages/product-category-form-page'), 'ProductCategoryFormPage')
+const ProductCategoryListPage = lazyPage(() => import('@/features/product-categories/pages/product-category-list-page'), 'ProductCategoryListPage')
+const ProductCategoryShowPage = lazyPage(() => import('@/features/product-categories/pages/product-category-show-page'), 'ProductCategoryShowPage')
 const MailboxComposePage = lazyPage(() => import('@/features/mailbox/pages/mailbox-compose-page'), 'MailboxComposePage')
 const MailboxMessageListPage = lazyPage(
   () => import('@/features/mailbox/pages/mailbox-message-list-page'),
@@ -290,6 +297,10 @@ const adminRoutes = {
         { path: 'products/new', element: renderLazy(ProductFormPage) },
         { path: 'products/:productId', element: renderLazy(ProductShowPage) },
         { path: 'products/:productId/edit', element: renderLazy(ProductFormPage) },
+        { path: 'product-categories', element: renderLazy(ProductCategoryListPage) },
+        { path: 'product-categories/new', element: renderLazy(ProductCategoryFormPage) },
+        { path: 'product-categories/:categoryId', element: renderLazy(ProductCategoryShowPage) },
+        { path: 'product-categories/:categoryId/edit', element: renderLazy(ProductCategoryFormPage) },
         { path: 'mailbox/messages', element: renderLazy(MailboxMessageListPage) },
         { path: 'mailbox/messages/:messageId', element: renderLazy(MailboxMessageShowPage) },
         { path: 'mailbox/compose', element: renderLazy(MailboxComposePage) },
@@ -337,6 +348,10 @@ const customerPortalRoutes = {
         {
           path: 'orders',
           element: renderLazy(CustomerOrdersPage),
+        },
+        {
+          path: 'orders/:orderId/track',
+          element: renderLazy(CustomerOrderTrackingPage),
         },
         {
           path: 'profile',

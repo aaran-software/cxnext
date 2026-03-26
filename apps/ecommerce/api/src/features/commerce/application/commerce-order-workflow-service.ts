@@ -39,6 +39,19 @@ export class CommerceOrderWorkflowService {
       workflow: await this.repository.getWorkflow(orderId),
     } satisfies CommerceOrderWorkflowResponse)
   }
+  
+  async getCustomerWorkflow(user: AuthUser, orderId: string): Promise<CommerceOrderWorkflowResponse> {
+    if (user.actorType !== 'customer') {
+      throw new ApplicationError('This workflow is available only to customer users.', { actorType: user.actorType }, 403)
+    }
+
+    const workflow = await this.repository.getWorkflow(orderId)
+    if (workflow.order.email !== user.email) {
+      throw new ApplicationError('You do not have permission to view this order tracking.', { orderId }, 403)
+    }
+
+    return commerceOrderWorkflowResponseSchema.parse({ workflow } satisfies CommerceOrderWorkflowResponse)
+  }
 
   async applyWorkflowAction(user: AuthUser, orderId: string, payload: unknown): Promise<CommerceOrderWorkflowResponse> {
     assertBackofficeUser(user)

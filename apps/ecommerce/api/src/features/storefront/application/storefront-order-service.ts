@@ -34,17 +34,6 @@ export class StorefrontOrderService {
       } satisfies StorefrontCheckoutSessionResponse)
     }
 
-    if (environment.payments.testBypass) {
-      const order = await this.repository.createBypassedPaymentOrder(parsedPayload)
-      await this.workflowRepository.initializeOrder(order)
-      await this.workflowRepository.markPaymentCaptured(order.id)
-      return storefrontCheckoutSessionResponseSchema.parse({
-        order: await this.repository.getById(order.id),
-        requiresPayment: false,
-        paymentSession: null,
-      } satisfies StorefrontCheckoutSessionResponse)
-    }
-
     if (!environment.payments.razorpay.enabled) {
       throw new ApplicationError('Razorpay is not configured for online payments.', {}, 503)
     }

@@ -20,6 +20,7 @@ import { db } from '@framework-core/runtime/database/orm'
 import { commerceTableNames, storefrontTableNames } from '@framework-core/runtime/database/table-names'
 import { ApplicationError } from '@framework-core/runtime/errors/application-error'
 import { StorefrontOrderRepository } from '../../storefront/data/storefront-order-repository'
+import { CommerceNotificationService } from '../application/commerce-notification-service'
 
 type JsonPrimitive = string | number | boolean | null
 
@@ -302,6 +303,7 @@ function resolveWorkflowState(
 
 export class CommerceOrderWorkflowRepository {
   private readonly storefrontOrderRepository = new StorefrontOrderRepository()
+  private readonly notificationService = new CommerceNotificationService()
 
   async listOrders() {
     await ensureDatabaseSchema()
@@ -450,6 +452,13 @@ export class CommerceOrderWorkflowRepository {
       })
     })
 
+    if (order.status === 'pending_payment') {
+      await this.notificationService.sendOrderReceivedEmail(order)
+    } else {
+      await this.notificationService.sendOrderReceivedEmail(order)
+      await this.notificationService.sendOrderConfirmedEmail(order)
+    }
+
     if (order.paymentStatus === 'captured') {
       await this.postAccountingForOrder(order.id, 'captured')
     } else if (order.paymentMethod === 'cod') {
@@ -490,6 +499,7 @@ export class CommerceOrderWorkflowRepository {
       })
     })
 
+    await this.notificationService.sendOrderConfirmedEmail(order)
     await this.postAccountingForOrder(orderId, 'captured')
   }
 
@@ -594,6 +604,14 @@ export class CommerceOrderWorkflowRepository {
         metadata,
       })
     })
+
+    if (payload.eventType === 'picked_up' || payload.eventType === 'in_transit') {
+      await this.notificationService.sendOrderShippedEmail(order, mapShipment(shipmentRow))
+    } else if (payload.eventType === 'delivered') {
+      await this.notificationService.sendOrderDeliveredEmail(order)
+    } else if (payload.eventType === 'cancelled') {
+      await this.notificationService.sendOrderCancelledEmail(order, payload.description || undefined)
+    }
 
     return this.getWorkflow(orderId)
   }

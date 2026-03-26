@@ -180,12 +180,15 @@ const commonModuleDefinitions = [
     label: 'Product Categories',
     tableName: commonTableNames.productCategories,
     idPrefix: 'product-category',
-    defaultSortKey: 'name',
+    defaultSortKey: 'position_order',
     columns: [
       { key: 'code', label: 'Code', type: 'string', required: true, nullable: false },
       { key: 'name', label: 'Name', type: 'string', required: true, nullable: false },
       { key: 'description', label: 'Description', type: 'string', required: false, nullable: true },
       { key: 'image', label: 'Image', type: 'string', required: false, nullable: true },
+      { key: 'position_order', label: 'Position Order', type: 'number', numberMode: 'integer', required: false, nullable: false },
+      { key: 'show_on_storefront_top_menu', label: 'Show On Storefront Top Menu', type: 'boolean', required: false, nullable: false },
+      { key: 'show_on_storefront_catalog', label: 'Show On Storefront Catalog', type: 'boolean', required: false, nullable: false },
     ],
   },
   {

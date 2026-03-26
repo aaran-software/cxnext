@@ -125,6 +125,10 @@ export function getCommonModuleMenuItem(key: CommonModuleKey) {
 }
 
 export function getCommonModuleHref(key: CommonModuleKey) {
+  if (key === 'productCategories') {
+    return buildAdminPortalPath('/product-categories')
+  }
+
   if (key === 'storefrontTemplates') {
     return buildAdminPortalPath('/storefront-designer')
   }

@@ -907,6 +907,13 @@ export async function listCustomerOrders(token: string) {
   return response.items
 }
 
+export async function getCustomerOrderWorkflow(token: string, orderId: string) {
+  const response = await request<CommerceOrderWorkflowResponse>(`/customer/orders/${orderId}/workflow`, {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.workflow
+}
+
 export async function listCommerceOrders(token: string) {
   const response = await request<CommerceOrderListResponse>('/admin/commerce/orders', {
     headers: createAuthorizationHeaders(token),

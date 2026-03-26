@@ -1,6 +1,8 @@
 import { MenuIcon } from "lucide-react"
 import { Link } from "react-router-dom"
 
+import { BrandMark } from "@/shared/branding/brand-mark"
+import { useBranding } from "@/shared/branding/branding-provider"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 
@@ -10,6 +12,8 @@ type MobileMenuLink = {
 }
 
 export function PortfolioMobileMenu({ links }: { links: MobileMenuLink[] }) {
+  const branding = useBranding()
+
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -21,6 +25,12 @@ export function PortfolioMobileMenu({ links }: { links: MobileMenuLink[] }) {
         <SheetHeader>
           <SheetTitle>Browse Site</SheetTitle>
         </SheetHeader>
+        <div className="mt-6 rounded-3xl border border-border/70 bg-card px-4 py-4">
+          <BrandMark />
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">
+            {branding.summary}
+          </p>
+        </div>
         <nav className="mt-6 grid gap-3">
           {links.map((link) => (
             <Link

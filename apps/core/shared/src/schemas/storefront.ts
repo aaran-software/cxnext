@@ -36,6 +36,9 @@ export const storefrontCategorySchema = z.object({
   description: z.string().nullable(),
   image: z.string().nullable(),
   menuImage: z.string().nullable(),
+  positionOrder: z.number().int(),
+  showInTopMenu: z.boolean(),
+  showInCatalogSection: z.boolean(),
   productCount: z.number().int().nonnegative(),
 })
 

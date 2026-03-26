@@ -118,7 +118,7 @@ export function RegisterPage() {
     }
   }
 
-  function continueToOtp() {
+  async function continueToOtp() {
     if (!detailsValid) {
       const message = 'Enter a valid name, email, and mobile number before continuing.'
       setError(message)
@@ -129,8 +129,7 @@ export function RegisterPage() {
       return
     }
 
-    setError(null)
-    setCurrentStep('otp')
+    await handleRequestEmailOtp({ advanceToOtp: true })
   }
 
   function continueToPassword() {
@@ -148,7 +147,7 @@ export function RegisterPage() {
     setCurrentStep('password')
   }
 
-  async function handleRequestEmailOtp() {
+  async function handleRequestEmailOtp(options?: { advanceToOtp?: boolean }) {
     if (!detailsValid) {
       showWarningToast({
         title: 'Finish customer details first',
@@ -179,6 +178,11 @@ export function RegisterPage() {
         isRequesting: false,
         hasError: false,
       }))
+      setError(null)
+
+      if (options?.advanceToOtp) {
+        setCurrentStep('otp')
+      }
 
       showSuccessToast({
         title: 'Email OTP sent',
@@ -411,7 +415,7 @@ export function RegisterPage() {
 
                   <div className="flex justify-end">
                     <Button type="button" className="rounded-full px-6" onClick={continueToOtp}>
-                      Continue
+                      {emailVerification.isRequesting ? 'Sending OTP...' : 'Continue to send OTP'}
                       <ArrowRight className="size-4" />
                     </Button>
                   </div>
@@ -453,7 +457,7 @@ export function RegisterPage() {
                           <div className="text-xs text-muted-foreground">{normalizedEmail}</div>
                         </div>
                         <Button type="button" variant="outline" className="h-9 shrink-0 px-3 text-xs sm:text-sm" disabled={emailVerification.isRequesting || emailVerification.verified} onClick={() => void handleRequestEmailOtp()}>
-                          {emailVerification.isRequesting ? 'Sending...' : emailVerification.verificationId ? 'Resend OTP' : 'Send OTP'}
+                          {emailVerification.isRequesting ? 'Sending...' : emailVerification.verificationId ? 'Retry OTP' : 'Send OTP'}
                         </Button>
                       </div>
                       <div className="flex gap-3">
@@ -465,6 +469,11 @@ export function RegisterPage() {
                           inputMode="numeric"
                         />
                       </div>
+                      {emailVerification.verified ? (
+                        <div className="rounded-xl border border-emerald-200 bg-emerald-100/90 px-3 py-2 text-sm text-emerald-900">
+                          Email OTP verified successfully. Continue to set your password.
+                        </div>
+                      ) : null}
                       <Button
                         type="button"
                         className={cn(

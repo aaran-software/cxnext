@@ -42,7 +42,7 @@ export function PortfolioFooter() {
               <p>{branding.email}</p>
               <p>{branding.phone}</p>
               <p>{branding.location}</p>
-              <p>{branding.legalName ?? branding.tagline}</p>
+              <p>{branding.tagline}</p>
             </div>
           </div>
         </div>

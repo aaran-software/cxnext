@@ -12,6 +12,8 @@ export type {
   StorefrontProduct,
   StorefrontRazorpayCheckoutSession,
   StorefrontReview,
+  CommerceOrderWorkflow,
+  CommerceOrderWorkflowResponse,
 } from '@shared/index'
 
 export type StorefrontSortOption =

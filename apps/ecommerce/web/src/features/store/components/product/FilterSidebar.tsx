@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { CatalogFilters, StorefrontCategory } from "@/features/store/types/storefront"
+import { cn } from "@/lib/utils"
 
 type FilterOptions = {
   sizes: string[]
@@ -136,12 +137,14 @@ export function FilterSidebar({
   options,
   onChange,
   onReset,
+  className,
 }: {
   filters: CatalogFilters
   categories: StorefrontCategory[]
   options: FilterOptions
   onChange: (next: CatalogFilters) => void
   onReset: () => void
+  className?: string
 }) {
   const toggleValue = (key: MultiValueFilterKey, value: string) => {
     const current = filters[key]
@@ -155,7 +158,7 @@ export function FilterSidebar({
   const activeCount = countActiveFilters(filters)
 
   return (
-    <aside className="space-y-4 self-start xl:sticky xl:top-24">
+    <aside className={cn("space-y-4 self-start xl:sticky xl:top-24", className)}>
       <section className="rounded-[1.8rem] border border-[#e7dbcb] bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(249,246,241,0.95)_100%)] p-5 shadow-[0_24px_50px_-38px_rgba(45,29,19,0.2)]">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-2">

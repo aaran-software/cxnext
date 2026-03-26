@@ -113,6 +113,9 @@ interface StorefrontCatalogRow extends RowDataPacket {
   category_name: string | null
   category_description: string | null
   category_menu_image: string | null
+  category_position_order: number | string | null
+  category_show_on_storefront_top_menu: number | null
+  category_show_on_storefront_catalog: number | null
   base_price: number | string
   compare_at_price: number | string | null
   rating: number | string | null
@@ -785,6 +788,9 @@ export class ProductRepository {
         category.name AS category_name,
         category.description AS category_description,
         category.image AS category_menu_image,
+        category.position_order AS category_position_order,
+        category.show_on_storefront_top_menu AS category_show_on_storefront_top_menu,
+        category.show_on_storefront_catalog AS category_show_on_storefront_catalog,
         sf.department,
         sf.home_slider_enabled,
         sf.home_slider_order,
@@ -1021,9 +1027,17 @@ export class ProductRepository {
         description: toOptionalCatalogText(row.category_description),
         image: categoryProducts[0]?.images[0] ?? null,
         menuImage: toOptionalCatalogText(row.category_menu_image),
+        positionOrder: Number(row.category_position_order ?? 0),
+        showInTopMenu: Boolean(row.category_show_on_storefront_top_menu),
+        showInCatalogSection: Boolean(row.category_show_on_storefront_catalog),
         productCount: categoryProducts.length,
       })
     }
+
+    categories.sort((left, right) =>
+      left.positionOrder - right.positionOrder
+      || left.name.localeCompare(right.name, undefined, { sensitivity: 'base' }),
+    )
 
     return {
       brands,

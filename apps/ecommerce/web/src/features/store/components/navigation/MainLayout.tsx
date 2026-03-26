@@ -9,6 +9,7 @@ import { useStorefront } from "@/features/store/context/storefront-context"
 
 export default function MainLayout() {
   const { categories } = useStorefront()
+  const topMenuCategories = categories.filter((category) => category.showInTopMenu)
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,#f6efe6,transparent_30%),linear-gradient(180deg,#fcfbf8_0%,#f5efe7_100%)] text-foreground">
@@ -20,7 +21,7 @@ export default function MainLayout() {
       </main>
       <StorefrontFooter />
       <StorefrontBottomNav
-        categories={categories.map((category) => ({
+        categories={topMenuCategories.map((category) => ({
           label: category.name,
           slug: category.slug,
         }))}

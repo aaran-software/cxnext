@@ -59,6 +59,9 @@ export function CustomerOrdersPage() {
                     <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">{order.orderNumber}</h2>
                     <Badge variant="outline">{order.status}</Badge>
                     <Badge variant="outline">{order.paymentStatus}</Badge>
+                    <Button variant="outline" size="sm" asChild className="ml-auto rounded-full px-4 text-xs font-semibold">
+                      <Link to={`/account/orders/${order.id}/track`}>Track Shipment</Link>
+                    </Button>
                   </div>
                   <p className="max-w-3xl text-sm leading-6 text-muted-foreground">{describeCustomerOrder(order)}</p>
                 </div>

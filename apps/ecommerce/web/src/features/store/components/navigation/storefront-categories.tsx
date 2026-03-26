@@ -5,8 +5,9 @@ import { cn } from '@/lib/utils'
 
 export function StorefrontCategories({ className }: { className?: string }) {
   const { categories } = useStorefront()
+  const visibleCategories = categories.filter((category) => category.showInTopMenu)
 
-  if (categories.length === 0) {
+  if (visibleCategories.length === 0) {
     return null
   }
 
@@ -31,7 +32,7 @@ export function StorefrontCategories({ className }: { className?: string }) {
               All Products
             </span>
           </Link>
-          {categories.map((category) => (
+          {visibleCategories.map((category) => (
             <Link
               key={category.id}
               to={`/category/${category.slug}`}

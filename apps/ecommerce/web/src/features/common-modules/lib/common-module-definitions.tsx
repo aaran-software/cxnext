@@ -53,7 +53,7 @@ function toFieldDefinition(column: CommonModuleMetadataColumn) {
   return {
     key: column.key,
     label: column.label,
-    type: column.referenceModule ? 'select' : column.key === 'image' ? 'image' : column.type === 'number' ? 'number' : 'text',
+    type: column.referenceModule ? 'select' : column.key === 'image' ? 'image' : column.type === 'number' ? 'number' : column.type === 'boolean' ? 'checkbox' : 'text',
     required: column.required,
     placeholder: column.label,
     parseAs: column.type,

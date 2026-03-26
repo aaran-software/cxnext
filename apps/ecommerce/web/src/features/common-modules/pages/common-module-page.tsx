@@ -28,7 +28,9 @@ export function CommonModulePage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const redirectTarget =
-    moduleKey === 'storefrontTemplates'
+    moduleKey === 'productCategories'
+      ? buildAdminPortalPath('/product-categories')
+      : moduleKey === 'storefrontTemplates'
       ? buildAdminPortalPath('/storefront-designer')
       : moduleKey === 'sliderThemes'
         ? buildAdminPortalPath('/slider-themes')

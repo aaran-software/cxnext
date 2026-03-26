@@ -235,6 +235,18 @@ export class CommonModuleService {
       return value
     }
 
+    if (column.type === 'boolean') {
+      if (typeof rawValue !== 'boolean') {
+        throw new ApplicationError(
+          'Expected a boolean value for the master field.',
+          { module: definition.key, field: column.key },
+          400,
+        )
+      }
+
+      return rawValue
+    }
+
     if (typeof rawValue !== 'number' || !Number.isFinite(rawValue)) {
       throw new ApplicationError(
         'Expected a numeric value for the master field.',

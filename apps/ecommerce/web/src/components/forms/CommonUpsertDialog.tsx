@@ -25,11 +25,11 @@ export type CommonUpsertSelectOption = {
 export type CommonUpsertFieldDefinition = {
   key: string
   label: string
-  type?: "text" | "number" | "select" | "image"
+  type?: "text" | "number" | "select" | "image" | "checkbox"
   placeholder?: string
   required?: boolean
   options?: CommonUpsertSelectOption[]
-  parseAs?: "string" | "number"
+  parseAs?: "string" | "number" | "boolean"
   createOption?: (
     label: string,
     values: Record<string, string>,
@@ -62,6 +62,10 @@ function normalizeValue(field: CommonUpsertFieldDefinition, value: CommonUpsertV
     }
 
     return String(value)
+  }
+
+  if (field.type === "checkbox") {
+    return String(Boolean(value))
   }
 
   return typeof value === "string" ? value : ""
@@ -133,9 +137,11 @@ export function CommonUpsertDialog({
 
         return [
           field.key,
-          field.type === "number" || field.parseAs === "number"
-            ? Number(normalizedValue)
-            : normalizedValue.trim(),
+          field.type === "checkbox" || field.parseAs === "boolean"
+            ? normalizedValue === "true"
+            : field.type === "number" || field.parseAs === "number"
+              ? Number(normalizedValue)
+              : normalizedValue.trim(),
         ]
       })),
       isActive,
@@ -233,6 +239,17 @@ export function CommonUpsertDialog({
                       dialogTitle={`Select ${field.label}`}
                       dialogDescription={`Attach an image for ${field.label.toLowerCase()}.`}
                     />
+                  ) : field.type === "checkbox" ? (
+                    <label className="flex items-center gap-3 rounded-md border border-border/70 px-3 py-2">
+                      <Checkbox
+                        checked={formValues[field.key] === "true"}
+                        onCheckedChange={(checked) => {
+                          setFormValues((current) => ({ ...current, [field.key]: String(Boolean(checked)) }))
+                          setErrors((current) => ({ ...current, [field.key]: "" }))
+                        }}
+                      />
+                      <span className="text-sm text-foreground">{field.placeholder ?? field.label}</span>
+                    </label>
                   ) : (
                     <Input
                       type={field.type === "number" ? "number" : "text"}

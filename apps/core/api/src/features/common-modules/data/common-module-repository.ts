@@ -13,9 +13,22 @@ interface CommonModuleRow extends RowDataPacket {
   updated_at: Date
 }
 
-function normalizeValue(value: string | number | Date | null | undefined) {
+function normalizeValue(
+  definition: CommonModuleDefinition,
+  columnKey: string,
+  value: string | number | Date | null | undefined,
+) {
   if (value instanceof Date) {
     return value.toISOString()
+  }
+
+  const column = definition.columns.find((entry) => entry.key === columnKey)
+  if (column?.type === 'boolean') {
+    if (typeof value === 'string') {
+      return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase())
+    }
+
+    return Boolean(value)
   }
 
   return value ?? null
@@ -31,6 +44,8 @@ function toCommonModuleItem(definition: CommonModuleDefinition, row: CommonModul
 
   for (const column of definition.columns) {
     item[column.key] = normalizeValue(
+      definition,
+      column.key,
       row[column.key as keyof CommonModuleRow] as string | number | Date | null | undefined,
     ) as CommonModuleValue
   }

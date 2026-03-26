@@ -625,6 +625,17 @@ export async function routeRequest(
       return
     }
 
+    const customerOrderWorkflowMatch = url.pathname.match(/^\/customer\/orders\/([^/]+)\/workflow$/)
+    if (customerOrderWorkflowMatch && method === 'GET') {
+      const customer = await requireCustomerUser(request)
+      writeJson(
+        response,
+        200,
+        await commerceOrderWorkflowService.getCustomerWorkflow(customer, customerOrderWorkflowMatch[1]),
+      )
+      return
+    }
+
     if (method === 'POST' && url.pathname === '/customer/account/change-password') {
       const customer = await requireCustomerUser(request)
       writeJson(response, 200, await authService.changePassword(customer, await readJsonBody(request)))

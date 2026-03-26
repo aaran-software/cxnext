@@ -62,6 +62,11 @@
 
 - [ ] Validate production auth behavior with real email OTP and recovery delivery
 - [ ] Review Razorpay production readiness and confirm payment gateway configuration
+- [ ] Integrate stock reduction and restock flow between ecommerce orders and billing inventory
+- [x] Implement automated customer notifications (Email/SMS) for order and shipment lifecycle events
+- [/] Build a dedicated customer-side order tracking and shipment detail page
+- [ ] Add support for order cancellation with automated refund and inventory reversal
+- [ ] Refine backoffice order operations with bulk fulfillment actions and print-ready dispatch labels
 - [ ] Run go-live validation for auth, checkout, payments, email, and public storefront routes
 
 ## Upcoming Batch

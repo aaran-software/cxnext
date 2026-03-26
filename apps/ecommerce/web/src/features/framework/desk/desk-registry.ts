@@ -16,6 +16,7 @@ import {
   Receipt,
   Settings2,
   ShieldCheck,
+  Shirt,
   ShoppingBag,
   Store,
   Users,
@@ -425,10 +426,11 @@ function getMenuGroups(appId: SuiteAppId, modules: DeskWorkspaceLink[]): DeskMen
         items: modules.map((item) => createMenuItem(item)),
       },
       {
-        id: 'ecommerce-shared',
-        label: 'Shared',
+        id: 'ecommerce-common',
+        label: 'Common',
         shared: true,
         items: [
+          createSharedMenuItem('product-categories', 'Product Categories', '/admin/dashboard/product-categories', 'Category ordering and storefront placement controls.', Shirt),
           createSharedMenuItem('common', 'Common Modules', '/admin/dashboard/common', 'Reusable master data across apps.', Blocks, [
             '/admin/dashboard/common',
           ]),
