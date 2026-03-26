@@ -469,6 +469,10 @@ export class ProductRepository {
     const row = await db.first<ProductRow>(`
       SELECT
         p.*,
+        brand.name AS brand_name,
+        category.name AS category_name,
+        product_group.name AS product_group_name,
+        product_type.name AS product_type_name,
         sf.department AS storefront_department,
         sf.home_slider_enabled,
         sf.promo_slider_enabled,
@@ -495,6 +499,10 @@ export class ProductRepository {
         ) AS tag_count
       FROM ${productTableNames.products} p
       LEFT JOIN ${productTableNames.storefront} sf ON sf.product_id = p.id AND sf.is_active = 1
+      LEFT JOIN ${commonTableNames.brands} brand ON brand.id = p.brand_id
+      LEFT JOIN ${commonTableNames.productCategories} category ON category.id = p.category_id
+      LEFT JOIN ${commonTableNames.productGroups} product_group ON product_group.id = p.product_group_id
+      LEFT JOIN ${commonTableNames.productTypes} product_type ON product_type.id = p.product_type_id
       WHERE p.id = ?
       LIMIT 1
     `, [id])

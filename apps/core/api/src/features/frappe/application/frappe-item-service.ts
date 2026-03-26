@@ -17,6 +17,7 @@ import {
 } from '@shared/index'
 import { randomUUID } from 'node:crypto'
 import type { RowDataPacket } from 'mysql2'
+import { ZodError } from 'zod'
 import { ApplicationError } from '@framework-core/runtime/errors/application-error'
 import { environment } from '@framework-core/runtime/config/environment'
 import { ensureDatabaseSchema } from '@framework-core/runtime/database/database'
@@ -123,6 +124,27 @@ function extractRows(payload: Record<string, unknown> | null) {
   return Array.isArray(payload?.data)
     ? payload.data as Record<string, unknown>[]
     : []
+}
+
+function toErrorDetail(error: unknown) {
+  if (error instanceof ZodError) {
+    return JSON.stringify(error.issues, null, 2)
+  }
+
+  if (error instanceof ApplicationError) {
+    const detail = error.context?.detail
+    if (typeof detail === 'string' && detail.trim()) {
+      return detail.trim()
+    }
+
+    return error.message.trim()
+  }
+
+  if (error instanceof Error) {
+    return error.message.trim()
+  }
+
+  return 'Unknown sync error'
 }
 
 function parseJsonArray<T>(value: unknown): T[] {
@@ -1046,7 +1068,7 @@ export async function syncFrappeItemsToProducts(user: AuthUser, payload: unknown
       })
     } catch (error) {
       failureCount += 1
-      const reason = error instanceof Error ? error.message : 'Failed to sync item.'
+      const reason = toErrorDetail(error)
       const failedEntry = {
         frappeItemId: itemId,
         frappeItemCode: itemCode,

@@ -31,7 +31,9 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ActiveStatusBadge, StatusBadge } from '@/components/ui/status-badge'
+import { Progress } from '@/components/ui/progress'
 import { Textarea } from '@/components/ui/textarea'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   createFieldErrors,
   inputErrorClassName,
@@ -194,6 +196,7 @@ export function FrappeItemPage() {
   const [searchValue, setSearchValue] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'disabled'>('all')
   const [stockFilter, setStockFilter] = useState<'all' | 'stock' | 'service'>('all')
+  const [syncFilter, setSyncFilter] = useState<'all' | 'synced' | 'notSynced'>('all')
   const [variantsOnly, setVariantsOnly] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [syncDialogOpen, setSyncDialogOpen] = useState(false)
@@ -202,6 +205,7 @@ export function FrappeItemPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
   const [lastSyncedAt, setLastSyncedAt] = useState('')
+  const [activeTab, setActiveTab] = useState<'items' | 'logs'>('items')
 
   const itemGroupOptions = useMemo(() => getLeafOptions(references?.itemGroups ?? []), [references])
   const warehouseOptions = useMemo(() => getLeafOptions(references?.warehouses ?? []), [references])
@@ -326,11 +330,15 @@ export function FrappeItemPage() {
         || (stockFilter === 'stock' && item.isStockItem)
         || (stockFilter === 'service' && !item.isStockItem)
 
+      const matchesSync = syncFilter === 'all'
+        || (syncFilter === 'synced' && item.isSyncedToProduct)
+        || (syncFilter === 'notSynced' && !item.isSyncedToProduct)
+
       const matchesVariants = !variantsOnly || item.hasVariants
 
-      return matchesSearch && matchesStatus && matchesStock && matchesVariants
+      return matchesSearch && matchesStatus && matchesStock && matchesSync && matchesVariants
     })
-  }, [items, searchValue, statusFilter, stockFilter, variantsOnly])
+  }, [items, searchValue, statusFilter, stockFilter, syncFilter, variantsOnly])
 
   const totalRecords = filteredItems.length
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize))
@@ -651,46 +659,75 @@ export function FrappeItemPage() {
         </CardHeader>
       </Card>
 
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'items' | 'logs')} className="space-y-4">
+        <TabsList variant="line" className="w-full justify-start rounded-none border-b bg-transparent p-0">
+          <TabsTrigger value="items" className="rounded-none px-4">Product table</TabsTrigger>
+          <TabsTrigger value="logs" className="rounded-none px-4">Sync log manager</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="items" className="space-y-4">
       <Card className="rounded-md">
-        <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
-          <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-            <span>Total: <span className="font-medium text-foreground">{items.length}</span></span>
-            <span>Active: <span className="font-medium text-foreground">{items.filter((item) => !item.disabled).length}</span></span>
-            <span>Stock items: <span className="font-medium text-foreground">{items.filter((item) => item.isStockItem).length}</span></span>
-            <span>Variants: <span className="font-medium text-foreground">{items.filter((item) => item.hasVariants).length}</span></span>
-            {isSuperAdmin ? (
-              <span>Selected: <span className="font-medium text-foreground">{selectedItemCount}</span></span>
-            ) : null}
-          </div>
-          {isSuperAdmin ? (
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => openSyncDialog()}
-                disabled={syncingProducts || saving || editing || selectedIds.length === 0}
-              >
-                <CheckIcon className="size-4" />
-                {syncingProducts ? 'Syncing products...' : 'Sync selected to ecommerce'}
-              </Button>
-              <Button type="button" variant="outline" onClick={() => void handleManualSync()} disabled={syncing || saving || editing || syncingProducts}>
-                <RefreshCcw className="size-4" />
-                {syncing ? 'Syncing...' : 'Refresh frappe list'}
-              </Button>
-            </div>
-          ) : (
-            <span className="text-sm text-muted-foreground">Product sync and edits are available only to super-admin users.</span>
-          )}
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">References and dependencies</CardTitle>
+          <CardDescription>
+            The form loads ERPNext Item Groups, Warehouses, UOMs, Brands, and GST HSN codes. Product sync maps these to ecommerce masters, creates missing references when needed, and falls back to system defaults for any remaining gaps.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+          <span>Item Groups: <span className="font-medium text-foreground">{itemGroupOptions.length}</span></span>
+          <span>Warehouses: <span className="font-medium text-foreground">{warehouseOptions.length}</span></span>
+          <span>UOMs: <span className="font-medium text-foreground">{stockUomOptions.length}</span></span>
+          <span>Brands: <span className="font-medium text-foreground">{brandOptions.length}</span></span>
+          <span>HSN references: <span className="font-medium text-foreground">{gstHsnOptions.length}</span></span>
+          {references?.defaults.company ? (
+            <span>Default company: <span className="font-medium text-foreground">{references.defaults.company}</span></span>
+          ) : null}
+          {references?.defaults.warehouse ? (
+            <span>Default warehouse: <span className="font-medium text-foreground">{references.defaults.warehouse}</span></span>
+          ) : null}
         </CardContent>
       </Card>
 
-      {isSuperAdmin ? (
-        <Card className="rounded-md">
-          <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+      <Card className="rounded-md">
+        <CardContent className="space-y-4 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-              <span>Selected on this page: <span className="font-medium text-foreground">{selectedOnPageCount}</span></span>
-              <span>Selected across all filters: <span className="font-medium text-foreground">{selectedItemCount}</span></span>
+              <span>Total records: <span className="font-medium text-foreground">{totalRecords}</span></span>
+              <span>Selected on page: <span className="font-medium text-foreground">{selectedOnPageCount}</span></span>
+              <span>Selected across filters: <span className="font-medium text-foreground">{selectedItemCount}</span></span>
             </div>
+            {isSuperAdmin ? (
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => openSyncDialog()}
+                  disabled={syncingProducts || saving || editing || selectedIds.length === 0}
+                >
+                  <CheckIcon className="size-4" />
+                  {syncingProducts ? 'Syncing products...' : 'Sync selected to ecommerce'}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => void handleManualSync()} disabled={syncing || saving || editing || syncingProducts}>
+                  <RefreshCcw className="size-4" />
+                  {syncing ? 'Syncing...' : 'Refresh frappe list'}
+                </Button>
+              </div>
+            ) : (
+              <span className="text-sm text-muted-foreground">Product sync and edits are available only to super-admin users.</span>
+            )}
+          </div>
+
+          {syncingProducts ? (
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                <span>Syncing selected to ecommerce</span>
+                <span>Please wait...</span>
+              </div>
+              <Progress value={100} className="h-1" />
+            </div>
+          ) : null}
+
+          {isSuperAdmin ? (
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
@@ -715,94 +752,6 @@ export function FrappeItemPage() {
                 Clear selection
               </Button>
             </div>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      <Card className="rounded-md">
-        <CardHeader className="pb-3">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <CardTitle className="text-base">Sync log manager</CardTitle>
-              <CardDescription>
-                Review recent Frappe item to product sync sessions, success counts, skipped items, and failure reasons.
-              </CardDescription>
-            </div>
-            <Badge variant="outline">{syncLogs.length} sessions</Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {syncLogs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No sync sessions recorded yet.</p>
-          ) : syncLogs.slice(0, 5).map((log) => {
-            const failedItems = log.items.filter((item) => item.mode === 'failed')
-
-            return (
-              <div key={log.id} className="rounded-xl border border-border/70 bg-muted/20 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-foreground">{formatDateTime(log.syncedAt)}</p>
-                    <p className="text-xs text-muted-foreground">{log.summary}</p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline">{log.duplicateMode}</Badge>
-                    <Badge variant="secondary">Success {log.successCount}</Badge>
-                    <Badge variant="secondary">Skipped {log.skippedCount}</Badge>
-                    <Badge
-                      variant="outline"
-                      className={log.failureCount > 0 ? 'border-destructive/40 bg-destructive/10 text-destructive' : undefined}
-                    >
-                      Failed {log.failureCount}
-                    </Badge>
-                  </div>
-                </div>
-
-                <div className="mt-3 grid gap-2 text-xs text-muted-foreground md:grid-cols-4">
-                  <span>Total requested: <span className="font-medium text-foreground">{log.requestedCount}</span></span>
-                  <span>Started: <span className="font-medium text-foreground">{formatDateTime(log.startedAt)}</span></span>
-                  <span>Finished: <span className="font-medium text-foreground">{formatDateTime(log.finishedAt)}</span></span>
-                  <span>By: <span className="font-medium text-foreground">{log.createdByUserId || 'System'}</span></span>
-                </div>
-
-                {failedItems.length > 0 ? (
-                  <details className="mt-3 rounded-lg border border-border/60 bg-background/80 p-3">
-                    <summary className="cursor-pointer text-sm font-medium text-foreground">
-                      Failed items ({failedItems.length})
-                    </summary>
-                    <div className="mt-3 space-y-2">
-                      {failedItems.map((item) => (
-                        <div key={`${log.id}-${item.frappeItemId}`} className="rounded-md bg-muted/40 p-3 text-sm">
-                          <p className="font-medium text-foreground">{item.frappeItemCode}</p>
-                          <p className="text-muted-foreground">{item.reason}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </details>
-                ) : null}
-              </div>
-            )
-          })}
-        </CardContent>
-      </Card>
-
-      <Card className="rounded-md">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">References and dependencies</CardTitle>
-          <CardDescription>
-            The form loads ERPNext Item Groups, Warehouses, UOMs, Brands, and GST HSN codes. Product sync maps these to ecommerce masters, creates missing references when needed, and falls back to system defaults for any remaining gaps.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-          <span>Item Groups: <span className="font-medium text-foreground">{itemGroupOptions.length}</span></span>
-          <span>Warehouses: <span className="font-medium text-foreground">{warehouseOptions.length}</span></span>
-          <span>UOMs: <span className="font-medium text-foreground">{stockUomOptions.length}</span></span>
-          <span>Brands: <span className="font-medium text-foreground">{brandOptions.length}</span></span>
-          <span>HSN references: <span className="font-medium text-foreground">{gstHsnOptions.length}</span></span>
-          {references?.defaults.company ? (
-            <span>Default company: <span className="font-medium text-foreground">{references.defaults.company}</span></span>
-          ) : null}
-          {references?.defaults.warehouse ? (
-            <span>Default warehouse: <span className="font-medium text-foreground">{references.defaults.warehouse}</span></span>
           ) : null}
         </CardContent>
       </Card>
@@ -889,6 +838,24 @@ export function FrappeItemPage() {
               },
             },
             {
+              key: 'synced',
+              label: 'Synced products',
+              isActive: syncFilter === 'synced',
+              onSelect: () => {
+                setSyncFilter((current) => (current === 'synced' ? 'all' : 'synced'))
+                setCurrentPage(1)
+              },
+            },
+            {
+              key: 'not-synced',
+              label: 'Not synced',
+              isActive: syncFilter === 'notSynced',
+              onSelect: () => {
+                setSyncFilter((current) => (current === 'notSynced' ? 'all' : 'notSynced'))
+                setCurrentPage(1)
+              },
+            },
+            {
               key: 'variants',
               label: 'Variants only',
               isActive: variantsOnly,
@@ -901,6 +868,7 @@ export function FrappeItemPage() {
           activeFilters: [
             ...(statusFilter === 'all' ? [] : [{ key: 'status', label: 'Status', value: statusFilter === 'active' ? 'Active' : 'Disabled' }]),
             ...(stockFilter === 'all' ? [] : [{ key: 'stock', label: 'Type', value: stockFilter === 'stock' ? 'Stock' : 'Service' }]),
+            ...(syncFilter === 'all' ? [] : [{ key: 'sync', label: 'Sync', value: syncFilter === 'synced' ? 'Synced' : 'Not synced' }]),
             ...(variantsOnly ? [{ key: 'variants', label: 'Variants', value: 'Yes' }] : []),
           ],
           onRemoveFilter: (key) => {
@@ -912,6 +880,10 @@ export function FrappeItemPage() {
               setStockFilter('all')
             }
 
+            if (key === 'sync') {
+              setSyncFilter('all')
+            }
+
             if (key === 'variants') {
               setVariantsOnly(false)
             }
@@ -919,6 +891,7 @@ export function FrappeItemPage() {
           onClearAllFilters: () => {
             setStatusFilter('all')
             setStockFilter('all')
+            setSyncFilter('all')
             setVariantsOnly(false)
             setCurrentPage(1)
           },
@@ -1090,6 +1063,76 @@ export function FrappeItemPage() {
           },
         }}
       />
+
+        </TabsContent>
+        <TabsContent value="logs" className="space-y-4">
+          <Card className="rounded-md">
+            <CardHeader className="pb-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <CardTitle className="text-base">Sync log manager</CardTitle>
+                  <CardDescription>
+                    Review recent Frappe item to product sync sessions, success counts, skipped items, and failure reasons.
+                  </CardDescription>
+                </div>
+                <Badge variant="outline">{syncLogs.length} sessions</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {syncLogs.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No sync sessions recorded yet.</p>
+              ) : syncLogs.slice(0, 5).map((log) => {
+                const failedItems = log.items.filter((item) => item.mode === 'failed')
+
+                return (
+                  <div key={log.id} className="rounded-xl border border-border/70 bg-muted/20 p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-foreground">{formatDateTime(log.syncedAt)}</p>
+                        <p className="text-xs text-muted-foreground">{log.summary}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant="outline">{log.duplicateMode}</Badge>
+                        <Badge variant="secondary">Success {log.successCount}</Badge>
+                        <Badge variant="secondary">Skipped {log.skippedCount}</Badge>
+                        <Badge
+                          variant="outline"
+                          className={log.failureCount > 0 ? 'border-destructive/40 bg-destructive/10 text-destructive' : undefined}
+                        >
+                          Failed {log.failureCount}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 grid gap-2 text-xs text-muted-foreground md:grid-cols-4">
+                      <span>Total requested: <span className="font-medium text-foreground">{log.requestedCount}</span></span>
+                      <span>Started: <span className="font-medium text-foreground">{formatDateTime(log.startedAt)}</span></span>
+                      <span>Finished: <span className="font-medium text-foreground">{formatDateTime(log.finishedAt)}</span></span>
+                      <span>By: <span className="font-medium text-foreground">{log.createdByUserId || 'System'}</span></span>
+                    </div>
+
+                    {failedItems.length > 0 ? (
+                      <details className="mt-3 rounded-lg border border-border/60 bg-background/80 p-3">
+                        <summary className="cursor-pointer text-sm font-medium text-foreground">
+                          Failed items ({failedItems.length})
+                        </summary>
+                        <div className="mt-3 space-y-2">
+                          {failedItems.map((item) => (
+                            <div key={`${log.id}-${item.frappeItemId}`} className="rounded-md bg-muted/40 p-3 text-sm">
+                              <p className="font-medium text-foreground">{item.frappeItemCode}</p>
+                              <p className="text-muted-foreground">{item.reason}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+                    ) : null}
+                  </div>
+                )
+              })}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={syncDialogOpen} onOpenChange={setSyncDialogOpen}>
         <DialogContent className="max-w-4xl">

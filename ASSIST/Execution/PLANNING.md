@@ -45,7 +45,10 @@ Refine the ecommerce storefront mobile navigation:
 - [x] sync ERPNext item codes into product SKUs and regenerate slugs from item names
 - [x] sort the Frappe item sync list by ERPNext item id
 - [x] show category, brand, product group, and type on two compact lines in the product list
-- [x] add a persistent sync log manager for Frappe item-to-product sessions
+- [x] move the persistent sync log manager into a dedicated tab beside the product table
+- [x] add a sync progress bar in the action area and move reference and summary blocks above the table
+- [x] make the sync progress bar slimmer and visible only during selected-item sync
+- [x] capture exact persistence error details in the sync log entries
 - [x] run typecheck
 - [x] run `npm run build:web`
 

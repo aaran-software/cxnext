@@ -42,4 +42,7 @@
 36. clamped the deal banner title to one line and the description to two lines
 37. synced ERPNext item codes into product SKUs and regenerated product slugs from item names during item-to-product sync
 38. sorted the Frappe item sync list by ERPNext item id and added compact category, brand, product group, and type metadata to the product list
-39. added a persistent Frappe item-to-product sync log table, API, and review panel with success, skipped, and failure counts
+39. added a persistent Frappe item-to-product sync log table, API, and review panel with success, skipped, and failure counts, then moved the log manager into a dedicated tab beside the product table
+40. added a sync progress bar to the Frappe item sync action area and moved the reference and total/selected summaries above the product table
+41. slimmed the Frappe item sync progress bar and made it appear only while selected items are syncing to ecommerce
+40. captured exact persistence error details in Frappe sync failure logs instead of only the generic wrapper message
