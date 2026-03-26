@@ -185,6 +185,7 @@ const commonModuleDefinitions = [
       { key: 'code', label: 'Code', type: 'string', required: true, nullable: false },
       { key: 'name', label: 'Name', type: 'string', required: true, nullable: false },
       { key: 'description', label: 'Description', type: 'string', required: false, nullable: true },
+      { key: 'image', label: 'Image', type: 'string', required: false, nullable: true },
     ],
   },
   {

@@ -108,6 +108,7 @@ interface StorefrontCatalogRow extends RowDataPacket {
   category_id: string | null
   category_name: string | null
   category_description: string | null
+  category_menu_image: string | null
   base_price: number | string
   compare_at_price: number | string | null
   rating: number | string | null
@@ -759,6 +760,7 @@ export class ProductRepository {
         p.category_id,
         category.name AS category_name,
         category.description AS category_description,
+        category.image AS category_menu_image,
         sf.department,
         sf.home_slider_enabled,
         sf.home_slider_order,
@@ -994,6 +996,7 @@ export class ProductRepository {
         department: categoryProducts[0]?.department ?? 'women',
         description: toOptionalCatalogText(row.category_description),
         image: categoryProducts[0]?.images[0] ?? null,
+        menuImage: toOptionalCatalogText(row.category_menu_image),
         productCount: categoryProducts.length,
       })
     }

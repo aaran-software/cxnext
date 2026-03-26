@@ -16,6 +16,7 @@ import { customerProfileMigration } from './015-customer-profile'
 import { commerceOperationsMigration } from './016-commerce-operations'
 import { customerAccountRecoveryMigration } from './017-customer-account-recovery'
 import { frappePurchaseReceiptsMigration } from './018-frappe-purchase-receipts'
+import { productCategoryMenuImagesMigration } from './019-product-category-menu-images'
 import type { Migration } from './migration'
 
 export const migrations: Migration[] = [
@@ -37,4 +38,5 @@ export const migrations: Migration[] = [
   commerceOperationsMigration,
   customerAccountRecoveryMigration,
   frappePurchaseReceiptsMigration,
+  productCategoryMenuImagesMigration,
 ]

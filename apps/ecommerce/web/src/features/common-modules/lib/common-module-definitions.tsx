@@ -53,7 +53,7 @@ function toFieldDefinition(column: CommonModuleMetadataColumn) {
   return {
     key: column.key,
     label: column.label,
-    type: column.referenceModule ? 'select' : column.type === 'number' ? 'number' : 'text',
+    type: column.referenceModule ? 'select' : column.key === 'image' ? 'image' : column.type === 'number' ? 'number' : 'text',
     required: column.required,
     placeholder: column.label,
     parseAs: column.type,
@@ -67,6 +67,25 @@ function toColumnDefinition(column: CommonModuleMetadataColumn) {
     header: column.label,
     accessor: (item: Record<string, unknown>) =>
       item[column.key] as string | number | boolean | Date | null | undefined,
+    cell: column.key === 'image'
+      ? (item: Record<string, unknown>) => {
+          const value = typeof item.image === 'string' ? item.image.trim() : ''
+
+          return value
+            ? (
+                <div className="flex items-center">
+                  <img
+                    src={value}
+                    alt="Category"
+                    className="h-10 w-10 rounded-md border border-border/60 object-cover"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
+              )
+            : <span className="text-muted-foreground">No image</span>
+        }
+      : undefined,
   }
 }
 

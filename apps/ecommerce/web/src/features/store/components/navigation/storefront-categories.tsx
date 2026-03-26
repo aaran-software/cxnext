@@ -38,9 +38,9 @@ export function StorefrontCategories({ className }: { className?: string }) {
               className="group flex w-16 flex-col items-center gap-2 transition-transform duration-300 hover:-translate-y-1 sm:w-20 md:w-24 lg:w-28"
             >
               <div className="relative flex aspect-square w-full shrink-0 flex-col items-center justify-end overflow-hidden">
-                {category.image ? (
+                {category.menuImage ?? category.image ? (
                   <img
-                    src={category.image}
+                    src={category.menuImage ?? category.image ?? ''}
                     alt={category.name}
                     className="aspect-square w-full rounded-md object-cover object-center mix-blend-multiply drop-shadow-md transition-transform duration-500 group-hover:scale-110"
                     loading="lazy"

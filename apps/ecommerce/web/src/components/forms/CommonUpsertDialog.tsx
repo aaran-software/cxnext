@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog"
 import { Field, FieldContent, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { MediaImageField } from "@/components/forms/media-image-field"
 
 export type CommonUpsertValue = string | number | boolean
 
@@ -24,7 +25,7 @@ export type CommonUpsertSelectOption = {
 export type CommonUpsertFieldDefinition = {
   key: string
   label: string
-  type?: "text" | "number" | "select"
+  type?: "text" | "number" | "select" | "image"
   placeholder?: string
   required?: boolean
   options?: CommonUpsertSelectOption[]
@@ -220,6 +221,17 @@ export function CommonUpsertDialog({
                           }
                         }
                         : undefined}
+                    />
+                  ) : field.type === "image" ? (
+                    <MediaImageField
+                      label=""
+                      value={formValues[field.key] ?? ""}
+                      onChange={(value) => {
+                        setFormValues((current) => ({ ...current, [field.key]: value }))
+                        setErrors((current) => ({ ...current, [field.key]: "" }))
+                      }}
+                      dialogTitle={`Select ${field.label}`}
+                      dialogDescription={`Attach an image for ${field.label.toLowerCase()}.`}
                     />
                   ) : (
                     <Input
