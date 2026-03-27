@@ -182,6 +182,12 @@ App shell rule:
 3. framework bootstrap should only select and render shells, not absorb app-specific provider trees
 4. feature pages and app business flows must stay behind the app shell instead of leaking into framework bootstrap
 
+Shared web runtime rule:
+
+1. global web styles belong to framework under `apps/framework/src/web/platform`
+2. shared theme contracts and providers belong to framework under `apps/framework/src/web/theme`
+3. apps may consume framework web runtime primitives, but framework must not import app-local theme or shell code back again
+
 ## Delivery Modes
 
 The repository should support these delivery modes over time:
@@ -240,8 +246,8 @@ Remaining:
 5. harden connector boundaries for Frappe, Zoho, Tally, and future integrations
 6. keep future database schema changes module-owned so billing, commerce, CRM, and connectors can evolve without one global migration dump
 7. keep every new web app behind an explicit app shell so framework bootstrap remains thin while the product suite grows
-6. continue building billing business workflows on top of the current billing base
-7. improve docs so the platform vision is clear to future contributors and client delivery teams
+8. continue building billing business workflows on top of the current billing base
+9. improve docs so the platform vision is clear to future contributors and client delivery teams
 
 ## Target Shape
 

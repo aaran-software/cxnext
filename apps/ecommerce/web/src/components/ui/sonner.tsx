@@ -1,6 +1,6 @@
 import 'sonner/dist/styles.css'
 import { Toaster } from 'sonner'
-import { useThemeSettings } from '@/shared/theme/theme-provider'
+import { useThemeSettings } from '@framework-core/web/theme/theme-provider'
 
 export function AppToaster() {
   const { resolvedMode } = useThemeSettings()

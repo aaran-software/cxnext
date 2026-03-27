@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useThemeSettings } from './theme-provider'
+import { useThemeSettings } from '@framework-core/web/theme/theme-provider'
 
 export function ThemeSwitcher() {
   const { accent, mode, resolvedMode, setAccent, setMode } = useThemeSettings()

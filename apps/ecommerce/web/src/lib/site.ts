@@ -14,28 +14,21 @@ import {
   Truck,
   Users,
 } from 'lucide-react'
+import {
+  accentOptions,
+  modeOptions,
+  type AccentTheme,
+  type ColorMode,
+} from '@framework-core/web/theme/theme-contract'
 
-export type AccentTheme = 'neutral' | 'orange' | 'blue' | 'purple'
-export type ColorMode = 'light' | 'dark' | 'system'
+export { accentOptions, modeOptions }
+export type { AccentTheme, ColorMode }
 
 export const publicNavigation = [
   { label: 'Home', href: '/' },
   { label: 'About', href: '/about' },
   { label: 'Contact', href: '/contact' },
   { label: 'Dashboard', href: '/admin/dashboard' },
-]
-
-export const modeOptions: { value: ColorMode; label: string }[] = [
-  { value: 'light', label: 'Light' },
-  { value: 'dark', label: 'Dark' },
-  { value: 'system', label: 'System' },
-]
-
-export const accentOptions: { value: AccentTheme; label: string }[] = [
-  { value: 'neutral', label: 'Neutral' },
-  { value: 'orange', label: 'Orange' },
-  { value: 'blue', label: 'Blue' },
-  { value: 'purple', label: 'Purple' },
 ]
 
 export interface SidebarGroup {

@@ -15,6 +15,7 @@
 - [x] Rework framework database migrations into module-owned registries instead of a single flat migration dump
 - [x] Move frontend bootstrap ownership to `apps/framework/src/main.tsx` and register current app shells under framework selection
 - [x] Split current web startup into explicit app shell modules so framework bootstrap no longer owns ecommerce-specific providers
+- [x] Move global web styles and shared theme runtime into framework so app shells stop depending on ecommerce-owned style primitives
 - [ ] Reduce hidden host coupling and document the extraction path from shared host to clearer standalone app boundaries
 - [ ] Move billing business rules toward reusable app services instead of UI-local state
 - [ ] Define packaging and customization rules so client-specific delivery does not fork the whole platform

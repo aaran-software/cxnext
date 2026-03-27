@@ -6,7 +6,7 @@ import {
   useMemo,
   useState,
 } from 'react'
-import type { AccentTheme, ColorMode } from '@/lib/site'
+import type { AccentTheme, ColorMode } from './theme-contract'
 
 const MODE_STORAGE_KEY = 'cxnext-color-mode'
 const ACCENT_STORAGE_KEY = 'cxnext-accent-theme'
