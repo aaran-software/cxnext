@@ -83,6 +83,7 @@ function createDefaultValues(): CompanyFormValues {
   return {
     name: '',
     legalName: '',
+    tagline: '',
     registrationNumber: '',
     pan: '',
     financialYearStart: '',
@@ -126,6 +127,7 @@ function toFormValues(company: Company): CompanyFormValues {
   return {
     name: company.name,
     legalName: company.legalName ?? '',
+    tagline: company.tagline ?? '',
     registrationNumber: company.registrationNumber ?? '',
     pan: company.pan ?? '',
     financialYearStart: company.financialYearStart ?? '',
@@ -445,6 +447,7 @@ export function CompanyFormPage() {
                 <CollectionCard className="rounded-md" contentClassName="grid gap-4 pt-5 md:grid-cols-2">
                     <div className="grid min-h-[4.75rem] gap-2"><Label className={fieldErrors.name ? 'text-destructive' : undefined}>Name</Label><Input className={inputErrorClassName(Boolean(fieldErrors.name))} value={values.name} onChange={(event) => setValues((current) => ({ ...current, name: event.target.value }))} /><FieldError message={fieldErrors.name} /></div>
                     <div className="grid gap-2"><Label>Legal Name</Label><Input value={values.legalName} onChange={(event) => setValues((current) => ({ ...current, legalName: event.target.value }))} /></div>
+                    <div className="grid gap-2 md:col-span-2"><Label>Tagline</Label><Input value={values.tagline} onChange={(event) => setValues((current) => ({ ...current, tagline: event.target.value }))} placeholder="Shown below logo text in menus and footers" /></div>
                     <div className="grid gap-2"><Label>Registration Number</Label><Input value={values.registrationNumber} onChange={(event) => setValues((current) => ({ ...current, registrationNumber: event.target.value }))} /></div>
                     <div className="grid gap-2"><Label>PAN</Label><Input value={values.pan} onChange={(event) => setValues((current) => ({ ...current, pan: event.target.value }))} /></div>
                     <div className="grid gap-2"><Label>Financial Year Start</Label><Input type="date" value={values.financialYearStart} onChange={(event) => setValues((current) => ({ ...current, financialYearStart: event.target.value }))} /></div>

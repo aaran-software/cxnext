@@ -26,6 +26,8 @@ import { CommerceOrderWorkflowRepository } from '@ecommerce-api/features/commerc
 import { CustomerHelpdeskService } from '@ecommerce-api/features/customer-helpdesk/application/customer-helpdesk-service'
 import { CustomerHelpdeskRepository } from '@ecommerce-api/features/customer-helpdesk/data/customer-helpdesk-repository'
 import { UserManagementService } from '../../features/users/application/user-management-service'
+import { TaskService } from '../../features/task/application/task-service'
+import { TaskRepository } from '../../features/task/data/task-repository'
 import {
   createFrappeItem,
   getFrappeItem,
@@ -103,6 +105,7 @@ const customerHelpdeskService = new CustomerHelpdeskService(
   customerProfileRepository,
   authService,
 )
+const taskService = new TaskService(new TaskRepository())
 
 function parseBooleanFlag(value: string | null) {
   if (!value) {
@@ -577,6 +580,52 @@ export async function routeRequest(
 
     if (method === 'GET' && url.pathname === '/products') {
       writeJson(response, 200, await productService.list())
+      return
+    }
+
+    if (method === 'GET' && url.pathname === '/tasks') {
+      const user = await requireAuthenticatedUser(request)
+      if (user.actorType === 'admin') {
+        writeJson(response, 200, await taskService.listAll())
+      } else {
+        writeJson(response, 200, await taskService.listForUser(user.id))
+      }
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/tasks') {
+      const user = await requireAuthenticatedUser(request)
+      writeJson(response, 201, await taskService.create(user.id, await readJsonBody(request)))
+      return
+    }
+
+    const taskRecordMatch = url.pathname.match(/^\/tasks\/([^/]+)$/)
+    if (taskRecordMatch) {
+      const taskId = taskRecordMatch[1]
+      const user = await requireAuthenticatedUser(request)
+
+      if (method === 'GET') {
+        writeJson(response, 200, await taskService.getById(taskId))
+        return
+      }
+
+      if (method === 'PATCH') {
+        writeJson(response, 200, await taskService.update(taskId, user.id, await readJsonBody(request)))
+        return
+      }
+    }
+
+    const taskFinalizeMatch = url.pathname.match(/^\/tasks\/([^/]+)\/finalize$/)
+    if (method === 'POST' && taskFinalizeMatch) {
+      const user = await requireAuthenticatedUser(request)
+      writeJson(response, 200, await taskService.finalize(taskFinalizeMatch[1], user.id))
+      return
+    }
+
+    const taskActivityMatch = url.pathname.match(/^\/tasks\/([^/]+)\/activities$/)
+    if (method === 'POST' && taskActivityMatch) {
+      const user = await requireAuthenticatedUser(request)
+      writeJson(response, 201, await taskService.addActivity(taskActivityMatch[1], user.id, await readJsonBody(request)))
       return
     }
 

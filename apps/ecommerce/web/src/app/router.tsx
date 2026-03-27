@@ -233,6 +233,14 @@ const SystemVersionPage = lazyPage(() => import('@/features/settings/pages/syste
 const EcommerceSettingsPage = lazyPage(() => import('@/features/settings/pages/ecommerce-settings-page'), 'EcommerceSettingsPage')
 const UserFormPage = lazyPage(() => import('@/features/users/pages/user-form-page'), 'UserFormPage')
 const UserListPage = lazyPage(() => import('@/features/users/pages/user-list-page'), 'UserListPage')
+const TaskWorkspacePage = lazyPage(
+  () => import('@/features/task/pages/task-workspace-page'),
+  'TaskWorkspacePage',
+)
+const TaskFormPage = lazyPage(
+  () => import('@/features/task/pages/task-form-page'),
+  'TaskFormPage',
+)
 
 function LegacyAdminDashboardRedirect() {
   const location = useLocation()
@@ -331,6 +339,9 @@ const adminRoutes = {
         },
         { path: 'common', element: renderLazy(CommonModulesHomePage) },
         { path: 'common/:moduleKey', element: renderLazy(CommonModulePage) },
+        { path: 'tasks', element: renderLazy(TaskWorkspacePage) },
+        { path: 'tasks/new', element: renderLazy(TaskFormPage) },
+        { path: 'tasks/:taskId/edit', element: renderLazy(TaskFormPage) },
         { path: '*', element: renderLazy(DashboardPage) },
       ],
     },

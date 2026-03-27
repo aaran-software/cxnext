@@ -13,6 +13,8 @@ type BrandingSnapshot = {
   brandName: string
   legalName: string | null
   tagline: string
+  logoUrl: string
+  logoDarkUrl: string
   summary: string
   email: string
   phone: string
@@ -31,6 +33,8 @@ const defaultBrandingSnapshot: BrandingSnapshot = {
   brandName: 'CODEXSUN',
   legalName: null,
   tagline: 'Software Made Simple',
+  logoUrl: '/logo.svg',
+  logoDarkUrl: '/logo-dark.svg',
   summary:
     'Design systems, frontend architecture, and rollout support across web, commerce, and business applications.',
   email: 'hello@codexsun.com',
@@ -74,16 +78,49 @@ function formatCompanyLocation(company: Company | CompanySummary | null) {
     .join(', ')
 }
 
+function findCompanyLogo(
+  company: Company | CompanySummary | null,
+  matcher: (logoType: string) => boolean,
+) {
+  if (!company || !('logos' in company) || !Array.isArray(company.logos)) {
+    return null
+  }
+
+  return company.logos.find((logo) => logo.isActive && matcher(logo.logoType.trim().toLowerCase())) ?? null
+}
+
+function resolveBrandLogos(company: Company | CompanySummary | null) {
+  const primaryLogo =
+    findCompanyLogo(company, (logoType) => ['primary', 'default', 'light', 'logo'].includes(logoType))
+    ?? findCompanyLogo(company, (logoType) => !logoType.includes('dark'))
+    ?? (company && 'logos' in company && Array.isArray(company.logos)
+      ? company.logos.find((logo) => logo.isActive) ?? null
+      : null)
+
+  const darkLogo =
+    findCompanyLogo(company, (logoType) => ['dark', 'logo-dark', 'primary-dark'].includes(logoType) || logoType.includes('dark'))
+    ?? primaryLogo
+
+  return {
+    logoUrl: normalizeText(primaryLogo?.logoUrl) ?? defaultBrandingSnapshot.logoUrl,
+    logoDarkUrl: normalizeText(darkLogo?.logoUrl) ?? defaultBrandingSnapshot.logoDarkUrl,
+  }
+}
+
 function createBrandingSnapshot(company: Company | CompanySummary | null): BrandingSnapshot {
   const brandName = normalizeText(company?.name) ?? defaultBrandingSnapshot.brandName
   const legalName = normalizeText(company?.legalName) ?? null
+  const tagline = normalizeText(company?.tagline) ?? defaultBrandingSnapshot.tagline
   const description = normalizeText(company?.description)
   const website = normalizeText(company?.website)
+  const { logoUrl, logoDarkUrl } = resolveBrandLogos(company)
 
   return {
     brandName,
     legalName,
-    tagline: defaultBrandingSnapshot.tagline,
+    tagline,
+    logoUrl,
+    logoDarkUrl,
     summary: description ?? defaultBrandingSnapshot.summary,
     email: normalizeText(company?.primaryEmail) ?? defaultBrandingSnapshot.email,
     phone: normalizeText(company?.primaryPhone) ?? defaultBrandingSnapshot.phone,

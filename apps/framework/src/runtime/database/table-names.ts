@@ -116,3 +116,8 @@ export const frappeTableNames = {
   purchaseReceiptItems: 'frappe_purchase_receipt_items',
   itemProductSyncLogs: 'frappe_item_product_sync_logs',
 } as const
+
+export const taskTableNames = {
+  tasks: 'tasks',
+  activities: 'task_activities',
+} as const

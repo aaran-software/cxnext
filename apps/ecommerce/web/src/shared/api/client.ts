@@ -100,6 +100,9 @@ import type {
   SystemUpdateRunResponse,
   SystemVersionResponse,
   SystemUpdateCheckResponse,
+  TaskListResponse,
+  TaskResponse,
+  TaskUpsertPayload,
 } from '@shared/index'
 
 const configuredApiBaseUrl = String(import.meta.env.VITE_API_BASE_URL ?? '').trim()
@@ -905,6 +908,38 @@ export async function listCustomerOrders(token: string) {
     headers: createAuthorizationHeaders(token),
   })
   return response.items
+}
+
+export async function listTasks(token: string) {
+  const response = await request<TaskListResponse>('/tasks', {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.items
+}
+
+export async function getTask(token: string, id: string) {
+  const response = await request<TaskResponse>(`/tasks/${id}`, {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.item
+}
+
+export async function createTask(token: string, payload: TaskUpsertPayload) {
+  const response = await request<TaskResponse>('/tasks', {
+    method: 'POST',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
+  })
+  return response.item
+}
+
+export async function updateTask(token: string, id: string, payload: TaskUpsertPayload) {
+  const response = await request<TaskResponse>(`/tasks/${id}`, {
+    method: 'PATCH',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
+  })
+  return response.item
 }
 
 export async function getCustomerOrderWorkflow(token: string, orderId: string) {

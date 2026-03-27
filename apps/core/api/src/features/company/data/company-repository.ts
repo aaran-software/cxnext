@@ -24,6 +24,7 @@ interface CompanySummaryRow extends RowDataPacket {
   id: string
   name: string
   legal_name: string | null
+  tagline: string | null
   registration_number: string | null
   pan: string | null
   financial_year_start: Date | null
@@ -115,6 +116,7 @@ function toCompanySummary(row: CompanySummaryRow): CompanySummary {
     id: row.id,
     name: row.name,
     legalName: row.legal_name,
+    tagline: row.tagline,
     registrationNumber: row.registration_number,
     pan: row.pan,
     financialYearStart: toDateString(row.financial_year_start),
@@ -346,6 +348,7 @@ export class CompanyRepository {
           c.id,
           c.name,
           c.legal_name,
+          c.tagline,
           c.registration_number,
           c.pan,
           c.financial_year_start,
@@ -386,6 +389,7 @@ export class CompanyRepository {
           c.id,
           c.name,
           c.legal_name,
+          c.tagline,
           c.registration_number,
           c.pan,
           c.financial_year_start,
@@ -464,6 +468,7 @@ export class CompanyRepository {
             id,
             name,
             legal_name,
+            tagline,
             registration_number,
             pan,
             financial_year_start,
@@ -472,12 +477,13 @@ export class CompanyRepository {
             description,
             is_active
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
           companyId,
           payload.name,
           payload.legalName,
+          payload.tagline,
           payload.registrationNumber,
           payload.pan,
           payload.financialYearStart,
@@ -522,6 +528,7 @@ export class CompanyRepository {
           SET
             name = ?,
             legal_name = ?,
+            tagline = ?,
             registration_number = ?,
             pan = ?,
             financial_year_start = ?,
@@ -534,6 +541,7 @@ export class CompanyRepository {
         [
           payload.name,
           payload.legalName,
+          payload.tagline,
           payload.registrationNumber,
           payload.pan,
           payload.financialYearStart,

@@ -1,4 +1,5 @@
 import { Orbit } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useBranding } from './branding-provider'
 
@@ -14,15 +15,51 @@ interface BrandGlyphProps {
 }
 
 export function BrandGlyph({ className, iconClassName, shadowless = false }: BrandGlyphProps) {
+  const branding = useBranding()
+  const [lightLogoFailed, setLightLogoFailed] = useState(false)
+  const [darkLogoFailed, setDarkLogoFailed] = useState(false)
+
+  useEffect(() => {
+    setLightLogoFailed(false)
+    setDarkLogoFailed(false)
+  }, [branding.logoUrl, branding.logoDarkUrl])
+
+  const showImageLogo = !lightLogoFailed || !darkLogoFailed
+
   return (
     <div
       className={cn(
-        'flex size-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground',
+        'flex size-11 items-center justify-center overflow-hidden rounded-2xl bg-primary text-primary-foreground',
         !shadowless && 'shadow-lg shadow-primary/20',
         className,
       )}
     >
-      <Orbit className={cn('size-5', iconClassName)} />
+      {showImageLogo ? (
+        <>
+          {!lightLogoFailed ? (
+            <img
+              src={branding.logoUrl}
+              alt={branding.brandName}
+              className="block h-full w-full object-contain p-1 dark:hidden"
+              loading="eager"
+              decoding="async"
+              onError={() => setLightLogoFailed(true)}
+            />
+          ) : null}
+          {!darkLogoFailed ? (
+            <img
+              src={branding.logoDarkUrl}
+              alt={branding.brandName}
+              className="hidden h-full w-full object-contain p-1 dark:block"
+              loading="eager"
+              decoding="async"
+              onError={() => setDarkLogoFailed(true)}
+            />
+          ) : null}
+        </>
+      ) : (
+        <Orbit className={cn('size-5', iconClassName)} />
+      )}
     </div>
   )
 }

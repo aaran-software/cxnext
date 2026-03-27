@@ -244,6 +244,7 @@ export function CompanyShowPage() {
         <table className="w-full border-collapse">
           <tbody>
             <OverviewRow label="Legal Name" value={formatDetailValue(item.legalName)} />
+            <OverviewRow label="Tagline" value={formatDetailValue(item.tagline)} />
             <OverviewRow label="Registration Number" value={formatDetailValue(item.registrationNumber)} />
             <OverviewRow label="PAN" value={formatDetailValue(item.pan)} />
             <OverviewRow label="Financial Year Start" value={formatDetailValue(item.financialYearStart)} />

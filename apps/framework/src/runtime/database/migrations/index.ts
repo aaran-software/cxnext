@@ -19,6 +19,9 @@ import { frappePurchaseReceiptsMigration } from './018-frappe-purchase-receipts'
 import { frappeItemProductSyncLogsMigration } from './019-frappe-item-product-sync-logs'
 import { productCategoryMenuImagesMigration } from './019-product-category-menu-images'
 import { productCategoryStorefrontFlagsMigration } from './020-product-category-storefront-flags'
+import { companyTaglineMigration } from './021-company-tagline'
+import { taskFoundationMigration } from './022-task-foundation'
+import { taskPriorityTagsMigration } from './023-task-priority-tags'
 import type { Migration } from './migration'
 
 export const migrations: Migration[] = [
@@ -43,4 +46,7 @@ export const migrations: Migration[] = [
   frappeItemProductSyncLogsMigration,
   productCategoryMenuImagesMigration,
   productCategoryStorefrontFlagsMigration,
+  companyTaglineMigration,
+  taskFoundationMigration,
+  taskPriorityTagsMigration,
 ]

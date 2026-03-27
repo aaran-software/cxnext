@@ -46,3 +46,17 @@
 40. added a sync progress bar to the Frappe item sync action area and moved the reference and total/selected summaries above the product table
 41. slimmed the Frappe item sync progress bar and made it appear only while selected items are syncing to ecommerce
 40. captured exact persistence error details in Frappe sync failure logs instead of only the generic wrapper message
+# Changelog
+
+## 2026-03-26
+
+- Architected and implemented a comprehensive Task Management module within \`apps/core\`.
+- Created Task and TaskActivity Zod schemas with complete type safety.
+- Built explicit TaskRepository and TaskService layers mapping database operations to the core API.
+- Registered Task endpoints in the core API router with proper authentication and actor-based authorization (admin vs staff).
+- Built a multi-tabbed TaskWorkspacePage in the Staff Desktop UI (My Tasks, Open Tasks, Created By Me).
+- Added the Task workspace to the core domain manifest and connected it to the global left sidebar navigation.
+- Added company tagline support to the core company schema, persistence layer, and migration path.
+- Exposed the company tagline in the admin create/edit/detail screens.
+- Updated branding resolution so menu and footer logo text uses the saved company tagline when present.
+- Updated brand rendering to use uploaded company logos first, with `/logo.svg` and `/logo-dark.svg` as fallback assets.

@@ -70,6 +70,7 @@ export const companySummarySchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   legalName: z.string().nullable(),
+  tagline: z.string().nullable(),
   registrationNumber: z.string().nullable(),
   pan: z.string().nullable(),
   financialYearStart: z.string().nullable(),
@@ -132,6 +133,7 @@ export const companyBankAccountInputSchema = z.object({
 export const companyUpsertPayloadSchema = z.object({
   name: z.string().trim().min(2),
   legalName: dashString,
+  tagline: dashString,
   registrationNumber: dashString,
   pan: dashString,
   financialYearStart: dashString,

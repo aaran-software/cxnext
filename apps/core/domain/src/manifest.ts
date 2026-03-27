@@ -42,4 +42,10 @@ export const coreWorkspaceItems: CoreWorkspaceItem[] = [
     route: '/admin/dashboard/settings',
     summary: 'Shared system configuration and admin-level controls.',
   },
+  {
+    id: 'tasks',
+    name: 'Tasks',
+    route: '/admin/dashboard/tasks',
+    summary: 'Manage your workload, assign tasks, and track organization progress.',
+  },
 ]
