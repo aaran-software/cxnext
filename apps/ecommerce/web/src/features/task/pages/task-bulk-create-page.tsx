@@ -1,4 +1,4 @@
-import type { ProductSummary, TaskPriority, TaskTemplateSummary } from '@shared/index'
+import type { MilestoneSummary, ProductSummary, TaskPriority, TaskTemplateSummary } from '@shared/index'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Boxes, Layers3, Package, Users } from 'lucide-react'
@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { StatusBadge } from '@/components/ui/status-badge'
-import { createTasksFromTemplateBulk, HttpError, listProducts, listTaskTemplates, listUsers } from '@/shared/api/client'
+import { createTasksFromTemplateBulk, HttpError, listMilestones, listProducts, listTaskTemplates, listUsers } from '@/shared/api/client'
 import { showFailedActionToast, showSavedToast } from '@/shared/notifications/toast'
 import { useAuth } from '@framework-core/web/auth/components/auth-provider'
 
@@ -27,7 +27,9 @@ export function TaskBulkCreatePage() {
   const [templates, setTemplates] = useState<TaskTemplateSummary[]>([])
   const [products, setProducts] = useState<ProductSummary[]>([])
   const [users, setUsers] = useState<{ id: string; name: string }[]>([])
+  const [milestones, setMilestones] = useState<MilestoneSummary[]>([])
   const [selectedTemplateId, setSelectedTemplateId] = useState('')
+  const [selectedMilestoneId, setSelectedMilestoneId] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedTag, setSelectedTag] = useState('all')
@@ -53,15 +55,17 @@ export function TaskBulkCreatePage() {
       setLoading(true)
       setErrorMessage(null)
       try {
-        const [templateItems, productItems, userItems] = await Promise.all([
+        const [templateItems, productItems, userItems, milestoneItems] = await Promise.all([
           listTaskTemplates(accessToken, 'product'),
           listProducts(),
           listUsers(accessToken),
+          listMilestones(accessToken),
         ])
         if (!cancelled) {
           setTemplates(templateItems.filter((item) => (item.scopeType === 'general' || item.scopeType === 'product') && item.isActive))
           setProducts(productItems.filter((item) => item.isActive))
           setUsers(userItems.map((user) => ({ id: user.id, name: user.displayName || user.email })))
+          setMilestones(milestoneItems)
         }
       } catch (error) {
         if (!cancelled) {
@@ -90,6 +94,10 @@ export function TaskBulkCreatePage() {
   const userOptions = useMemo(
     () => users.map((user) => ({ value: user.id, label: user.name })),
     [users],
+  )
+  const milestoneOptions = useMemo(
+    () => milestones.filter((milestone) => milestone.status === 'active').map((milestone) => ({ value: milestone.id, label: milestone.title })),
+    [milestones],
   )
   const templateOptions = useMemo(
     () => templates.map((template) => ({ value: template.id, label: template.name })),
@@ -149,7 +157,11 @@ export function TaskBulkCreatePage() {
       return
     }
     if (!selectedTemplateId) {
-      setErrorMessage('Choose a product task template first.')
+      setErrorMessage('Choose a product starter template first.')
+      return
+    }
+    if (!selectedMilestoneId) {
+      setErrorMessage('Choose a milestone before creating tasks in bulk.')
       return
     }
     if (selectedProductIds.length === 0) {
@@ -166,6 +178,7 @@ export function TaskBulkCreatePage() {
     try {
       const response = await createTasksFromTemplateBulk(session.accessToken, {
         templateId: selectedTemplateId,
+        milestoneId: selectedMilestoneId,
         entityType: 'product',
         entityIds: selectedProductIds,
         assigneeMode: assignmentMode,
@@ -206,7 +219,7 @@ export function TaskBulkCreatePage() {
             <Link to="/admin/dashboard/task"><ArrowLeft className="size-4" />Back to task app</Link>
           </Button>
           <h1 className="text-2xl font-semibold tracking-tight">Bulk Task Generator</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Select a product template, filter the catalog, and generate checklist-backed tasks at scale.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Select a product starter template, choose a milestone, filter the catalog, and generate task drafts at scale.</p>
         </div>
         <div className="flex items-center gap-3">
           <Button type="button" variant="outline" onClick={() => { void navigate('/admin/dashboard/task/templates') }}>
@@ -227,12 +240,17 @@ export function TaskBulkCreatePage() {
           <Card className="rounded-md border-border/70 shadow-none">
             <CardHeader className="pb-4">
               <CardTitle>Generation Rules</CardTitle>
-              <CardDescription>Control the template, ownership, deadline, and tags before generating tasks.</CardDescription>
+              <CardDescription>Control the milestone context, starter template, ownership, deadline, and tags before generating tasks.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4">
               <div className="grid gap-2">
-                <Label>Template</Label>
-                <AutocompleteLookup value={selectedTemplateId} onChange={setSelectedTemplateId} options={templateOptions} placeholder="Select product task template" />
+                <Label>Milestone</Label>
+                <AutocompleteLookup value={selectedMilestoneId} onChange={setSelectedMilestoneId} options={milestoneOptions} placeholder="Select milestone" />
+              </div>
+
+              <div className="grid gap-2">
+                <Label>Starter Template</Label>
+                <AutocompleteLookup value={selectedTemplateId} onChange={setSelectedTemplateId} options={templateOptions} placeholder="Select product starter template" />
               </div>
 
               <div className="grid gap-2">
@@ -267,7 +285,7 @@ export function TaskBulkCreatePage() {
                     value={priority}
                     onChange={(event) => setPriority(event.target.value as TaskPriority | '')}
                   >
-                    <option value="">Use template default</option>
+                    <option value="">Use starter default</option>
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
                     <option value="high">High</option>
@@ -295,8 +313,19 @@ export function TaskBulkCreatePage() {
                     <Layers3 className="size-4 text-muted-foreground" />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-foreground">{selectedTemplate?.name ?? 'No template selected'}</p>
-                    <p className="text-xs text-muted-foreground">{selectedTemplate?.checklistItemCount ?? 0} checklist items will be snapshotted into each created task.</p>
+                    <p className="text-sm font-medium text-foreground">{selectedTemplate?.name ?? 'No starter template selected'}</p>
+                    <p className="text-xs text-muted-foreground">{selectedTemplate?.checklistItemCount ?? 0} starter checklist items will be copied into each created task.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-md border border-border/60 bg-muted/10 p-3">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-full border border-border/70 bg-background p-2">
+                    <Layers3 className="size-4 text-muted-foreground" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-foreground">{milestones.find((item) => item.id === selectedMilestoneId)?.title ?? 'No milestone selected'}</p>
+                    <p className="text-xs text-muted-foreground">Bulk-created tasks will be grouped under this milestone.</p>
                   </div>
                 </div>
               </div>

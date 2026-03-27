@@ -5,12 +5,23 @@ import { ArrowLeft, CalendarClock, ClipboardList, Flag, UserRound } from 'lucide
 import { AnimatedTabs, type AnimatedContentTab } from '@/components/ui/animated-tabs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { Textarea } from '@/components/ui/textarea'
 import { addTaskActivity, getTask, HttpError, markNotificationsReadByTask, updateTask } from '@/shared/api/client'
 import { showFailedActionToast, showSavedToast } from '@/shared/notifications/toast'
 import { useAuth } from '@framework-core/web/auth/components/auth-provider'
+
+const PLAN_SECTION_MARKER = '## Plan'
+
+interface ParsedPlan {
+  objective: string
+  steps: string[]
+  notes: string
+  attachments: string[]
+  rawText: string
+}
 
 function toErrorMessage(error: unknown) {
   if (error instanceof HttpError) return error.message
@@ -77,6 +88,104 @@ function isIncompleteVerificationTask(task: Task) {
   return task.checklistTotalCount > 0 && task.checklistCompletionCount < task.checklistTotalCount
 }
 
+function parseTaskDescription(rawDescription: string | null | undefined) {
+  if (!rawDescription?.trim()) {
+    return {
+      shortDescription: '',
+      plan: {
+        objective: '',
+        steps: [],
+        notes: '',
+        attachments: [],
+        rawText: '',
+      } satisfies ParsedPlan,
+    }
+  }
+
+  const normalized = rawDescription.replace(/\r\n/g, '\n')
+  const markerIndex = normalized.indexOf(PLAN_SECTION_MARKER)
+  if (markerIndex < 0) {
+    return {
+      shortDescription: normalized.trim(),
+      plan: {
+        objective: '',
+        steps: [],
+        notes: '',
+        attachments: [],
+        rawText: '',
+      } satisfies ParsedPlan,
+    }
+  }
+
+  const shortDescription = normalized.slice(0, markerIndex).trim()
+  const planText = normalized.slice(markerIndex + PLAN_SECTION_MARKER.length).trim()
+  const lines = planText.split('\n')
+  let activeSection: 'objective' | 'steps' | 'notes' | 'attachments' | null = null
+  const objectiveLines: string[] = []
+  const notesLines: string[] = []
+  const steps: string[] = []
+  const attachments: string[] = []
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim()
+    if (!line) continue
+
+    if (/^#{1,3}\s+objective$/i.test(line)) {
+      activeSection = 'objective'
+      continue
+    }
+    if (/^#{1,3}\s+steps$/i.test(line)) {
+      activeSection = 'steps'
+      continue
+    }
+    if (/^#{1,3}\s+notes$/i.test(line)) {
+      activeSection = 'notes'
+      continue
+    }
+    if (/^#{1,3}\s+attachments$/i.test(line)) {
+      activeSection = 'attachments'
+      continue
+    }
+
+    if (/^\d+\.\s+/.test(line)) {
+      steps.push(line.replace(/^\d+\.\s+/, '').trim())
+      activeSection = 'steps'
+      continue
+    }
+
+    if (/^[\u{1F4CE}]?\s*[^#].+\.(png|jpg|jpeg|gif|pdf|doc|docx|xls|xlsx|csv|txt|webp)$/iu.test(line) || /^📎\s+/.test(line)) {
+      attachments.push(line.replace(/^📎\s+/, '').trim())
+      activeSection = 'attachments'
+      continue
+    }
+
+    if (activeSection === 'objective') {
+      objectiveLines.push(line)
+    } else if (activeSection === 'notes') {
+      notesLines.push(line)
+    } else if (activeSection === 'attachments') {
+      attachments.push(line.replace(/^📎\s+/, '').trim())
+    } else if (!objectiveLines.length) {
+      objectiveLines.push(line)
+      activeSection = 'objective'
+    } else {
+      notesLines.push(line)
+      activeSection = 'notes'
+    }
+  }
+
+  return {
+    shortDescription,
+    plan: {
+      objective: objectiveLines.join('\n').trim(),
+      steps,
+      notes: notesLines.join('\n').trim(),
+      attachments,
+      rawText: planText,
+    } satisfies ParsedPlan,
+  }
+}
+
 function canUserEditTask(task: Task, user: { id: string; actorType: string; isSuperAdmin: boolean; roles: Array<{ key: string; name: string }> } | null) {
   if (!user || task.status === 'finalized') {
     return false
@@ -106,6 +215,7 @@ function toTaskPayload(task: Task) {
     status: task.status,
     priority: task.priority,
     tags: task.tags,
+    milestoneId: task.milestoneId,
     scopeType: task.scopeType,
     entityType: task.entityType,
     entityId: task.entityId,
@@ -148,11 +258,24 @@ function ActivityItem({ item }: { item: TaskActivity }) {
   )
 }
 
-function ChecklistItemCard({ item }: { item: TaskChecklistItem }) {
+function ChecklistItemCard(props: {
+  item: TaskChecklistItem
+  canToggle: boolean
+  toggleDisabled: boolean
+  onToggle: (checked: boolean) => void
+}) {
+  const { item } = props
   return (
     <div className="rounded-md border border-border/60 bg-muted/10 p-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <Checkbox
+            checked={item.isChecked}
+            disabled={!props.canToggle || props.toggleDisabled}
+            onCheckedChange={(checked) => props.onToggle(Boolean(checked))}
+            className="mt-1"
+          />
+          <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-sm font-medium text-foreground">{item.label}</p>
             <StatusBadge tone={item.isChecked ? 'active' : 'manual'}>{item.isChecked ? 'Checked' : 'Pending'}</StatusBadge>
@@ -163,6 +286,7 @@ function ChecklistItemCard({ item }: { item: TaskChecklistItem }) {
             {item.checkedAt ? ` on ${formatDateTime(item.checkedAt)}` : ''}
           </p>
           <p className="text-sm text-muted-foreground">{item.note?.trim() || 'No checklist note added.'}</p>
+        </div>
         </div>
         <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Step {item.sortOrder + 1}</p>
       </div>
@@ -229,6 +353,11 @@ export function TaskDetailPage() {
   }, [searchParams])
 
   const verificationStatus = task ? getVerificationStatus(task) : null
+  const parsedDescription = useMemo(() => task ? parseTaskDescription(task.description) : null, [task])
+  const hasPlanSteps = Boolean(parsedDescription && parsedDescription.plan.steps.length > 0)
+  const hasPlanNotes = Boolean(parsedDescription?.plan.notes.trim())
+  const hasPlanAttachments = Boolean(parsedDescription && parsedDescription.plan.attachments.length > 0)
+  const hasStructuredPlan = hasPlanSteps || hasPlanNotes || hasPlanAttachments
   const comments = useMemo(() => task?.activities.filter((item) => item.activityType === 'comment') ?? [], [task])
   const systemActivity = useMemo(() => task?.activities.filter((item) => item.activityType !== 'comment') ?? [], [task])
   const userCanEdit = task ? canUserEditTask(task, session?.user ?? null) : false
@@ -298,6 +427,38 @@ export function TaskDetailPage() {
     }
   }
 
+  async function handleChecklistToggle(checklistItemId: string, checked: boolean) {
+    if (!taskId || !task || !session?.accessToken) {
+      return
+    }
+
+    setActionSaving(true)
+    setErrorMessage(null)
+    try {
+      const nextTask = await updateTask(session.accessToken, taskId, {
+        ...toTaskPayload(task),
+        checklistItems: task.checklistItems.map((item) => ({
+          id: item.id,
+          isChecked: item.id === checklistItemId ? checked : item.isChecked,
+          note: item.note,
+        })),
+      })
+      setTask(nextTask)
+      showSavedToast({
+        entityLabel: 'task',
+        recordName: nextTask.title,
+        referenceId: nextTask.id,
+        mode: 'update',
+      })
+    } catch (error) {
+      const message = toErrorMessage(error)
+      setErrorMessage(message)
+      showFailedActionToast({ entityLabel: 'task', action: 'update', detail: message })
+    } finally {
+      setActionSaving(false)
+    }
+  }
+
   if (loading) {
     return (
       <Card className="rounded-md border-border/70 shadow-none">
@@ -328,15 +489,28 @@ export function TaskDetailPage() {
             <CardContent className="space-y-4">
               <div className="rounded-md border border-border/60 bg-muted/10 p-4">
                 <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Description</p>
-                <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{task.description?.trim() || 'No task description added yet.'}</p>
+                <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{parsedDescription?.shortDescription || 'No task description added yet.'}</p>
               </div>
 
               <div className="grid gap-3 md:grid-cols-2">
+                <TaskInfoRow label="Milestone" value={task.milestoneTitle ?? 'No milestone'} />
                 <TaskInfoRow label="Entity Type" value={task.entityType ?? 'General'} />
                 <TaskInfoRow label="Entity Label" value={task.entityLabel ?? task.entityId ?? 'Not linked'} />
                 <TaskInfoRow label="Entity ID" value={task.entityId ?? 'Not linked'} />
-                <TaskInfoRow label="Template" value={task.templateName ?? 'No template'} />
+                <TaskInfoRow label="Source Template" value={task.templateName ?? 'No starter template'} />
               </div>
+              {task.milestoneId && task.milestoneTitle ? (
+                <div className="rounded-md border border-border/60 bg-muted/10 p-4">
+                  <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Milestone</p>
+                  <button
+                    type="button"
+                    onClick={() => { void navigate(`/admin/dashboard/task/milestones/${encodeURIComponent(task.milestoneId!)}`) }}
+                    className="mt-2 text-sm font-medium text-foreground underline-offset-4 hover:underline"
+                  >
+                    {task.milestoneTitle}
+                  </button>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
 
@@ -372,6 +546,78 @@ export function TaskDetailPage() {
             </Card>
           </div>
         </div>
+      ),
+      contentClassName: 'border-0 bg-transparent p-0 shadow-none',
+    },
+    {
+      label: 'Plan',
+      value: 'plan',
+      content: (
+        <Card className="rounded-md border-border/70 shadow-none">
+          <CardHeader className="pb-4">
+            <CardTitle>Plan</CardTitle>
+            <CardDescription>Execution plan captured for this task record.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {!parsedDescription?.plan.rawText ? (
+              <p className="text-sm text-muted-foreground">No plan has been added for this task yet.</p>
+            ) : (
+              <>
+                <div className="grid gap-3 md:grid-cols-4">
+                  <TaskInfoRow label="Task Name" value={task.title} />
+                  <TaskInfoRow label="Steps" value={`${parsedDescription.plan.steps.length}`} />
+                  <TaskInfoRow label="Notes" value={hasPlanNotes ? 'Present' : 'Missing'} />
+                  <TaskInfoRow label="Attachments" value={`${parsedDescription.plan.attachments.length}`} />
+                </div>
+
+                {!hasStructuredPlan ? (
+                  <div className="rounded-md border border-border/60 bg-muted/10 p-4">
+                    <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Plan</p>
+                    <pre className="mt-2 whitespace-pre-wrap break-words text-sm text-foreground">{parsedDescription.plan.rawText}</pre>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(16rem,0.95fr)]">
+                    <div className="space-y-4">
+                      {hasPlanNotes ? (
+                        <div className="rounded-md border border-border/60 bg-muted/10 p-4">
+                          <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Notes</p>
+                          <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{parsedDescription.plan.notes}</p>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="space-y-4">
+                      {hasPlanSteps ? (
+                        <div className="rounded-md border border-border/60 bg-muted/10 p-4">
+                          <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Steps</p>
+                          <ol className="mt-2 space-y-2 text-sm text-foreground">
+                            {parsedDescription.plan.steps.map((step, index) => <li key={`${index + 1}-${step}`}>{index + 1}. {step || 'Untitled step'}</li>)}
+                          </ol>
+                        </div>
+                      ) : null}
+
+                      {hasPlanAttachments ? (
+                        <div className="rounded-md border border-border/60 bg-muted/10 p-4">
+                          <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Attachments</p>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {parsedDescription.plan.attachments.map((attachment) => <StatusBadge key={attachment} tone="manual">{attachment}</StatusBadge>)}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                )}
+
+                {hasStructuredPlan ? (
+                  <details className="rounded-md border border-border/60 bg-muted/10 p-4">
+                    <summary className="cursor-pointer text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">View Raw Plan</summary>
+                    <pre className="mt-3 whitespace-pre-wrap break-words text-sm text-muted-foreground">{parsedDescription.plan.rawText}</pre>
+                  </details>
+                ) : null}
+              </>
+            )}
+          </CardContent>
+        </Card>
       ),
       contentClassName: 'border-0 bg-transparent p-0 shadow-none',
     },
@@ -457,7 +703,7 @@ export function TaskDetailPage() {
         <Card className="rounded-md border-border/70 shadow-none">
           <CardHeader className="pb-4">
             <CardTitle>Progress</CardTitle>
-            <CardDescription>Verification proof and checklist completion for this task.</CardDescription>
+            <CardDescription>Task-owned proof and checklist completion for this task.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-wrap items-center gap-3">
@@ -470,7 +716,15 @@ export function TaskDetailPage() {
               <p className="text-sm text-muted-foreground">No checklist items exist for this task.</p>
             ) : (
               <div className="space-y-3">
-                {task.checklistItems.map((item) => <ChecklistItemCard key={item.id} item={item} />)}
+                {task.checklistItems.map((item) => (
+                  <ChecklistItemCard
+                    key={item.id}
+                    item={item}
+                    canToggle={userCanEdit}
+                    toggleDisabled={actionSaving}
+                    onToggle={(checked) => { void handleChecklistToggle(item.id, checked) }}
+                  />
+                ))}
               </div>
             )}
           </CardContent>

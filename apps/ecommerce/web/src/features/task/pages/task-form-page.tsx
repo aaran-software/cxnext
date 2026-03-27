@@ -1,24 +1,36 @@
 import type { LookupOption } from '@/shared/forms/common-lookup'
-import type { TaskPriority, TaskScopeType, TaskStatus, TaskTemplateSummary, TaskUpsertPayload } from '@shared/index'
-import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, CalendarClock, CheckCircle2, ClipboardList, Flag, Sparkles, Tags, UserRound } from 'lucide-react'
+import type { MilestoneSummary, MilestoneUpsertPayload, TaskPriority, TaskScopeType, TaskStatus, TaskTemplateSummary, TaskUpsertPayload } from '@shared/index'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { ArrowLeft, CalendarClock, CheckCircle2, ClipboardList, Flag, Paperclip, Plus, Sparkles, Tags, UserRound } from 'lucide-react'
 import { AutocompleteLookup } from '@/components/lookups/AutocompleteLookup'
 import { TaskCreateWizard } from '@/features/task/components/task-create-wizard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { Textarea } from '@/components/ui/textarea'
 import { createFieldErrors, inputErrorClassName, isBlank, setFieldError, summarizeFieldErrors, type FieldErrors, warningCardClassName } from '@/shared/forms/validation'
-import { HttpError, createTask, getTask, getTaskTemplate, listProducts, listTaskTemplates, listUsers, markNotificationsReadByTask, updateTask } from '@/shared/api/client'
+import { HttpError, createMilestone, createTask, getTask, getTaskTemplate, listMilestones, listProducts, listTaskTemplates, listUsers, markNotificationsReadByTask, updateTask } from '@/shared/api/client'
 import { showFailedActionToast, showSavedToast, showValidationToast } from '@/shared/notifications/toast'
 import { useAuth } from '@framework-core/web/auth/components/auth-provider'
 
 type TaskFormValues = TaskUpsertPayload
 const TASK_DRAFT_STORAGE_KEY = 'task:create-draft'
+const PLAN_SECTION_MARKER = '## Plan'
+
+interface TaskPlanItem {
+  id: string
+  text: string
+}
+
+interface TaskPlanState {
+  steps: TaskPlanItem[]
+  notes: string
+  attachments: TaskPlanItem[]
+}
 
 const taskStatusOptions: Array<LookupOption & { tone: 'manual' | 'publishing' | 'featured' | 'active' }> = [
   { value: 'pending', label: 'Pending', tone: 'manual' },
@@ -50,6 +62,7 @@ function createDefaultValues(): TaskFormValues {
     status: 'pending',
     priority: 'medium',
     tags: [],
+    milestoneId: null,
     scopeType: 'general',
     entityType: null,
     entityId: null,
@@ -59,6 +72,188 @@ function createDefaultValues(): TaskFormValues {
     dueDate: null,
     reviewComment: null,
     checklistItems: [],
+  }
+}
+
+function createPlanItem(text = ''): TaskPlanItem {
+  return {
+    id: crypto.randomUUID(),
+    text,
+  }
+}
+
+function createDefaultPlan(): TaskPlanState {
+  return {
+    steps: [],
+    notes: '',
+    attachments: [],
+  }
+}
+
+function normalizePlanItems(values: string[], options?: { keepEmpty?: boolean }) {
+  return values
+    .map((value) => createPlanItem(value.trim()))
+    .filter((item) => options?.keepEmpty ? true : item.text.length > 0)
+}
+
+function upsertNumberedStepLine(value: string) {
+  const currentText = value.trimEnd()
+  const lines = currentText ? currentText.split('\n') : []
+  const stepsHeaderIndex = lines.findIndex((line) => /^#{1,3}\s+steps\s*$/i.test(line.trim()))
+
+  if (stepsHeaderIndex < 0) {
+    return [currentText, '## Steps\n1. '].filter(Boolean).join('\n\n')
+  }
+
+  let nextSectionIndex = lines.length
+  for (let index = stepsHeaderIndex + 1; index < lines.length; index += 1) {
+    if (/^#{1,3}\s+\w+/i.test(lines[index].trim())) {
+      nextSectionIndex = index
+      break
+    }
+  }
+
+  const stepLines = lines.slice(stepsHeaderIndex + 1, nextSectionIndex)
+  const existingStepNumbers = stepLines
+    .map((line) => {
+      const match = line.trim().match(/^(\d+)\.\s*/)
+      return match ? Number.parseInt(match[1], 10) : null
+    })
+    .filter((number): number is number => number !== null && Number.isFinite(number) && number > 0)
+  const nextStepNumber = (existingStepNumbers.length > 0 ? Math.max(...existingStepNumbers) : 0) + 1
+  const nextLines = [...lines]
+  nextLines.splice(nextSectionIndex, 0, `${nextStepNumber}. `)
+  return nextLines.join('\n').trimEnd()
+}
+
+function serializePlanEditor(plan: TaskPlanState) {
+  const sections: string[] = []
+
+  if (plan.steps.length > 0) {
+    sections.push('## Steps', ...plan.steps.map((step, index) => `${index + 1}. ${step.text.trim()}`))
+  }
+  if (plan.notes.trim()) {
+    sections.push('## Notes', plan.notes.trim())
+  }
+  if (plan.attachments.length > 0) {
+    sections.push('## Attachments', ...plan.attachments.map((attachment) => `📎 ${attachment.text.trim()}`))
+  }
+
+  return sections.join('\n\n').trim()
+}
+
+function parsePlanEditor(value: string) {
+  const plan = createDefaultPlan()
+  const lines = value.replace(/\r\n/g, '\n').split('\n')
+  let activeSection: 'steps' | 'notes' | 'attachments' | null = null
+  const noteLines: string[] = []
+  const stepLines: string[] = []
+  const attachmentLines: string[] = []
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim()
+    if (!line) continue
+
+    if (/^#{1,3}\s+steps$/i.test(line)) {
+      activeSection = 'steps'
+      continue
+    }
+    if (/^#{1,3}\s+notes$/i.test(line)) {
+      activeSection = 'notes'
+      continue
+    }
+    if (/^#{1,3}\s+attachments$/i.test(line)) {
+      activeSection = 'attachments'
+      continue
+    }
+
+    if (line === '/attach' || line === '[attach]') {
+      attachmentLines.push('Attachment')
+      activeSection = 'attachments'
+      continue
+    }
+
+    if (/^📎\s+/.test(line)) {
+      attachmentLines.push(line.replace(/^📎\s+/, '').trim())
+      activeSection = 'attachments'
+      continue
+    }
+
+    if (/^\d+\.\s*/.test(line)) {
+      stepLines.push(line.replace(/^\d+\.\s*/, '').trim())
+      activeSection = 'steps'
+      continue
+    }
+
+    if (/^- \[[ xX]\]\s+/.test(line)) {
+      noteLines.push(line.replace(/^- \[[ xX]\]\s+/, '').trim())
+      activeSection = 'notes'
+      continue
+    }
+
+    if (/^[-*]\s+/.test(line)) {
+      noteLines.push(line.replace(/^[-*]\s+/, '').trim())
+      activeSection = 'notes'
+      continue
+    }
+
+    if (activeSection === 'notes') {
+      noteLines.push(line)
+    } else if (activeSection === 'attachments') {
+      attachmentLines.push(line)
+    } else {
+      noteLines.push(line)
+      activeSection = 'notes'
+    }
+  }
+
+  plan.steps = normalizePlanItems(stepLines, { keepEmpty: true })
+  plan.notes = noteLines.join('\n').trim()
+  plan.attachments = normalizePlanItems(attachmentLines)
+
+  return plan
+}
+
+function serializeTaskDescription(shortDescription: string, planText: string) {
+  const blocks: string[] = []
+  if (shortDescription.trim()) {
+    blocks.push(shortDescription.trim())
+  }
+
+  if (planText.trim()) {
+    blocks.push(PLAN_SECTION_MARKER, planText.trim())
+  }
+
+  return blocks.join('\n\n').trim() || null
+}
+
+function parseTaskDescription(rawDescription: string | null | undefined) {
+  if (!rawDescription?.trim()) {
+    return {
+      shortDescription: '',
+      plan: createDefaultPlan(),
+      planText: '',
+    }
+  }
+
+  const normalized = rawDescription.replace(/\r\n/g, '\n')
+  const markerIndex = normalized.indexOf(PLAN_SECTION_MARKER)
+  const shortDescription = markerIndex >= 0 ? normalized.slice(0, markerIndex).trim() : normalized.trim()
+  if (markerIndex < 0) {
+    return {
+      shortDescription,
+      plan: createDefaultPlan(),
+      planText: '',
+    }
+  }
+
+  const planText = normalized.slice(markerIndex + PLAN_SECTION_MARKER.length).trim()
+  const plan = parsePlanEditor(planText)
+
+  return {
+    shortDescription,
+    plan,
+    planText,
   }
 }
 
@@ -107,6 +302,7 @@ export function TaskFormPage() {
   const navigate = useNavigate()
   const { session } = useAuth()
   const { taskId } = useParams()
+  const [searchParams] = useSearchParams()
   const isEditMode = Boolean(taskId)
   const [values, setValues] = useState<TaskFormValues>(createDefaultValues())
   const [loading, setLoading] = useState(isEditMode)
@@ -116,36 +312,106 @@ export function TaskFormPage() {
   const [users, setUsers] = useState<{ id: string; name: string }[]>([])
   const [products, setProducts] = useState<{ id: string; name: string }[]>([])
   const [templates, setTemplates] = useState<TaskTemplateSummary[]>([])
+  const [milestones, setMilestones] = useState<MilestoneSummary[]>([])
   const [checklistLabels, setChecklistLabels] = useState<Record<string, string>>({})
   const [wizardOpen, setWizardOpen] = useState(false)
   const [draftLoaded, setDraftLoaded] = useState(false)
+  const [shortDescription, setShortDescription] = useState('')
+  const [plan, setPlan] = useState<TaskPlanState>(createDefaultPlan())
+  const [planEditorText, setPlanEditorText] = useState('')
+  const [planEditorOpen, setPlanEditorOpen] = useState(false)
+  const planFileInputRef = useRef<HTMLInputElement | null>(null)
+  const [milestoneDialogOpen, setMilestoneDialogOpen] = useState(false)
+  const [milestoneSaving, setMilestoneSaving] = useState(false)
+  const [milestoneForm, setMilestoneForm] = useState<MilestoneUpsertPayload>({
+    title: '',
+    description: null,
+    entityType: null,
+    entityId: null,
+    status: 'active',
+    dueDate: null,
+  })
+
+  function updatePlanEditor(nextValue: string) {
+    setPlanEditorText(nextValue)
+    setPlan(parsePlanEditor(nextValue))
+  }
+
+  function insertPlanBlock(kind: 'steps' | 'notes') {
+    setPlanEditorText((currentValue) => {
+      const currentText = currentValue.trimEnd()
+
+      let nextText = currentText
+
+      if (kind === 'steps') {
+        nextText = upsertNumberedStepLine(currentText)
+      } else {
+        const blockMap = {
+          notes: '## Notes\n',
+        } satisfies Record<'notes', string>
+        nextText = [currentText, blockMap[kind]].filter(Boolean).join('\n\n')
+      }
+
+      setPlan(parsePlanEditor(nextText))
+      return nextText
+    })
+  }
+
+  function openAttachPicker() {
+    planFileInputRef.current?.click()
+  }
+
+  function handlePlanFiles(fileList: FileList | null) {
+    if (!fileList || fileList.length === 0) return
+    const nextLines = Array.from(fileList)
+      .map((file) => `📎 ${file.name.trim()}`)
+      .filter(Boolean)
+      .filter((line) => !planEditorText.includes(line))
+    if (nextLines.length === 0) return
+    const attachmentsBlock = ['## Attachments', ...nextLines].join('\n')
+    const nextText = plan.attachments.length > 0
+      ? `${planEditorText.trim()}\n${nextLines.join('\n')}`
+      : [planEditorText.trim(), attachmentsBlock].filter(Boolean).join('\n\n')
+    updatePlanEditor(nextText)
+  }
 
   useEffect(() => {
     let cancelled = false
     async function loadBootstrap() {
       if (!session?.accessToken) return
       try {
-        const [userList, templateList, productList] = await Promise.all([
+        const [userList, templateList, productList, milestoneList] = await Promise.all([
           listUsers(session.accessToken),
           listTaskTemplates(session.accessToken),
           listProducts(),
+          listMilestones(session.accessToken),
         ])
         if (!cancelled) {
           setUsers(userList.map((user) => ({ id: user.id, name: user.displayName || user.email })))
           setTemplates(templateList)
           setProducts(productList.map((product) => ({ id: product.id, name: product.name })))
+          setMilestones(milestoneList)
         }
       } catch {
         if (!cancelled) {
           setUsers([])
           setProducts([])
           setTemplates([])
+          setMilestones([])
         }
       }
     }
     void loadBootstrap()
     return () => { cancelled = true }
   }, [session?.accessToken])
+
+  useEffect(() => {
+    const composedDescription = serializeTaskDescription(shortDescription, planEditorText)
+    setValues((current) => current.description === composedDescription ? current : {
+      ...current,
+      description: composedDescription,
+    })
+  }, [planEditorText, shortDescription])
 
   useEffect(() => {
     if (taskId) {
@@ -159,10 +425,14 @@ export function TaskFormPage() {
 
     try {
       const draft = JSON.parse(rawDraft) as TaskUpsertPayload
+      const parsed = parseTaskDescription(draft.description)
       setValues((current) => ({
         ...current,
         ...draft,
       }))
+      setShortDescription(parsed.shortDescription)
+      setPlan(parsed.plan)
+      setPlanEditorText(parsed.planText)
       setDraftLoaded(true)
     } catch {
       sessionStorage.removeItem(TASK_DRAFT_STORAGE_KEY)
@@ -173,6 +443,22 @@ export function TaskFormPage() {
   }, [taskId])
 
   useEffect(() => {
+    if (taskId) {
+      return
+    }
+
+    const seededMilestoneId = searchParams.get('milestoneId')
+    if (!seededMilestoneId) {
+      return
+    }
+
+    setValues((current) => current.milestoneId ? current : {
+      ...current,
+      milestoneId: seededMilestoneId,
+    })
+  }, [searchParams, taskId])
+
+  useEffect(() => {
     let cancelled = false
     async function loadTask() {
       if (!taskId || !session?.accessToken) return
@@ -180,14 +466,19 @@ export function TaskFormPage() {
       setErrorMessage(null)
       try {
         const task = await getTask(session.accessToken, taskId)
+        const parsed = parseTaskDescription(task.description)
         if (!cancelled) {
           setChecklistLabels(Object.fromEntries(task.checklistItems.map((item) => [item.id, item.label])))
+          setShortDescription(parsed.shortDescription)
+          setPlan(parsed.plan)
+          setPlanEditorText(parsed.planText)
           setValues({
             title: task.title,
-            description: task.description,
+            description: serializeTaskDescription(parsed.shortDescription, parsed.planText),
             status: task.status,
             priority: task.priority,
             tags: task.tags,
+            milestoneId: task.milestoneId,
             scopeType: task.scopeType,
             entityType: task.entityType,
             entityId: task.entityId,
@@ -222,33 +513,89 @@ export function TaskFormPage() {
   }, [session?.accessToken, taskId])
 
   const assigneeOptions = useMemo<LookupOption[]>(() => users.map((user) => ({ value: user.id, label: user.name })), [users])
+  const milestoneOptions = useMemo<LookupOption[]>(() => milestones
+    .filter((milestone) => milestone.status === 'active' || milestone.id === values.milestoneId)
+    .map((milestone) => ({ value: milestone.id, label: milestone.title })), [milestones, values.milestoneId])
   const templateOptions = useMemo<LookupOption[]>(() => templates.map((template) => ({ value: template.id, label: template.name })), [templates])
   const selectedStatus = getStatusMeta(values.status)
   const selectedPriority = getPriorityMeta(values.priority)
   const selectedAssigneeLabel = users.find((user) => user.id === values.assigneeId)?.name ?? 'Unassigned'
+  const selectedMilestoneLabel = milestones.find((milestone) => milestone.id === values.milestoneId)?.title ?? 'No milestone'
   const headerTitle = values.title?.trim() || (isEditMode ? 'Untitled Task' : 'New Task')
 
   async function handleTemplateSelect(templateId: string) {
     if (!session?.accessToken) return
-    setValues((current) => ({ ...current, templateId: templateId || null }))
-    if (!templateId) return
+    if (!templateId) {
+      setValues((current) => ({ ...current, templateId: null }))
+      return
+    }
     const template = await getTaskTemplate(session.accessToken, templateId)
-    setChecklistLabels(Object.fromEntries(template.checklistItems.map((item) => [item.id, item.label])))
+    const checklistSeed = values.checklistItems.length > 0
+      ? values.checklistItems
+      : template.checklistItems.map((item) => ({
+          id: crypto.randomUUID(),
+          label: item.label,
+          isChecked: false,
+          note: null,
+        }))
+    setChecklistLabels(Object.fromEntries(checklistSeed.map((item) => [item.id, item.label ?? item.id])))
+    const nextPlan = {
+      ...plan,
+    }
+    setPlan(nextPlan)
+    setPlanEditorText(serializePlanEditor(nextPlan))
     setValues((current) => ({
       ...current,
       templateId: template.id,
       title: current.title.trim() ? current.title : template.titleTemplate,
-      description: current.description?.trim() ? current.description : template.descriptionTemplate,
       priority: template.defaultPriority,
-      tags: template.defaultTags,
+      tags: current.tags.length > 0 ? current.tags : template.defaultTags,
       scopeType: template.scopeType,
       entityType: template.scopeType === 'general' ? null : template.scopeType,
-      checklistItems: template.checklistItems.map((item) => ({
-        id: item.id,
-        isChecked: false,
-        note: null,
-      })),
+      checklistItems: checklistSeed,
     }))
+    if (!shortDescription.trim() && template.descriptionTemplate?.trim()) {
+      setShortDescription(template.descriptionTemplate)
+    }
+  }
+
+  async function handleCreateMilestone() {
+    if (!session?.accessToken) {
+      setErrorMessage('Authorization token is required.')
+      return
+    }
+    if (isBlank(milestoneForm.title)) {
+      setErrorMessage('Milestone title is required.')
+      return
+    }
+
+    setMilestoneSaving(true)
+    try {
+      const createdMilestone = await createMilestone(session.accessToken, milestoneForm)
+      setMilestones((current) => [createdMilestone, ...current])
+      setValues((current) => ({ ...current, milestoneId: createdMilestone.id }))
+      setMilestoneDialogOpen(false)
+      setMilestoneForm({
+        title: '',
+        description: null,
+        entityType: null,
+        entityId: null,
+        status: 'active',
+        dueDate: null,
+      })
+      showSavedToast({
+        entityLabel: 'milestone',
+        recordName: createdMilestone.title,
+        referenceId: createdMilestone.id,
+        mode: 'create',
+      })
+    } catch (error) {
+      const message = toErrorMessage(error)
+      setErrorMessage(message)
+      showFailedActionToast({ entityLabel: 'milestone', action: 'create', detail: message })
+    } finally {
+      setMilestoneSaving(false)
+    }
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -268,9 +615,13 @@ export function TaskFormPage() {
     setSaving(true)
     setErrorMessage(null)
     try {
+      const payload: TaskUpsertPayload = {
+        ...values,
+        description: serializeTaskDescription(shortDescription, planEditorText),
+      }
       const savedTask = taskId
-        ? await updateTask(session.accessToken, taskId, values)
-        : await createTask(session.accessToken, values)
+        ? await updateTask(session.accessToken, taskId, payload)
+        : await createTask(session.accessToken, payload)
       showSavedToast({
         entityLabel: 'task',
         recordName: savedTask.title,
@@ -304,7 +655,7 @@ export function TaskFormPage() {
             <Link to={taskId ? `/admin/dashboard/task/tasks/${taskId}` : '/admin/dashboard/task/tasks'}><ArrowLeft className="size-4" />Back to tasks</Link>
           </Button>
           <h1 className="text-2xl font-semibold tracking-tight">{headerTitle}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{isEditMode ? 'Task Brief' : 'Create a task with template, ownership, checklist, and due date.'}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{isEditMode ? 'Task Brief' : 'Create a task with milestone context, starter template help, ownership, and due date.'}</p>
         </div>
         <div className="flex items-center gap-3">
           {!isEditMode ? (
@@ -323,6 +674,7 @@ export function TaskFormPage() {
           open={wizardOpen}
           onOpenChange={setWizardOpen}
           templates={templates}
+          milestones={milestones}
           users={users}
           products={products}
           currentUserId={session?.user.id ?? null}
@@ -357,21 +709,112 @@ export function TaskFormPage() {
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(19rem,0.9fr)]">
         <Card className="rounded-md border-border/70 shadow-none">
           <CardContent className="grid gap-4 pt-6">
+            <div className="grid gap-2">
+              <Label className={fieldErrors.title ? 'text-destructive' : undefined}>Title</Label>
+              <Input className={inputErrorClassName(Boolean(fieldErrors.title))} value={values.title} onChange={(event) => setValues((current) => ({ ...current, title: event.target.value }))} placeholder="Ex: Verify product price update" />
+              <FieldError message={fieldErrors.title} />
+            </div>
+
+            <div className="grid gap-2">
+              <div className="flex items-center justify-between gap-3">
+                <Label>Milestone</Label>
+                <Button type="button" variant="outline" size="sm" onClick={() => setMilestoneDialogOpen(true)}>
+                  <Plus className="size-4" />
+                  New
+                </Button>
+              </div>
+              <AutocompleteLookup
+                value={values.milestoneId ?? ''}
+                onChange={(value) => setValues((current) => ({ ...current, milestoneId: value || null }))}
+                options={milestoneOptions}
+                placeholder="Select milestone"
+                allowEmptyOption
+                emptyOptionLabel="No milestone"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Description</Label>
+              <Textarea rows={3} value={shortDescription} onChange={(event) => setShortDescription(event.target.value)} placeholder="Short context only. Keep execution details in the plan below." className="min-h-20 resize-none" />
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Plan</Label>
+              <div className="rounded-md border border-border/60 bg-muted/10 p-4">
+                <div className="space-y-4">
+                  <Textarea
+                    rows={7}
+                    value={planEditorText}
+                    onChange={(event) => {
+                      const nextValue = event.target.value
+                      if ((nextValue.includes('/attach') || nextValue.includes('[attach]')) && !planEditorText.includes('/attach') && !planEditorText.includes('[attach]')) {
+                        openAttachPicker()
+                        updatePlanEditor(nextValue.replace('/attach', '').replace('[attach]', '').trim())
+                        return
+                      }
+                      updatePlanEditor(nextValue)
+                    }}
+                    onPaste={(event) => {
+                      handlePlanFiles(event.clipboardData.files)
+                    }}
+                    placeholder="Type naturally or use light structure like ## Steps, 1. Step, and ## Notes."
+                    className="min-h-40 border-none bg-background font-mono text-sm shadow-none"
+                  />
+
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-3">
+                    <div className="flex flex-wrap gap-2">
+                      <Button type="button" variant="outline" size="sm" onClick={openAttachPicker}>
+                        <Paperclip className="size-4" />
+                        Attach
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" onClick={() => insertPlanBlock('steps')}>
+                        <Plus className="size-4" />
+                        Steps
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" onClick={() => insertPlanBlock('notes')}>
+                        <Plus className="size-4" />
+                        Note
+                      </Button>
+                    </div>
+                    <Button type="button" size="sm" onClick={() => setPlanEditorOpen(true)}>Open Full Editor</Button>
+                  </div>
+
+                  <input ref={planFileInputRef} type="file" multiple className="hidden" onChange={(event) => handlePlanFiles(event.target.files)} />
+
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    <div className="rounded-md border border-border/60 bg-background p-3">
+                      <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Steps</p>
+                      <p className="mt-2 text-sm text-foreground">{plan.steps.length} step{plan.steps.length === 1 ? '' : 's'}</p>
+                    </div>
+                    <div className="rounded-md border border-border/60 bg-background p-3">
+                      <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Attachments</p>
+                      <p className="mt-2 text-sm text-foreground">{plan.attachments.length} file{plan.attachments.length === 1 ? '' : 's'}</p>
+                    </div>
+                  </div>
+
+                  {plan.attachments.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {plan.attachments.map((attachment) => <StatusBadge key={attachment.id} tone="manual">{attachment.text}</StatusBadge>)}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Tags</Label>
+              <Input value={values.tags.join(', ')} onChange={(event) => setValues((current) => ({ ...current, tags: event.target.value.split(',').map((tag) => tag.trim()).filter(Boolean) }))} placeholder="Ex: product, price, verification" />
+            </div>
+
             <div className="grid gap-2 md:grid-cols-2">
               <div className="grid gap-2">
-                <Label>Template</Label>
-                <AutocompleteLookup value={values.templateId ?? ''} onChange={(value) => { void handleTemplateSelect(value) }} options={templateOptions} placeholder="Select task template" allowEmptyOption emptyOptionLabel="No template" />
+                <Label>Starter Template</Label>
+                <AutocompleteLookup value={values.templateId ?? ''} onChange={(value) => { void handleTemplateSelect(value) }} options={templateOptions} placeholder="Use template as starter" allowEmptyOption emptyOptionLabel="No template" />
               </div>
               <div className="grid gap-2">
                 <Label>Scope</Label>
                 <AutocompleteLookup value={values.scopeType} onChange={(value) => setValues((current) => ({ ...current, scopeType: value as TaskScopeType, entityType: value === 'general' ? null : value as TaskScopeType }))} options={taskScopeOptions} placeholder="Select scope" />
               </div>
-            </div>
-
-            <div className="grid gap-2">
-              <Label className={fieldErrors.title ? 'text-destructive' : undefined}>Title</Label>
-              <Input className={inputErrorClassName(Boolean(fieldErrors.title))} value={values.title} onChange={(event) => setValues((current) => ({ ...current, title: event.target.value }))} placeholder="Ex: Verify product price update" />
-              <FieldError message={fieldErrors.title} />
             </div>
 
             <div className="grid gap-2 md:grid-cols-2">
@@ -385,39 +828,80 @@ export function TaskFormPage() {
               </div>
             </div>
 
-            <div className="grid gap-2">
-              <Label>Description</Label>
-              <Textarea rows={8} value={values.description ?? ''} onChange={(event) => setValues((current) => ({ ...current, description: event.target.value || null }))} placeholder="Add scope, expected output, and verification notes." className="min-h-40" />
-            </div>
-
-            <div className="grid gap-2">
-              <Label>Tags</Label>
-              <Input value={values.tags.join(', ')} onChange={(event) => setValues((current) => ({ ...current, tags: event.target.value.split(',').map((tag) => tag.trim()).filter(Boolean) }))} placeholder="Ex: product, price, verification" />
-            </div>
-
-            {values.checklistItems.length > 0 ? (
-              <div className="grid gap-3 rounded-md border border-border/60 bg-muted/10 p-4">
+            <div className="grid gap-3 rounded-md border border-border/60 bg-muted/10 p-4">
+              <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-foreground">Checklist</p>
-                  <p className="text-xs text-muted-foreground">Required checks from the task template.</p>
+                  <p className="text-sm font-semibold text-foreground">Task Checklist</p>
+                  <p className="text-xs text-muted-foreground">This checklist belongs to the task itself. Templates only provide a starting point.</p>
                 </div>
-                {values.checklistItems.map((item, index) => (
-                  <div key={item.id} className="grid gap-2 rounded-md border border-border/50 bg-background p-3">
-                    <label className="flex items-center gap-3">
-                      <Checkbox checked={item.isChecked} onCheckedChange={(checked) => setValues((current) => ({
-                        ...current,
-                        checklistItems: current.checklistItems.map((entry, entryIndex) => entryIndex === index ? { ...entry, isChecked: Boolean(checked) } : entry),
-                      }))} />
-                      <span className="text-sm font-medium text-foreground">{checklistLabels[item.id] ?? item.id}</span>
-                    </label>
-                    <Input value={item.note ?? ''} onChange={(event) => setValues((current) => ({
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const id = crypto.randomUUID()
+                    const label = 'New checklist item'
+                    setChecklistLabels((current) => ({ ...current, [id]: label }))
+                    setValues((current) => ({
                       ...current,
-                      checklistItems: current.checklistItems.map((entry, entryIndex) => entryIndex === index ? { ...entry, note: event.target.value || null } : entry),
-                    }))} placeholder="Optional note" />
-                  </div>
-                ))}
+                      checklistItems: [...current.checklistItems, { id, label, isChecked: false, note: null }],
+                    }))
+                  }}
+                >
+                  <Plus className="size-4" />
+                  Add Item
+                </Button>
               </div>
-            ) : null}
+
+              {values.checklistItems.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No checklist items yet. Add task-owned validation here, even without a template.</p>
+              ) : values.checklistItems.map((item, index) => (
+                <div key={item.id} className="rounded-md border border-border/60 bg-background p-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex min-w-0 flex-1 items-start gap-3">
+                      <div className="mt-2 flex size-8 shrink-0 items-center justify-center rounded-full border border-border/70 text-xs font-semibold text-muted-foreground">
+                        {index + 1}
+                      </div>
+                      <div className="grid min-w-0 flex-1 gap-3">
+                        <Input
+                          value={item.label ?? checklistLabels[item.id] ?? item.id}
+                          onChange={(event) => {
+                            const label = event.target.value
+                            setChecklistLabels((current) => ({ ...current, [item.id]: label }))
+                            setValues((current) => ({
+                              ...current,
+                              checklistItems: current.checklistItems.map((entry, entryIndex) => entryIndex === index ? { ...entry, label } : entry),
+                            }))
+                          }}
+                          placeholder="Checklist instruction"
+                        />
+                        <Input
+                          value={item.note ?? ''}
+                          onChange={(event) => setValues((current) => ({
+                            ...current,
+                            checklistItems: current.checklistItems.map((entry, entryIndex) => entryIndex === index ? { ...entry, note: event.target.value || null } : entry),
+                          }))}
+                          placeholder="Optional note"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setValues((current) => ({
+                          ...current,
+                          checklistItems: current.checklistItems.filter((_, entryIndex) => entryIndex !== index),
+                        }))}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
@@ -468,9 +952,10 @@ export function TaskFormPage() {
               <TaskStat label="Workflow State" value={selectedStatus.label} hint="Current execution phase for the task." icon={CheckCircle2} />
               <TaskStat label="Priority" value={selectedPriority.label} hint="Relative urgency for scheduling and follow-through." icon={Flag} />
               <TaskStat label="Owner" value={selectedAssigneeLabel} hint="Person responsible for moving the task." icon={UserRound} />
+              <TaskStat label="Milestone" value={selectedMilestoneLabel} hint="Execution context grouping this task." icon={ClipboardList} />
               <TaskStat label="Due" value={values.dueDate || 'Not scheduled'} hint="Deadline visible to the team." icon={CalendarClock} />
               <TaskStat label="Tags" value={values.tags.length > 0 ? values.tags.join(', ') : 'No tags'} hint="Keywords attached to the task record." icon={Tags} />
-              <TaskStat label="Checklist" value={`${values.checklistItems.filter((item) => item.isChecked).length}/${values.checklistItems.length}`} hint="Completed checks from the selected template." icon={ClipboardList} />
+              <TaskStat label="Checklist" value={`${values.checklistItems.filter((item) => item.isChecked).length}/${values.checklistItems.length}`} hint="Task-owned validation progress." icon={ClipboardList} />
 
               <div className="rounded-md border border-border/60 bg-muted/15 p-3">
                 <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Status And Priority</p>
@@ -484,6 +969,145 @@ export function TaskFormPage() {
           </Card>
         </div>
       </div>
+
+      <Dialog open={planEditorOpen} onOpenChange={setPlanEditorOpen}>
+        <DialogContent className="flex max-h-[92vh] w-[min(94vw,64rem)] max-w-5xl flex-col overflow-hidden border border-border/70 bg-background p-0">
+          <DialogHeader className="border-b border-border/70 px-6 py-5">
+            <DialogTitle>Plan Builder</DialogTitle>
+            <DialogDescription>Use this to turn the task into an execution plan without leaving the main form.</DialogDescription>
+          </DialogHeader>
+
+          <div className="overflow-y-auto px-6 py-6">
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+              <div className="space-y-4">
+                <div className="rounded-md border border-border/60 bg-muted/10 p-3">
+                  <Textarea
+                    rows={20}
+                    value={planEditorText}
+                    onChange={(event) => {
+                      const nextValue = event.target.value
+                      if ((nextValue.includes('/attach') || nextValue.includes('[attach]')) && !planEditorText.includes('/attach') && !planEditorText.includes('[attach]')) {
+                        openAttachPicker()
+                        updatePlanEditor(nextValue.replace('/attach', '').replace('[attach]', '').trim())
+                        return
+                      }
+                      updatePlanEditor(nextValue)
+                    }}
+                    onPaste={(event) => handlePlanFiles(event.clipboardData.files)}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => {
+                      event.preventDefault()
+                      handlePlanFiles(event.dataTransfer.files)
+                    }}
+                    placeholder="Type naturally or use light syntax like ## Steps, 1. Step, and ## Notes."
+                    className="min-h-[32rem] border-none bg-background font-mono text-sm shadow-none"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <Card className="rounded-md border-border/70 shadow-none">
+                  <CardHeader className="pb-3">
+                    <CardTitle>Structure Panel</CardTitle>
+                    <CardDescription>The editor stays freeform. This panel shows the structure it detects.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid gap-3">
+                    <TaskStat label="Steps" value={`${plan.steps.length}`} hint={plan.steps.length > 0 ? plan.steps.map((step, index) => `${index + 1}. ${step.text}`).join(' | ') : 'No numbered steps detected yet.'} icon={ClipboardList} />
+                    <TaskStat label="Notes" value={plan.notes.trim() ? 'Captured' : 'Empty'} hint={plan.notes.trim() || 'Everything outside structure will land here.'} icon={Tags} />
+                    <TaskStat label="Summary" value={`${plan.steps.length} steps · ${plan.attachments.length} files`} hint="Live execution snapshot from the editor." icon={Flag} />
+                  </CardContent>
+                </Card>
+
+                <Card className="rounded-md border-border/70 shadow-none">
+                  <CardHeader className="pb-3">
+                    <CardTitle>Attachments</CardTitle>
+                    <CardDescription>Drop, paste, or attach files. They stay as plan references with the current task model.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid gap-3">
+                    <div className="rounded-md border border-dashed border-border/60 bg-muted/10 p-4 text-sm text-muted-foreground">
+                      Use `+ Attach`, drag and drop, paste an image, or type `/attach`.
+                    </div>
+                    {plan.attachments.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {plan.attachments.map((attachment) => <StatusBadge key={attachment.id} tone="manual">{attachment.text}</StatusBadge>)}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No attachments referenced yet.</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="border-t border-border/70 px-6 py-4">
+            <div className="mr-auto flex flex-wrap gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={openAttachPicker}>
+                <Paperclip className="size-4" />
+                Attach
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => insertPlanBlock('steps')}>
+                <Plus className="size-4" />
+                Steps
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => insertPlanBlock('notes')}>
+                <Plus className="size-4" />
+                Note
+              </Button>
+            </div>
+            <Button type="button" variant="outline" onClick={() => setPlanEditorOpen(false)}>Cancel</Button>
+            <Button type="button" onClick={() => setPlanEditorOpen(false)}>Save & Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={milestoneDialogOpen} onOpenChange={setMilestoneDialogOpen}>
+        <DialogContent className="w-[min(92vw,34rem)] max-w-2xl border border-border/70 bg-background p-0">
+          <DialogHeader className="border-b border-border/70 px-6 py-5">
+            <DialogTitle>New Milestone</DialogTitle>
+            <DialogDescription>Create a milestone and attach this task to it immediately.</DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 px-6 py-6">
+            <div className="grid gap-2">
+              <Label>Title</Label>
+              <Input value={milestoneForm.title} onChange={(event) => setMilestoneForm((current) => ({ ...current, title: event.target.value }))} placeholder="Ex: Product launch pricing review" />
+            </div>
+            <div className="grid gap-2">
+              <Label>Description</Label>
+              <Textarea rows={3} value={milestoneForm.description ?? ''} onChange={(event) => setMilestoneForm((current) => ({ ...current, description: event.target.value || null }))} placeholder="Short milestone context" className="min-h-24 resize-none" />
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-2">
+                <Label>Entity Type</Label>
+                <AutocompleteLookup
+                  value={milestoneForm.entityType ?? ''}
+                  onChange={(value) => setMilestoneForm((current) => ({ ...current, entityType: value ? value as TaskScopeType : null }))}
+                  options={taskScopeOptions}
+                  placeholder="Select related entity type"
+                  allowEmptyOption
+                  emptyOptionLabel="No entity"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Entity ID</Label>
+                <Input value={milestoneForm.entityId ?? ''} onChange={(event) => setMilestoneForm((current) => ({ ...current, entityId: event.target.value || null }))} placeholder="Optional linked entity id" />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label>Due Date</Label>
+              <Input type="date" value={milestoneForm.dueDate ?? ''} onChange={(event) => setMilestoneForm((current) => ({ ...current, dueDate: event.target.value || null }))} />
+            </div>
+          </div>
+
+          <DialogFooter className="border-t border-border/70 px-6 py-4">
+            <Button type="button" variant="outline" onClick={() => setMilestoneDialogOpen(false)}>Cancel</Button>
+            <Button type="button" onClick={() => { void handleCreateMilestone() }} disabled={milestoneSaving}>
+              {milestoneSaving ? 'Creating...' : 'Create Milestone'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </form>
   )
 }

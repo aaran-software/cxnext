@@ -27,6 +27,7 @@ import { notificationFoundationMigration } from './025-notification-foundation'
 import { notificationGroupKeyMigration } from './026-notification-group-key'
 import { taskReviewGovernanceMigration } from './027-task-review-governance'
 import { taskReviewAssignmentMigration } from './028-task-review-assignment'
+import { milestoneFoundationMigration } from './029-milestone-foundation'
 import type { Migration } from './migration'
 
 export const migrations: Migration[] = [
@@ -59,4 +60,5 @@ export const migrations: Migration[] = [
   notificationGroupKeyMigration,
   taskReviewGovernanceMigration,
   taskReviewAssignmentMigration,
+  milestoneFoundationMigration,
 ]

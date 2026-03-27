@@ -91,6 +91,8 @@ export const taskSummarySchema = z.object({
   id: z.string().min(1),
   title: z.string().min(1),
   description: z.string().nullable(),
+  milestoneId: z.string().nullable(),
+  milestoneTitle: z.string().nullable(),
   status: TaskStatusEnum,
   priority: TaskPriorityEnum,
   tags: trimmedStringArray,
@@ -177,6 +179,7 @@ export const taskTemplateUpsertPayloadSchema = z.object({
 
 export const taskChecklistItemUpdateSchema = z.object({
   id: z.string().min(1),
+  label: z.string().trim().min(1).optional(),
   isChecked: z.boolean(),
   note: trimmedNullableString,
 })
@@ -192,6 +195,7 @@ export const taskUpsertPayloadSchema = z.object({
   status: TaskStatusEnum.default('pending'),
   priority: TaskPriorityEnum.default('medium'),
   tags: trimmedStringArray,
+  milestoneId: trimmedNullableString,
   scopeType: TaskScopeTypeEnum.default('general'),
   entityType: TaskScopeTypeEnum.nullable().optional().default(null),
   entityId: trimmedNullableString,
@@ -211,6 +215,7 @@ export const taskBulkAssignmentModeEnum = z.enum([
 
 export const taskBulkCreatePayloadSchema = z.object({
   templateId: z.string().min(1),
+  milestoneId: z.string().trim().min(1),
   entityType: TaskScopeTypeEnum,
   entityIds: z.array(z.string().trim().min(1)).min(1),
   assigneeMode: taskBulkAssignmentModeEnum.default('unassigned'),

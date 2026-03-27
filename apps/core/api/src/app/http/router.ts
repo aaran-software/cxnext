@@ -28,6 +28,8 @@ import { CustomerHelpdeskRepository } from '@ecommerce-api/features/customer-hel
 import { UserManagementService } from '../../features/users/application/user-management-service'
 import { TaskService } from '../../features/task/application/task-service'
 import { TaskRepository } from '../../features/task/data/task-repository'
+import { MilestoneService } from '../../features/task/application/milestone-service'
+import { MilestoneRepository } from '../../features/task/data/milestone-repository'
 import { NotificationService } from '../../features/notification/application/notification-service'
 import { NotificationRepository } from '../../features/notification/data/notification-repository'
 import {
@@ -108,7 +110,9 @@ const customerHelpdeskService = new CustomerHelpdeskService(
   authService,
 )
 const notificationService = new NotificationService(new NotificationRepository())
-const taskService = new TaskService(new TaskRepository(), new ProductRepository(), notificationService)
+const milestoneRepository = new MilestoneRepository()
+const milestoneService = new MilestoneService(milestoneRepository)
+const taskService = new TaskService(new TaskRepository(), new ProductRepository(), notificationService, milestoneRepository)
 
 function parseBooleanFlag(value: string | null) {
   if (!value) {
@@ -590,15 +594,26 @@ export async function routeRequest(
       const user = await requireAuthenticatedUser(request)
       const entityType = url.searchParams.get('entityType')
       const entityId = url.searchParams.get('entityId')
+      const milestoneId = url.searchParams.get('milestoneId')
       if (entityType && entityId) {
         writeJson(response, 200, await taskService.listByEntity(entityType, entityId))
         return
       }
       if (user.actorType === 'admin') {
-        writeJson(response, 200, await taskService.listAll())
+        writeJson(response, 200, await taskService.listAll({ milestoneId }))
       } else {
-        writeJson(response, 200, await taskService.listForUser(user.id))
+        writeJson(response, 200, await taskService.listForUser(user.id, { milestoneId }))
       }
+      return
+    }
+
+    if (method === 'GET' && url.pathname === '/milestones') {
+      const user = await requireAuthenticatedUser(request)
+      writeJson(response, 200, await milestoneService.list(user, {
+        status: url.searchParams.get('status'),
+        entityType: url.searchParams.get('entityType'),
+        entityId: url.searchParams.get('entityId'),
+      }))
       return
     }
 
@@ -650,6 +665,12 @@ export async function routeRequest(
     if (method === 'POST' && url.pathname === '/tasks') {
       const user = await requireAuthenticatedUser(request)
       writeJson(response, 201, await taskService.create(user, await readJsonBody(request)))
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/milestones') {
+      const user = await requireAuthenticatedUser(request)
+      writeJson(response, 201, await milestoneService.create(user, await readJsonBody(request)))
       return
     }
 
@@ -714,6 +735,22 @@ export async function routeRequest(
       const user = await requireAuthenticatedUser(request)
       writeJson(response, 200, await taskService.finalize(taskFinalizeMatch[1], user))
       return
+    }
+
+    const milestoneRecordMatch = url.pathname.match(/^\/milestones\/([^/]+)$/)
+    if (milestoneRecordMatch) {
+      const milestoneId = milestoneRecordMatch[1]
+      const user = await requireAuthenticatedUser(request)
+
+      if (method === 'GET') {
+        writeJson(response, 200, await milestoneService.getById(user, milestoneId))
+        return
+      }
+
+      if (method === 'PATCH') {
+        writeJson(response, 200, await milestoneService.update(user, milestoneId, await readJsonBody(request)))
+        return
+      }
     }
 
     const taskActivityMatch = url.pathname.match(/^\/tasks\/([^/]+)\/activities$/)

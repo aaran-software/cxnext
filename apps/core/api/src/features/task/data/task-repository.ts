@@ -20,6 +20,8 @@ interface TaskSummaryRow extends RowDataPacket {
   id: string
   title: string
   description: string | null
+  milestone_id: string | null
+  milestone_title: string | null
   status: string
   priority: string
   tags_json: string | null
@@ -114,6 +116,8 @@ function toTaskSummary(row: TaskSummaryRow): TaskSummary {
     id: row.id,
     title: row.title,
     description: row.description,
+    milestoneId: row.milestone_id,
+    milestoneTitle: row.milestone_title,
     status: row.status as TaskSummary['status'],
     priority: row.priority as TaskSummary['priority'],
     tags: toStringArray(row.tags_json),
@@ -197,6 +201,8 @@ const taskSummarySelect = `
     t.id,
     t.title,
     t.description,
+    t.milestone_id,
+    milestone.title AS milestone_title,
     t.status,
     t.priority,
     CAST(t.tags_json AS CHAR) AS tags_json,
@@ -236,32 +242,49 @@ const taskSummarySelect = `
   LEFT JOIN ${authTableNames.users} review_assignee ON review_assignee.id = t.review_assigned_to
   LEFT JOIN ${authTableNames.users} reviewer ON reviewer.id = t.reviewed_by
   LEFT JOIN ${taskTableNames.templates} template ON template.id = t.template_id
+  LEFT JOIN ${taskTableNames.milestones} milestone ON milestone.id = t.milestone_id
 `
 
 export class TaskRepository {
-  async listVisibleTasks(userId: string) {
+  async listVisibleTasks(userId: string, filters?: { milestoneId?: string | null }) {
     await ensureDatabaseSchema()
+
+    const where = ['(t.assignee_id = ? OR t.creator_id = ?)']
+    const params: Array<string> = [userId, userId]
+    if (filters?.milestoneId) {
+      where.push('t.milestone_id = ?')
+      params.push(filters.milestoneId)
+    }
 
     const rows = await db.query<TaskSummaryRow>(
       `
         ${taskSummarySelect}
-        WHERE t.assignee_id = ? OR t.creator_id = ?
+        WHERE ${where.join(' AND ')}
         ORDER BY t.created_at ASC, t.id ASC
       `,
-      [userId, userId],
+      params,
     )
 
     return rows.map(toTaskSummary)
   }
 
-  async listAllTasks() {
+  async listAllTasks(filters?: { milestoneId?: string | null }) {
     await ensureDatabaseSchema()
+
+    const where: string[] = []
+    const params: Array<string> = []
+    if (filters?.milestoneId) {
+      where.push('t.milestone_id = ?')
+      params.push(filters.milestoneId)
+    }
 
     const rows = await db.query<TaskSummaryRow>(
       `
         ${taskSummarySelect}
+        ${where.length > 0 ? `WHERE ${where.join(' AND ')}` : ''}
         ORDER BY t.created_at ASC, t.id ASC
       `,
+      params,
     )
 
     return rows.map(toTaskSummary)
@@ -528,15 +551,6 @@ export class TaskRepository {
     await ensureDatabaseSchema()
     const taskId = randomUUID()
 
-    let templateChecklistItems: TaskTemplateChecklistItem[] = []
-    if (payload.templateId) {
-      const template = await this.findTemplateById(payload.templateId)
-      if (!template) {
-        throw new ApplicationError('Task template not found.', { templateId: payload.templateId }, 404)
-      }
-      templateChecklistItems = template.checklistItems
-    }
-
     await db.transaction(async (transaction) => {
       await transaction.execute(
         `
@@ -544,6 +558,7 @@ export class TaskRepository {
             id,
             title,
             description,
+            milestone_id,
             status,
             priority,
             assignee_id,
@@ -557,12 +572,13 @@ export class TaskRepository {
             entity_label,
             template_id
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
           taskId,
           payload.title,
           payload.description,
+          payload.milestoneId,
           payload.status,
           payload.priority,
           payload.assigneeId,
@@ -578,54 +594,31 @@ export class TaskRepository {
         ],
       )
 
-      const checklistSeed = payload.checklistItems.length > 0
-        ? payload.checklistItems.map((item, index) => ({
-            id: randomUUID(),
-            label: item.id,
-            note: item.note,
-            isChecked: item.isChecked,
-            sortOrder: index,
-          }))
-        : []
+      const checklistSeed = payload.checklistItems.map((item, index) => ({
+        id: item.id || randomUUID(),
+        label: item.label?.trim() || item.id,
+        note: item.note,
+        isChecked: item.isChecked,
+        sortOrder: index,
+      }))
 
-      if (templateChecklistItems.length > 0) {
-        for (const item of templateChecklistItems) {
-          await transaction.execute(
-            `
-              INSERT INTO ${taskTableNames.checklistItems} (
-                id,
-                task_id,
-                template_item_id,
-                label,
-                is_required,
-                is_checked,
-                note,
-                sort_order
-              )
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            `,
-            [randomUUID(), taskId, item.id, item.label, item.isRequired, false, null, item.sortOrder],
-          )
-        }
-      } else if (checklistSeed.length > 0) {
-        for (const item of checklistSeed) {
-          await transaction.execute(
-            `
-              INSERT INTO ${taskTableNames.checklistItems} (
-                id,
-                task_id,
-                template_item_id,
-                label,
-                is_required,
-                is_checked,
-                note,
-                sort_order
-              )
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            `,
-            [item.id, taskId, null, item.label, true, item.isChecked, item.note, item.sortOrder],
-          )
-        }
+      for (const item of checklistSeed) {
+        await transaction.execute(
+          `
+            INSERT INTO ${taskTableNames.checklistItems} (
+              id,
+              task_id,
+              template_item_id,
+              label,
+              is_required,
+              is_checked,
+              note,
+              sort_order
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          `,
+          [item.id, taskId, null, item.label, true, item.isChecked, item.note, item.sortOrder],
+        )
       }
 
       await transaction.execute(
@@ -674,6 +667,7 @@ export class TaskRepository {
           SET
             title = ?,
             description = ?,
+            milestone_id = ?,
             status = ?,
             priority = ?,
             assignee_id = ?,
@@ -693,6 +687,7 @@ export class TaskRepository {
         [
           payload.title,
           payload.description,
+          payload.milestoneId,
           payload.status,
           payload.priority,
           payload.assigneeId,
@@ -712,26 +707,62 @@ export class TaskRepository {
       )
 
       if (payload.checklistItems.length > 0) {
-        for (const item of payload.checklistItems) {
-          await transaction.execute(
+        for (const [index, item] of payload.checklistItems.entries()) {
+          const result = await transaction.execute(
             `
               UPDATE ${taskTableNames.checklistItems}
               SET
+                label = COALESCE(?, label),
                 is_checked = ?,
                 checked_by = ?,
                 checked_at = ?,
-                note = ?
+                note = ?,
+                sort_order = ?
               WHERE id = ? AND task_id = ?
             `,
             [
+              item.label ?? null,
               item.isChecked,
               item.isChecked ? authorId : null,
               item.isChecked ? new Date() : null,
               item.note,
+              index,
               item.id,
               id,
             ],
           )
+
+          if (result.affectedRows === 0) {
+            await transaction.execute(
+              `
+                INSERT INTO ${taskTableNames.checklistItems} (
+                  id,
+                  task_id,
+                  template_item_id,
+                  label,
+                  is_required,
+                  is_checked,
+                  checked_by,
+                  checked_at,
+                  note,
+                  sort_order
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              `,
+              [
+                item.id,
+                id,
+                null,
+                item.label?.trim() || item.id,
+                true,
+                item.isChecked,
+                item.isChecked ? authorId : null,
+                item.isChecked ? new Date() : null,
+                item.note,
+                index,
+              ],
+            )
+          }
         }
       }
 

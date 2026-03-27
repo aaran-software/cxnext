@@ -119,6 +119,7 @@ export const frappeTableNames = {
 
 export const taskTableNames = {
   tasks: 'tasks',
+  milestones: 'task_milestones',
   activities: 'task_activities',
   templates: 'task_templates',
   templateItems: 'task_template_items',

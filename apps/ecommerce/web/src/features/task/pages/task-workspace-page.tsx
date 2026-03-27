@@ -1,6 +1,6 @@
 import type { TaskPriority, TaskStatus, TaskSummary } from '@shared/index'
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowRight, CheckCircle2, Clock3, ListTodo, Plus, UserRound } from 'lucide-react'
 import { useAuth } from '@framework-core/web/auth/components/auth-provider'
 import { AnimatedTabs, type AnimatedContentTab } from '@/components/ui/animated-tabs'
@@ -266,6 +266,7 @@ function TaskListSection({
 
 export function TaskWorkspacePage() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { session } = useAuth()
   const [items, setItems] = useState<TaskSummary[]>([])
   const [loading, setLoading] = useState(true)
@@ -277,6 +278,7 @@ export function TaskWorkspacePage() {
   const [verifiedFilter, setVerifiedFilter] = useState<VerifiedFilterKey>('all')
   const [dueDateFrom, setDueDateFrom] = useState('')
   const [dueDateTo, setDueDateTo] = useState('')
+  const selectedMilestoneId = searchParams.get('milestoneId') ?? ''
 
   useEffect(() => {
     if (!session?.accessToken) {
@@ -293,7 +295,7 @@ export function TaskWorkspacePage() {
       setErrorMessage(null)
 
       try {
-        const nextItems = await listTasks(accessToken)
+        const nextItems = await listTasks(accessToken, { milestoneId: selectedMilestoneId || undefined })
         if (!cancelled) {
           setItems(nextItems)
         }
@@ -313,7 +315,7 @@ export function TaskWorkspacePage() {
     return () => {
       cancelled = true
     }
-  }, [session?.accessToken])
+  }, [selectedMilestoneId, session?.accessToken])
 
   const currentUserId = session?.user.id ?? ''
   const myTasks = useMemo(() => items.filter((item) => item.assigneeId === currentUserId), [currentUserId, items])
@@ -372,6 +374,9 @@ export function TaskWorkspacePage() {
       if (selectedTemplate !== 'all' && item.templateName !== selectedTemplate) {
         return false
       }
+      if (selectedMilestoneId && item.milestoneId !== selectedMilestoneId) {
+        return false
+      }
 
       const isVerified = item.checklistTotalCount > 0 && item.checklistCompletionCount >= item.checklistTotalCount
       if (verifiedFilter === 'verified' && !isVerified) {
@@ -405,6 +410,11 @@ export function TaskWorkspacePage() {
     setVerifiedFilter('all')
     setDueDateFrom('')
     setDueDateTo('')
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current)
+      next.delete('milestoneId')
+      return next
+    })
   }
 
   const taskTabs: AnimatedContentTab[] = [
@@ -529,6 +539,23 @@ export function TaskWorkspacePage() {
           </p>
           <Button type="button" variant="ghost" size="sm" onClick={() => setMetricFilter('all')}>
             Clear filter
+          </Button>
+        </div>
+      ) : null}
+
+      {selectedMilestoneId ? (
+        <div className="flex items-center justify-between gap-3 rounded-md border border-border/70 bg-muted/15 px-4 py-3 text-sm">
+          <p className="text-muted-foreground">
+            Viewing tasks for milestone <span className="font-medium text-foreground">{selectedMilestoneId}</span>
+          </p>
+          <Button type="button" variant="ghost" size="sm" onClick={() => {
+            setSearchParams((current) => {
+              const next = new URLSearchParams(current)
+              next.delete('milestoneId')
+              return next
+            })
+          }}>
+            Clear milestone
           </Button>
         </div>
       ) : null}

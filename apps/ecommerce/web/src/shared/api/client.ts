@@ -52,6 +52,9 @@ import type {
   MailboxTemplateListResponse,
   MailboxTemplateResponse,
   MailboxTemplateUpsertPayload,
+  MilestoneListResponse,
+  MilestoneResponse,
+  MilestoneUpsertPayload,
   NotificationListResponse,
   StorefrontCatalogResponse,
   StorefrontCheckoutPayload,
@@ -918,11 +921,57 @@ export async function listCustomerOrders(token: string) {
   return response.items
 }
 
-export async function listTasks(token: string) {
-  const response = await request<TaskListResponse>('/tasks', {
+export async function listTasks(token: string, filters?: {
+  milestoneId?: string
+}) {
+  const searchParams = new URLSearchParams()
+  if (filters?.milestoneId) searchParams.set('milestoneId', filters.milestoneId)
+  const suffix = searchParams.toString() ? `?${searchParams.toString()}` : ''
+  const response = await request<TaskListResponse>(`/tasks${suffix}`, {
     headers: createAuthorizationHeaders(token),
   })
   return response.items
+}
+
+export async function listMilestones(token: string, filters?: {
+  status?: string
+  entityType?: string
+  entityId?: string
+}) {
+  const searchParams = new URLSearchParams()
+  if (filters?.status) searchParams.set('status', filters.status)
+  if (filters?.entityType) searchParams.set('entityType', filters.entityType)
+  if (filters?.entityId) searchParams.set('entityId', filters.entityId)
+  const suffix = searchParams.toString() ? `?${searchParams.toString()}` : ''
+  const response = await request<MilestoneListResponse>(`/milestones${suffix}`, {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.items
+}
+
+export async function getMilestone(token: string, id: string) {
+  const response = await request<MilestoneResponse>(`/milestones/${id}`, {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.item
+}
+
+export async function createMilestone(token: string, payload: MilestoneUpsertPayload) {
+  const response = await request<MilestoneResponse>('/milestones', {
+    method: 'POST',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
+  })
+  return response.item
+}
+
+export async function updateMilestone(token: string, id: string, payload: MilestoneUpsertPayload) {
+  const response = await request<MilestoneResponse>(`/milestones/${id}`, {
+    method: 'PATCH',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
+  })
+  return response.item
 }
 
 export async function listTasksByEntity(token: string, entityType: string, entityId: string) {
@@ -1001,6 +1050,7 @@ export async function updateTaskTemplate(token: string, id: string, payload: Tas
 
 export async function createTaskFromTemplate(token: string, payload: {
   templateId: string
+  milestoneId?: string | null
   assigneeId?: string | null
   dueDate?: string | null
   entityType?: string | null
@@ -1021,6 +1071,7 @@ export async function createTaskFromTemplate(token: string, payload: {
 
 export async function createTasksFromTemplateBulk(token: string, payload: {
   templateId: string
+  milestoneId: string
   entityType: string
   entityIds: string[]
   assigneeMode?: 'specific' | 'self' | 'unassigned'

@@ -1,6 +1,6 @@
-import type { TaskPriority, TaskScopeType, TaskTemplateSummary, TaskUpsertPayload } from '@shared/index'
+import type { MilestoneSummary, TaskPriority, TaskScopeType, TaskTemplateSummary, TaskUpsertPayload } from '@shared/index'
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowRight, CalendarClock, ClipboardList, FileText, Flag, Link2, Tag, UserRound } from 'lucide-react'
+import { ArrowRight, CalendarClock, ClipboardList, FileText, Flag, Layers3, Link2, Tag, UserRound } from 'lucide-react'
 import { AutocompleteLookup } from '@/components/lookups/AutocompleteLookup'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -10,12 +10,13 @@ import { Label } from '@/components/ui/label'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { Textarea } from '@/components/ui/textarea'
 
-type WizardStep = 'title' | 'description' | 'template' | 'scope' | 'assignment' | 'schedule' | 'review'
+type WizardStep = 'title' | 'description' | 'milestone' | 'template' | 'scope' | 'assignment' | 'schedule' | 'review'
 
 interface TaskCreateWizardProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   templates: TaskTemplateSummary[]
+  milestones: MilestoneSummary[]
   users: { id: string; name: string }[]
   products: { id: string; name: string }[]
   currentUserId: string | null
@@ -27,6 +28,7 @@ interface WizardDraft {
   title: string
   description: string
   tags: string[]
+  milestoneId: string | null
   templateId: string | null
   scopeType: TaskScopeType
   entityType: TaskScopeType | null
@@ -37,7 +39,7 @@ interface WizardDraft {
   dueDate: string | null
 }
 
-const steps: WizardStep[] = ['title', 'description', 'template', 'scope', 'assignment', 'schedule', 'review']
+const steps: WizardStep[] = ['title', 'description', 'milestone', 'template', 'scope', 'assignment', 'schedule', 'review']
 
 const scopeOptions: Array<{ value: TaskScopeType; label: string; description: string }> = [
   { value: 'product', label: 'Product', description: 'Link the task to one product record.' },
@@ -58,6 +60,7 @@ function createDefaultDraft(): WizardDraft {
     title: '',
     description: '',
     tags: [],
+    milestoneId: null,
     templateId: null,
     scopeType: 'general',
     entityType: null,
@@ -109,7 +112,7 @@ export function TaskCreateWizard(props: TaskCreateWizardProps) {
   const [stepIndex, setStepIndex] = useState(0)
   const [draft, setDraft] = useState<WizardDraft>(createDefaultDraft())
   const [tagInput, setTagInput] = useState('')
-  const [templateMode, setTemplateMode] = useState<'template' | 'none'>(props.templates.length > 0 ? 'template' : 'none')
+  const [templateMode, setTemplateMode] = useState<'template' | 'none'>('none')
   const [selectedDuePreset, setSelectedDuePreset] = useState<'today' | 'tomorrow' | 'none' | 'custom'>('none')
   const [localAttachments, setLocalAttachments] = useState<string[]>([])
 
@@ -122,6 +125,10 @@ export function TaskCreateWizard(props: TaskCreateWizardProps) {
   const templateOptions = useMemo(
     () => props.templates.filter((template) => template.isActive).map((template) => ({ value: template.id, label: template.name })),
     [props.templates],
+  )
+  const milestoneOptions = useMemo(
+    () => props.milestones.map((milestone) => ({ value: milestone.id, label: milestone.title })),
+    [props.milestones],
   )
   const productOptions = useMemo(
     () => props.products.map((product) => ({ value: product.id, label: product.name })),
@@ -141,11 +148,11 @@ export function TaskCreateWizard(props: TaskCreateWizardProps) {
       setStepIndex(0)
       setDraft(createDefaultDraft())
       setTagInput('')
-      setTemplateMode(props.templates.length > 0 ? 'template' : 'none')
+      setTemplateMode('none')
       setSelectedDuePreset('none')
       setLocalAttachments([])
     }
-  }, [props.open, props.templates.length])
+  }, [props.open])
 
   function updateDraft(partial: Partial<WizardDraft>) {
     setDraft((current) => ({ ...current, ...partial }))
@@ -215,6 +222,7 @@ export function TaskCreateWizard(props: TaskCreateWizardProps) {
       status: 'pending',
       priority: draft.priority,
       tags: draft.tags,
+      milestoneId: draft.milestoneId,
       scopeType: draft.scopeType,
       entityType: draft.scopeType === 'general' ? null : draft.entityType ?? draft.scopeType,
       entityId: draft.scopeType === 'general' ? null : draft.entityId,
@@ -332,19 +340,47 @@ export function TaskCreateWizard(props: TaskCreateWizardProps) {
       )
     }
 
+    if (activeStep === 'milestone') {
+      return (
+        <div className="space-y-5">
+          <div className="space-y-2">
+            <Label>Which milestone does this belong to?</Label>
+            <AutocompleteLookup
+              value={draft.milestoneId ?? ''}
+              onChange={(value) => updateDraft({ milestoneId: value || null })}
+              options={milestoneOptions}
+              placeholder="Select milestone"
+              allowEmptyOption
+              emptyOptionLabel="No milestone"
+            />
+            <p className="text-xs text-muted-foreground">Milestone is the execution context for this task. You can still leave it empty and decide later in the full form.</p>
+          </div>
+
+          {draft.milestoneId ? (
+            <Card className="rounded-md border-border/70 shadow-none">
+              <CardContent className="p-4 text-sm">
+                <p className="font-medium text-foreground">{props.milestones.find((milestone) => milestone.id === draft.milestoneId)?.title ?? 'Selected milestone'}</p>
+                <p className="mt-1 text-muted-foreground">This draft will open already grouped under the selected milestone.</p>
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
+      )
+    }
+
     if (activeStep === 'template') {
       return (
         <div className="space-y-5">
           <div className="grid gap-3 sm:grid-cols-2">
             <ScopeCard
-              label="Use Template"
-              description="Start from a structured verification or review flow."
+              label="Use Starter"
+              description="Use a template as a starter for title, tags, and checklist draft."
               active={templateMode === 'template'}
               onClick={() => setTemplateMode('template')}
             />
             <ScopeCard
-              label="No Template"
-              description="Keep this task freeform with no checklist rules."
+              label="No Starter"
+              description="Keep this task fully manual with no starter template."
               active={templateMode === 'none'}
               onClick={() => {
                 setTemplateMode('none')
@@ -355,12 +391,12 @@ export function TaskCreateWizard(props: TaskCreateWizardProps) {
 
           {templateMode === 'template' ? (
             <div className="space-y-2">
-              <Label>Template</Label>
+              <Label>Starter Template</Label>
               <AutocompleteLookup
                 value={draft.templateId ?? ''}
                 onChange={(value) => applyTemplate(value || null)}
                 options={templateOptions}
-                placeholder="Select task template"
+                placeholder="Use template as starter"
               />
               {selectedTemplate ? (
                 <Card className="rounded-md border-border/70 shadow-none">
@@ -369,7 +405,7 @@ export function TaskCreateWizard(props: TaskCreateWizardProps) {
                       <p className="font-medium text-foreground">{selectedTemplate.name}</p>
                       <StatusBadge tone="featured">{selectedTemplate.scopeType}</StatusBadge>
                     </div>
-                    <p className="text-muted-foreground">{selectedTemplate.descriptionTemplate || 'This template will add structured guidance and checklist rules.'}</p>
+                    <p className="text-muted-foreground">{selectedTemplate.descriptionTemplate || 'This template will prefill a starting structure for the task.'}</p>
                     <div className="flex flex-wrap gap-2">
                       <StatusBadge tone="publishing">{selectedTemplate.defaultPriority}</StatusBadge>
                       <StatusBadge tone="manual">{selectedTemplate.checklistItemCount} checks</StatusBadge>
@@ -592,8 +628,12 @@ export function TaskCreateWizard(props: TaskCreateWizardProps) {
                 <p className="text-sm font-semibold text-foreground">{draft.title || 'Untitled task'}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Template</p>
-                <p className="text-sm text-foreground">{selectedTemplate?.name ?? 'No template'}</p>
+                <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Milestone</p>
+                <p className="text-sm text-foreground">{props.milestones.find((milestone) => milestone.id === draft.milestoneId)?.title ?? 'No milestone'}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Starter Template</p>
+                <p className="text-sm text-foreground">{selectedTemplate?.name ?? 'No starter template'}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Related To</p>
@@ -637,7 +677,7 @@ export function TaskCreateWizard(props: TaskCreateWizardProps) {
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="w-[min(92vw,54rem)] max-w-4xl overflow-hidden border border-border/70 bg-background p-0">
+      <DialogContent className="flex max-h-[92vh] w-[min(92vw,54rem)] max-w-4xl flex-col overflow-hidden border border-border/70 bg-background p-0">
         <div className="border-b border-border/70 px-6 py-5">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
@@ -648,72 +688,81 @@ export function TaskCreateWizard(props: TaskCreateWizardProps) {
             <StatusBadge tone="publishing">Step {stepIndex + 1} of {steps.length}</StatusBadge>
           </div>
 
-          <div className="mt-4 grid gap-2 sm:grid-cols-7">
+          <div
+            className="mt-4 grid gap-2"
+            style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}
+          >
             {steps.map((step, index) => (
               <div key={step} className={`h-1.5 rounded-full ${index <= stepIndex ? 'bg-foreground' : 'bg-muted'}`} />
             ))}
           </div>
         </div>
 
-        <div className="grid gap-6 px-6 py-6 lg:grid-cols-[minmax(0,1.5fr)_18rem]">
-          <div className="space-y-6">
-            {renderStep()}
+        <div className="overflow-y-auto px-6 py-6">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_18rem]">
+            <div className="space-y-6">
+              {renderStep()}
 
-            <div className="flex items-center justify-between gap-3 border-t border-border/70 pt-4">
-              <Button type="button" variant="ghost" onClick={goBack} disabled={stepIndex === 0}>Back</Button>
-              {activeStep === 'review' ? (
-                <Button type="button" onClick={() => { void handleContinueToEdit() }}>
-                  Continue To Edit
-                  <ArrowRight className="size-4" />
-                </Button>
-              ) : (
-                <Button type="button" onClick={goNext} disabled={!canContinue()}>
-                  Next
-                  <ArrowRight className="size-4" />
-                </Button>
-              )}
+              <div className="flex items-center justify-between gap-3 border-t border-border/70 pt-4">
+                <Button type="button" variant="ghost" onClick={goBack} disabled={stepIndex === 0}>Back</Button>
+                {activeStep === 'review' ? (
+                  <Button type="button" onClick={() => { void handleContinueToEdit() }}>
+                    Continue To Edit
+                    <ArrowRight className="size-4" />
+                  </Button>
+                ) : (
+                  <Button type="button" onClick={goNext} disabled={!canContinue()}>
+                    Next
+                    <ArrowRight className="size-4" />
+                  </Button>
+                )}
+              </div>
             </div>
+
+            <Card className="rounded-md border-border/70 bg-muted/10 shadow-none">
+              <CardContent className="grid gap-4 p-5">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Draft</p>
+                  <p className="text-sm font-semibold text-foreground">{draft.title || 'Untitled task'}</p>
+                </div>
+
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Tag className="size-4" />
+                    <span>{draft.tags.length > 0 ? draft.tags.join(', ') : 'No tags yet'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Layers3 className="size-4" />
+                    <span>{props.milestones.find((milestone) => milestone.id === draft.milestoneId)?.title ?? 'No milestone selected'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <ClipboardList className="size-4" />
+                    <span>{selectedTemplate?.name ?? 'No starter template selected'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Link2 className="size-4" />
+                    <span>{draft.entityLabel ?? draft.scopeType}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <UserRound className="size-4" />
+                    <span>{props.users.find((user) => user.id === draft.assigneeId)?.name ?? (draft.assigneeId === props.currentUserId ? props.currentUserName : 'Unassigned')}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Flag className="size-4" />
+                    <span>{draft.priority}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <CalendarClock className="size-4" />
+                    <span>{draft.dueDate ?? 'No due date'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <FileText className="size-4" />
+                    <span>{draft.description.trim() ? 'Description added' : 'No description yet'}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-
-          <Card className="rounded-md border-border/70 bg-muted/10 shadow-none">
-            <CardContent className="grid gap-4 p-5">
-              <div className="space-y-1">
-                <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Draft</p>
-                <p className="text-sm font-semibold text-foreground">{draft.title || 'Untitled task'}</p>
-              </div>
-
-              <div className="space-y-3 text-sm">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Tag className="size-4" />
-                  <span>{draft.tags.length > 0 ? draft.tags.join(', ') : 'No tags yet'}</span>
-                </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <ClipboardList className="size-4" />
-                  <span>{selectedTemplate?.name ?? 'No template selected'}</span>
-                </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Link2 className="size-4" />
-                  <span>{draft.entityLabel ?? draft.scopeType}</span>
-                </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <UserRound className="size-4" />
-                  <span>{props.users.find((user) => user.id === draft.assigneeId)?.name ?? (draft.assigneeId === props.currentUserId ? props.currentUserName : 'Unassigned')}</span>
-                </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Flag className="size-4" />
-                  <span>{draft.priority}</span>
-                </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <CalendarClock className="size-4" />
-                  <span>{draft.dueDate ?? 'No due date'}</span>
-                </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <FileText className="size-4" />
-                  <span>{draft.description.trim() ? 'Description added' : 'No description yet'}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </DialogContent>
     </Dialog>

@@ -30,6 +30,8 @@ import type { TaskRepository } from '../data/task-repository'
 import { ApplicationError } from '@framework-core/runtime/errors/application-error'
 import { ProductRepository } from '@ecommerce-api/features/product/data/product-repository'
 import type { NotificationService } from '../../notification/application/notification-service'
+import type { MilestoneRepository } from '../data/milestone-repository'
+import { randomUUID } from 'node:crypto'
 
 interface PersistenceError {
   sqlMessage?: string
@@ -95,6 +97,8 @@ function toAuditItem(task: TaskAuditItem | {
   id: string
   title: string
   description: string | null
+  milestoneId: string | null
+  milestoneTitle: string | null
   status: TaskAuditItem['status']
   priority: TaskAuditItem['priority']
   tags: string[]
@@ -192,6 +196,7 @@ function toTaskUpsertPayload(task: Task): TaskUpsertPayload {
     status: task.status,
     priority: task.priority,
     tags: task.tags,
+    milestoneId: task.milestoneId,
     scopeType: task.scopeType,
     entityType: task.entityType,
     entityId: task.entityId,
@@ -202,6 +207,7 @@ function toTaskUpsertPayload(task: Task): TaskUpsertPayload {
     reviewComment: task.reviewComment,
     checklistItems: task.checklistItems.map((item) => ({
       id: item.id,
+      label: item.label,
       isChecked: item.isChecked,
       note: item.note,
     })),
@@ -227,6 +233,7 @@ function isMutationEquivalent(previousItem: Task, nextPayload: TaskUpsertPayload
   return (
     previousItem.title === nextPayload.title
     && previousItem.description === nextPayload.description
+    && previousItem.milestoneId === nextPayload.milestoneId
     && previousItem.status === nextPayload.status
     && previousItem.priority === nextPayload.priority
     && previousItem.scopeType === nextPayload.scopeType
@@ -247,15 +254,16 @@ export class TaskService {
     private readonly repository: TaskRepository,
     private readonly productRepository = new ProductRepository(),
     private readonly notificationService?: NotificationService,
+    private readonly milestoneRepository?: MilestoneRepository,
   ) {}
 
-  async listForUser(userId: string) {
-    const items = await this.repository.listVisibleTasks(userId)
+  async listForUser(userId: string, filters?: { milestoneId?: string | null }) {
+    const items = await this.repository.listVisibleTasks(userId, filters)
     return taskListResponseSchema.parse({ items } satisfies TaskListResponse)
   }
 
-  async listAll() {
-    const items = await this.repository.listAllTasks()
+  async listAll(filters?: { milestoneId?: string | null }) {
+    const items = await this.repository.listAllTasks(filters)
     return taskListResponseSchema.parse({ items } satisfies TaskListResponse)
   }
 
@@ -377,6 +385,7 @@ export class TaskService {
     assertBackofficeUser(actor)
     const parsedPayload = payload as {
       templateId: string
+      milestoneId?: string | null
       assigneeId?: string | null
       dueDate?: string | null
       entityType?: TaskUpsertPayload['entityType']
@@ -398,6 +407,7 @@ export class TaskService {
       status: 'pending',
       priority: parsedPayload.priority ?? template.defaultPriority,
       tags: parsedPayload.tags?.length ? parsedPayload.tags : template.defaultTags,
+      milestoneId: parsedPayload.milestoneId ?? null,
       scopeType: template.scopeType,
       entityType: parsedPayload.entityType ?? (template.scopeType === 'general' ? null : template.scopeType),
       entityId: parsedPayload.entityId ?? null,
@@ -405,7 +415,12 @@ export class TaskService {
       templateId: template.id,
       assigneeId: parsedPayload.assigneeId ?? null,
       dueDate: parsedPayload.dueDate ?? null,
-      checklistItems: [],
+      checklistItems: template.checklistItems.map((item) => ({
+        id: randomUUID(),
+        label: item.label,
+        isChecked: false,
+        note: null,
+      })),
     })
 
     return this.create(actor, nextPayload)
@@ -431,6 +446,7 @@ export class TaskService {
         entityType: parsedPayload.entityType,
         entityId,
         entityLabel,
+        milestoneId: parsedPayload.milestoneId,
         tags: parsedPayload.tags,
         priority: parsedPayload.priority,
       })
@@ -552,8 +568,12 @@ export class TaskService {
       if (!template) {
         throw new ApplicationError('Task template not found.', { templateId: nextPayload.templateId }, 404)
       }
-      if (template.checklistItems.length === 0) {
-        throw new ApplicationError('Template task must have checklist items.', { templateId: nextPayload.templateId }, 400)
+    }
+
+    if (nextPayload.milestoneId) {
+      const milestone = await this.milestoneRepository?.findById(nextPayload.milestoneId)
+      if (!milestone) {
+        throw new ApplicationError('Milestone not found.', { milestoneId: nextPayload.milestoneId }, 404)
       }
     }
 
@@ -583,14 +603,6 @@ export class TaskService {
       throw new ApplicationError('Task not found.', {}, 404)
     }
 
-    if (previousItem.templateId !== nextPayload.templateId) {
-      throw new ApplicationError(
-        'Changing the task template after creation is not allowed.',
-        { previousTemplateId: previousItem.templateId, nextTemplateId: nextPayload.templateId },
-        400,
-      )
-    }
-
     validateStatusTransition(previousItem.status, nextPayload.status)
 
     if (previousItem.assigneeId !== nextPayload.assigneeId) {
@@ -618,13 +630,9 @@ export class TaskService {
     for (const item of nextPayload.checklistItems) {
       nextChecklistState.set(item.id, item.isChecked)
     }
-    const nextChecklistCompletionCount = previousItem.checklistItems.filter((item) => nextChecklistState.get(item.id)).length
-    const nextChecklistTotalCount = previousItem.checklistItems.length
+    const nextChecklistCompletionCount = Array.from(nextChecklistState.values()).filter(Boolean).length
+    const nextChecklistTotalCount = nextChecklistState.size
     const activityEntries: Array<{ activityType: Task['activities'][number]['activityType']; content: string }> = []
-
-    if (previousItem.templateId && nextChecklistTotalCount === 0) {
-      throw new ApplicationError('Template task must have checklist items.', { taskId: previousItem.id }, 400)
-    }
 
     if (previousItem.status !== nextPayload.status) {
       activityEntries.push({

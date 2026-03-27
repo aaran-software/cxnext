@@ -19,6 +19,12 @@ export const taskWorkspaceItems: TaskWorkspaceItem[] = [
     summary: 'Manage assigned work, linked entity tasks, and verification queues.',
   },
   {
+    id: 'milestones',
+    name: 'Milestones',
+    route: '/admin/dashboard/task/milestones',
+    summary: 'Group related tasks under one execution objective with progress and overdue rollups.',
+  },
+  {
     id: 'templates',
     name: 'Templates',
     route: '/admin/dashboard/task/templates',
