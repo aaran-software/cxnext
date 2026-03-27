@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
 import {
+  Boxes,
   Blocks,
   BookOpenText,
   BriefcaseBusiness,
@@ -96,6 +97,7 @@ const workspaceIconMap: Record<string, LucideIcon> = {
   'core-settings': Settings2,
   settings: Settings2,
   tasks: ListTodo,
+  groups: Boxes,
   milestones: Layers3,
   templates: FileText,
   bulk: ClipboardList,

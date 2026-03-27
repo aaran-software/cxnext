@@ -1,19 +1,19 @@
 import type { LookupOption } from '@/shared/forms/common-lookup'
-import type { MilestoneSummary, MilestoneUpsertPayload, TaskPriority, TaskScopeType, TaskStatus, TaskTemplateSummary, TaskUpsertPayload } from '@shared/index'
+import type { MilestoneSummary, MilestoneUpsertPayload, TaskGroupSummary, TaskGroupUpsertPayload, TaskPriority, TaskScopeType, TaskStatus, TaskTemplateSummary, TaskUpsertPayload } from '@shared/index'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, CalendarClock, CheckCircle2, ClipboardList, Flag, Paperclip, Plus, Sparkles, Tags, UserRound } from 'lucide-react'
 import { AutocompleteLookup } from '@/components/lookups/AutocompleteLookup'
 import { TaskCreateWizard } from '@/features/task/components/task-create-wizard'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { Textarea } from '@/components/ui/textarea'
 import { createFieldErrors, inputErrorClassName, isBlank, setFieldError, summarizeFieldErrors, type FieldErrors, warningCardClassName } from '@/shared/forms/validation'
-import { HttpError, createMilestone, createTask, getTask, getTaskTemplate, listMilestones, listProducts, listTaskTemplates, listUsers, markNotificationsReadByTask, updateTask } from '@/shared/api/client'
+import { HttpError, createMilestone, createTask, createTaskGroup, getTask, getTaskTemplate, listMilestones, listProducts, listTaskGroups, listTaskTemplates, listUsers, markNotificationsReadByTask, updateTask } from '@/shared/api/client'
 import { showFailedActionToast, showSavedToast, showValidationToast } from '@/shared/notifications/toast'
 import { useAuth } from '@framework-core/web/auth/components/auth-provider'
 
@@ -62,6 +62,7 @@ function createDefaultValues(): TaskFormValues {
     status: 'pending',
     priority: 'medium',
     tags: [],
+    taskGroupId: null,
     milestoneId: null,
     scopeType: 'general',
     entityType: null,
@@ -283,14 +284,14 @@ function getPriorityMeta(priority: TaskPriority) {
 
 function TaskStat({ label, value, hint, icon: Icon }: { label: string; value: string; hint: string; icon: typeof ClipboardList }) {
   return (
-    <div className="rounded-md border border-border/60 bg-muted/15 p-3">
+    <div className="rounded-md border border-border/60 bg-muted/15 p-2.5">
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
           <p className="text-sm font-semibold text-foreground">{value}</p>
-          <p className="text-xs text-muted-foreground">{hint}</p>
+          {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
         </div>
-        <div className="rounded-full border border-border/70 bg-background p-2">
+        <div className="rounded-full border border-border/70 bg-background p-1.5">
           <Icon className="size-4 text-muted-foreground" />
         </div>
       </div>
@@ -313,6 +314,7 @@ export function TaskFormPage() {
   const [products, setProducts] = useState<{ id: string; name: string }[]>([])
   const [templates, setTemplates] = useState<TaskTemplateSummary[]>([])
   const [milestones, setMilestones] = useState<MilestoneSummary[]>([])
+  const [taskGroups, setTaskGroups] = useState<TaskGroupSummary[]>([])
   const [checklistLabels, setChecklistLabels] = useState<Record<string, string>>({})
   const [wizardOpen, setWizardOpen] = useState(false)
   const [draftLoaded, setDraftLoaded] = useState(false)
@@ -320,7 +322,16 @@ export function TaskFormPage() {
   const [plan, setPlan] = useState<TaskPlanState>(createDefaultPlan())
   const [planEditorText, setPlanEditorText] = useState('')
   const [planEditorOpen, setPlanEditorOpen] = useState(false)
+  const [showMilestoneControls, setShowMilestoneControls] = useState(false)
   const planFileInputRef = useRef<HTMLInputElement | null>(null)
+  const [taskGroupDialogOpen, setTaskGroupDialogOpen] = useState(false)
+  const [taskGroupSaving, setTaskGroupSaving] = useState(false)
+  const [taskGroupForm, setTaskGroupForm] = useState<TaskGroupUpsertPayload>({
+    title: '',
+    type: 'focus',
+    status: 'active',
+    description: null,
+  })
   const [milestoneDialogOpen, setMilestoneDialogOpen] = useState(false)
   const [milestoneSaving, setMilestoneSaving] = useState(false)
   const [milestoneForm, setMilestoneForm] = useState<MilestoneUpsertPayload>({
@@ -380,17 +391,19 @@ export function TaskFormPage() {
     async function loadBootstrap() {
       if (!session?.accessToken) return
       try {
-        const [userList, templateList, productList, milestoneList] = await Promise.all([
+        const [userList, templateList, productList, milestoneList, taskGroupList] = await Promise.all([
           listUsers(session.accessToken),
           listTaskTemplates(session.accessToken),
           listProducts(),
           listMilestones(session.accessToken),
+          listTaskGroups(session.accessToken, { status: 'active' }),
         ])
         if (!cancelled) {
           setUsers(userList.map((user) => ({ id: user.id, name: user.displayName || user.email })))
           setTemplates(templateList)
           setProducts(productList.map((product) => ({ id: product.id, name: product.name })))
           setMilestones(milestoneList)
+          setTaskGroups(taskGroupList)
         }
       } catch {
         if (!cancelled) {
@@ -398,6 +411,7 @@ export function TaskFormPage() {
           setProducts([])
           setTemplates([])
           setMilestones([])
+          setTaskGroups([])
         }
       }
     }
@@ -456,6 +470,7 @@ export function TaskFormPage() {
       ...current,
       milestoneId: seededMilestoneId,
     })
+    setShowMilestoneControls(true)
   }, [searchParams, taskId])
 
   useEffect(() => {
@@ -468,6 +483,7 @@ export function TaskFormPage() {
         const task = await getTask(session.accessToken, taskId)
         const parsed = parseTaskDescription(task.description)
         if (!cancelled) {
+          setShowMilestoneControls(Boolean(task.milestoneId))
           setChecklistLabels(Object.fromEntries(task.checklistItems.map((item) => [item.id, item.label])))
           setShortDescription(parsed.shortDescription)
           setPlan(parsed.plan)
@@ -478,6 +494,7 @@ export function TaskFormPage() {
             status: task.status,
             priority: task.priority,
             tags: task.tags,
+            taskGroupId: task.taskGroupId,
             milestoneId: task.milestoneId,
             scopeType: task.scopeType,
             entityType: task.entityType,
@@ -513,6 +530,9 @@ export function TaskFormPage() {
   }, [session?.accessToken, taskId])
 
   const assigneeOptions = useMemo<LookupOption[]>(() => users.map((user) => ({ value: user.id, label: user.name })), [users])
+  const taskGroupOptions = useMemo<LookupOption[]>(() => taskGroups
+    .filter((group) => group.status === 'active' || group.id === values.taskGroupId)
+    .map((group) => ({ value: group.id, label: group.title })), [taskGroups, values.taskGroupId])
   const milestoneOptions = useMemo<LookupOption[]>(() => milestones
     .filter((milestone) => milestone.status === 'active' || milestone.id === values.milestoneId)
     .map((milestone) => ({ value: milestone.id, label: milestone.title })), [milestones, values.milestoneId])
@@ -520,6 +540,7 @@ export function TaskFormPage() {
   const selectedStatus = getStatusMeta(values.status)
   const selectedPriority = getPriorityMeta(values.priority)
   const selectedAssigneeLabel = users.find((user) => user.id === values.assigneeId)?.name ?? 'Unassigned'
+  const selectedTaskGroupLabel = taskGroups.find((group) => group.id === values.taskGroupId)?.title ?? 'No group'
   const selectedMilestoneLabel = milestones.find((milestone) => milestone.id === values.milestoneId)?.title ?? 'No milestone'
   const headerTitle = values.title?.trim() || (isEditMode ? 'Untitled Task' : 'New Task')
 
@@ -598,6 +619,43 @@ export function TaskFormPage() {
     }
   }
 
+  async function handleCreateTaskGroup() {
+    if (!session?.accessToken) {
+      setErrorMessage('Authorization token is required.')
+      return
+    }
+    if (isBlank(taskGroupForm.title)) {
+      setErrorMessage('Task group title is required.')
+      return
+    }
+
+    setTaskGroupSaving(true)
+    try {
+      const createdTaskGroup = await createTaskGroup(session.accessToken, taskGroupForm)
+      setTaskGroups((current) => [createdTaskGroup, ...current])
+      setValues((current) => ({ ...current, taskGroupId: createdTaskGroup.id }))
+      setTaskGroupDialogOpen(false)
+      setTaskGroupForm({
+        title: '',
+        type: 'focus',
+        status: 'active',
+        description: null,
+      })
+      showSavedToast({
+        entityLabel: 'task group',
+        recordName: createdTaskGroup.title,
+        referenceId: createdTaskGroup.id,
+        mode: 'create',
+      })
+    } catch (error) {
+      const message = toErrorMessage(error)
+      setErrorMessage(message)
+      showFailedActionToast({ entityLabel: 'task group', action: 'create', detail: message })
+    } finally {
+      setTaskGroupSaving(false)
+    }
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!session?.accessToken) {
@@ -648,14 +706,14 @@ export function TaskFormPage() {
   }
 
   return (
-    <form className="space-y-4 pt-1" onSubmit={(event) => { void handleSubmit(event) }}>
-      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-        <div>
+    <form className="mx-auto max-w-6xl space-y-3 px-1 pt-1 md:px-0" onSubmit={(event) => { void handleSubmit(event) }}>
+      <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
+        <div className="space-y-1">
           <Button variant="ghost" size="sm" asChild className="-ml-3 mb-2">
             <Link to={taskId ? `/admin/dashboard/task/tasks/${taskId}` : '/admin/dashboard/task/tasks'}><ArrowLeft className="size-4" />Back to tasks</Link>
           </Button>
           <h1 className="text-2xl font-semibold tracking-tight">{headerTitle}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{isEditMode ? 'Task Brief' : 'Create a task with milestone context, starter template help, ownership, and due date.'}</p>
+          {!isEditMode ? <p className="text-sm text-muted-foreground">Create task</p> : null}
         </div>
         <div className="flex items-center gap-3">
           {!isEditMode ? (
@@ -685,13 +743,12 @@ export function TaskFormPage() {
 
       {!isEditMode && draftLoaded ? (
         <Card className="rounded-md border-border/70 bg-muted/10 shadow-none">
-          <CardContent className="flex items-center gap-3 p-4 text-sm">
+          <CardContent className="flex items-center gap-3 p-3 text-sm">
             <div className="rounded-full border border-border/70 bg-background p-2">
               <Sparkles className="size-4 text-muted-foreground" />
             </div>
             <div>
               <p className="font-medium text-foreground">Prefilled from IFZ Beta</p>
-              <p className="text-muted-foreground">Review and adjust the draft before creating the task.</p>
             </div>
           </CardContent>
         </Card>
@@ -706,9 +763,9 @@ export function TaskFormPage() {
         </Card>
       ) : null}
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(19rem,0.9fr)]">
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,1.55fr)_minmax(18rem,0.88fr)]">
         <Card className="rounded-md border-border/70 shadow-none">
-          <CardContent className="grid gap-4 pt-6">
+          <CardContent className="grid gap-3 pt-4">
             <div className="grid gap-2">
               <Label className={fieldErrors.title ? 'text-destructive' : undefined}>Title</Label>
               <Input className={inputErrorClassName(Boolean(fieldErrors.title))} value={values.title} onChange={(event) => setValues((current) => ({ ...current, title: event.target.value }))} placeholder="Ex: Verify product price update" />
@@ -717,31 +774,74 @@ export function TaskFormPage() {
 
             <div className="grid gap-2">
               <div className="flex items-center justify-between gap-3">
-                <Label>Milestone</Label>
-                <Button type="button" variant="outline" size="sm" onClick={() => setMilestoneDialogOpen(true)}>
+                <Label>Task Group</Label>
+                <Button type="button" variant="outline" size="sm" onClick={() => setTaskGroupDialogOpen(true)}>
                   <Plus className="size-4" />
                   New
                 </Button>
               </div>
               <AutocompleteLookup
-                value={values.milestoneId ?? ''}
-                onChange={(value) => setValues((current) => ({ ...current, milestoneId: value || null }))}
-                options={milestoneOptions}
-                placeholder="Select milestone"
+                value={values.taskGroupId ?? ''}
+                onChange={(value) => setValues((current) => ({ ...current, taskGroupId: value || null }))}
+                options={taskGroupOptions}
+                placeholder="Select task group"
                 allowEmptyOption
-                emptyOptionLabel="No milestone"
+                emptyOptionLabel="No group"
               />
             </div>
 
+            {showMilestoneControls || values.milestoneId ? (
+              <div className="grid gap-2">
+                <div className="flex items-center justify-between gap-3">
+                  <Label>Milestone Overlay</Label>
+                  <div className="flex items-center gap-2">
+                    <Button type="button" variant="outline" size="sm" onClick={() => setMilestoneDialogOpen(true)}>
+                      <Plus className="size-4" />
+                      New
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setValues((current) => ({ ...current, milestoneId: null }))
+                        setShowMilestoneControls(false)
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+                <AutocompleteLookup
+                  value={values.milestoneId ?? ''}
+                  onChange={(value) => setValues((current) => ({ ...current, milestoneId: value || null }))}
+                  options={milestoneOptions}
+                  placeholder="Select milestone"
+                  allowEmptyOption
+                  emptyOptionLabel="No milestone"
+                />
+              </div>
+            ) : (
+              <div className="flex items-center justify-between rounded-md border border-dashed border-border/60 bg-muted/10 px-3 py-2">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Milestone Overlay</p>
+                  <p className="text-xs text-muted-foreground">Optional structured coordination for project or bulk mode.</p>
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={() => setShowMilestoneControls(true)}>
+                  Add milestone
+                </Button>
+              </div>
+            )}
+
             <div className="grid gap-2">
               <Label>Description</Label>
-              <Textarea rows={3} value={shortDescription} onChange={(event) => setShortDescription(event.target.value)} placeholder="Short context only. Keep execution details in the plan below." className="min-h-20 resize-none" />
+              <Textarea rows={2} value={shortDescription} onChange={(event) => setShortDescription(event.target.value)} placeholder="Short context only." className="min-h-16 resize-none" />
             </div>
 
             <div className="grid gap-2">
               <Label>Plan</Label>
-              <div className="rounded-md border border-border/60 bg-muted/10 p-4">
-                <div className="space-y-4">
+              <div className="rounded-md border border-border/60 bg-muted/10 p-3">
+                <div className="space-y-3">
                   <Textarea
                     rows={7}
                     value={planEditorText}
@@ -758,10 +858,10 @@ export function TaskFormPage() {
                       handlePlanFiles(event.clipboardData.files)
                     }}
                     placeholder="Type naturally or use light structure like ## Steps, 1. Step, and ## Notes."
-                    className="min-h-40 border-none bg-background font-mono text-sm shadow-none"
+                    className="min-h-32 border-none bg-background font-mono text-sm shadow-none"
                   />
 
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-3">
                     <div className="flex flex-wrap gap-2">
                       <Button type="button" variant="outline" size="sm" onClick={openAttachPicker}>
                         <Paperclip className="size-4" />
@@ -781,7 +881,7 @@ export function TaskFormPage() {
 
                   <input ref={planFileInputRef} type="file" multiple className="hidden" onChange={(event) => handlePlanFiles(event.target.files)} />
 
-                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  <div className="grid gap-2 md:grid-cols-2">
                     <div className="rounded-md border border-border/60 bg-background p-3">
                       <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Steps</p>
                       <p className="mt-2 text-sm text-foreground">{plan.steps.length} step{plan.steps.length === 1 ? '' : 's'}</p>
@@ -828,11 +928,10 @@ export function TaskFormPage() {
               </div>
             </div>
 
-            <div className="grid gap-3 rounded-md border border-border/60 bg-muted/10 p-4">
+            <div className="grid gap-3 rounded-md border border-border/60 bg-muted/10 p-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-foreground">Task Checklist</p>
-                  <p className="text-xs text-muted-foreground">This checklist belongs to the task itself. Templates only provide a starting point.</p>
                 </div>
                 <Button
                   type="button"
@@ -854,7 +953,7 @@ export function TaskFormPage() {
               </div>
 
               {values.checklistItems.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No checklist items yet. Add task-owned validation here, even without a template.</p>
+                <p className="text-sm text-muted-foreground">No checklist items yet.</p>
               ) : values.checklistItems.map((item, index) => (
                 <div key={item.id} className="rounded-md border border-border/60 bg-background p-3">
                   <div className="flex items-start gap-3">
@@ -909,9 +1008,8 @@ export function TaskFormPage() {
           <Card className="rounded-md border-border/70 shadow-none">
             <CardHeader className="pb-4">
               <CardTitle>Assignment</CardTitle>
-              <CardDescription>Set workflow, urgency, owner, and deadline.</CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-4">
+            <CardContent className="grid gap-3">
               <div className="grid gap-2">
                 <Label>Status</Label>
                 <AutocompleteLookup value={values.status} onChange={(value) => setValues((current) => ({ ...current, status: value as TaskStatus }))} options={taskStatusOptions} placeholder="Search status" />
@@ -946,16 +1044,16 @@ export function TaskFormPage() {
           <Card className="rounded-md border-border/70 shadow-none">
             <CardHeader className="pb-4">
               <CardTitle>At A Glance</CardTitle>
-              <CardDescription>Quick readback before saving.</CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-3">
-              <TaskStat label="Workflow State" value={selectedStatus.label} hint="Current execution phase for the task." icon={CheckCircle2} />
-              <TaskStat label="Priority" value={selectedPriority.label} hint="Relative urgency for scheduling and follow-through." icon={Flag} />
-              <TaskStat label="Owner" value={selectedAssigneeLabel} hint="Person responsible for moving the task." icon={UserRound} />
-              <TaskStat label="Milestone" value={selectedMilestoneLabel} hint="Execution context grouping this task." icon={ClipboardList} />
-              <TaskStat label="Due" value={values.dueDate || 'Not scheduled'} hint="Deadline visible to the team." icon={CalendarClock} />
-              <TaskStat label="Tags" value={values.tags.length > 0 ? values.tags.join(', ') : 'No tags'} hint="Keywords attached to the task record." icon={Tags} />
-              <TaskStat label="Checklist" value={`${values.checklistItems.filter((item) => item.isChecked).length}/${values.checklistItems.length}`} hint="Task-owned validation progress." icon={ClipboardList} />
+            <CardContent className="grid gap-2.5">
+              <TaskStat label="Workflow State" value={selectedStatus.label} hint="" icon={CheckCircle2} />
+              <TaskStat label="Priority" value={selectedPriority.label} hint="" icon={Flag} />
+              <TaskStat label="Owner" value={selectedAssigneeLabel} hint="" icon={UserRound} />
+              <TaskStat label="Task Group" value={selectedTaskGroupLabel} hint="" icon={ClipboardList} />
+              {values.milestoneId ? <TaskStat label="Milestone" value={selectedMilestoneLabel} hint="" icon={ClipboardList} /> : null}
+              <TaskStat label="Due" value={values.dueDate || 'Not scheduled'} hint="" icon={CalendarClock} />
+              <TaskStat label="Tags" value={values.tags.length > 0 ? values.tags.join(', ') : 'No tags'} hint="" icon={Tags} />
+              <TaskStat label="Checklist" value={`${values.checklistItems.filter((item) => item.isChecked).length}/${values.checklistItems.length}`} hint="" icon={ClipboardList} />
 
               <div className="rounded-md border border-border/60 bg-muted/15 p-3">
                 <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Status And Priority</p>
@@ -971,15 +1069,14 @@ export function TaskFormPage() {
       </div>
 
       <Dialog open={planEditorOpen} onOpenChange={setPlanEditorOpen}>
-        <DialogContent className="flex max-h-[92vh] w-[min(94vw,64rem)] max-w-5xl flex-col overflow-hidden border border-border/70 bg-background p-0">
-          <DialogHeader className="border-b border-border/70 px-6 py-5">
+        <DialogContent className="flex max-h-[92vh] w-[min(96vw,58rem)] max-w-5xl flex-col overflow-hidden border border-border/70 bg-background p-0">
+          <DialogHeader className="border-b border-border/70 px-5 py-4">
             <DialogTitle>Plan Builder</DialogTitle>
-            <DialogDescription>Use this to turn the task into an execution plan without leaving the main form.</DialogDescription>
           </DialogHeader>
 
-          <div className="overflow-y-auto px-6 py-6">
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-              <div className="space-y-4">
+          <div className="overflow-y-auto px-5 py-5">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,0.95fr)]">
+              <div className="space-y-3">
                 <div className="rounded-md border border-border/60 bg-muted/10 p-3">
                   <Textarea
                     rows={20}
@@ -1000,16 +1097,15 @@ export function TaskFormPage() {
                       handlePlanFiles(event.dataTransfer.files)
                     }}
                     placeholder="Type naturally or use light syntax like ## Steps, 1. Step, and ## Notes."
-                    className="min-h-[32rem] border-none bg-background font-mono text-sm shadow-none"
+                    className="min-h-[24rem] border-none bg-background font-mono text-sm shadow-none"
                   />
                 </div>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <Card className="rounded-md border-border/70 shadow-none">
                   <CardHeader className="pb-3">
                     <CardTitle>Structure Panel</CardTitle>
-                    <CardDescription>The editor stays freeform. This panel shows the structure it detects.</CardDescription>
                   </CardHeader>
                   <CardContent className="grid gap-3">
                     <TaskStat label="Steps" value={`${plan.steps.length}`} hint={plan.steps.length > 0 ? plan.steps.map((step, index) => `${index + 1}. ${step.text}`).join(' | ') : 'No numbered steps detected yet.'} icon={ClipboardList} />
@@ -1021,7 +1117,6 @@ export function TaskFormPage() {
                 <Card className="rounded-md border-border/70 shadow-none">
                   <CardHeader className="pb-3">
                     <CardTitle>Attachments</CardTitle>
-                    <CardDescription>Drop, paste, or attach files. They stay as plan references with the current task model.</CardDescription>
                   </CardHeader>
                   <CardContent className="grid gap-3">
                     <div className="rounded-md border border-dashed border-border/60 bg-muted/10 p-4 text-sm text-muted-foreground">
@@ -1040,7 +1135,7 @@ export function TaskFormPage() {
             </div>
           </div>
 
-          <DialogFooter className="border-t border-border/70 px-6 py-4">
+          <DialogFooter className="border-t border-border/70 px-5 py-3">
             <div className="mr-auto flex flex-wrap gap-2">
               <Button type="button" variant="outline" size="sm" onClick={openAttachPicker}>
                 <Paperclip className="size-4" />
@@ -1061,14 +1156,48 @@ export function TaskFormPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={milestoneDialogOpen} onOpenChange={setMilestoneDialogOpen}>
-        <DialogContent className="w-[min(92vw,34rem)] max-w-2xl border border-border/70 bg-background p-0">
-          <DialogHeader className="border-b border-border/70 px-6 py-5">
-            <DialogTitle>New Milestone</DialogTitle>
-            <DialogDescription>Create a milestone and attach this task to it immediately.</DialogDescription>
+      <Dialog open={taskGroupDialogOpen} onOpenChange={setTaskGroupDialogOpen}>
+        <DialogContent className="w-[min(94vw,32rem)] max-w-2xl border border-border/70 bg-background p-0">
+          <DialogHeader className="border-b border-border/70 px-5 py-4">
+            <DialogTitle>New Task Group</DialogTitle>
           </DialogHeader>
 
-          <div className="grid gap-4 px-6 py-6">
+          <div className="grid gap-3 px-5 py-5">
+            <div className="grid gap-2">
+              <Label>Title</Label>
+              <Input value={taskGroupForm.title} onChange={(event) => setTaskGroupForm((current) => ({ ...current, title: event.target.value }))} placeholder="Ex: Pricing sweep batch" />
+            </div>
+            <div className="grid gap-2">
+              <Label>Type</Label>
+              <AutocompleteLookup
+                value={taskGroupForm.type}
+                onChange={(value) => setTaskGroupForm((current) => ({ ...current, type: (value || 'focus') as TaskGroupUpsertPayload['type'] }))}
+                options={[
+                  { value: 'focus', label: 'Focus' },
+                  { value: 'batch', label: 'Batch' },
+                  { value: 'sprint', label: 'Sprint' },
+                ]}
+                placeholder="Select group type"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="border-t border-border/70 px-5 py-3">
+            <Button type="button" variant="outline" onClick={() => setTaskGroupDialogOpen(false)}>Cancel</Button>
+            <Button type="button" onClick={() => { void handleCreateTaskGroup() }} disabled={taskGroupSaving}>
+              {taskGroupSaving ? 'Creating...' : 'Create Group'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={milestoneDialogOpen} onOpenChange={setMilestoneDialogOpen}>
+        <DialogContent className="w-[min(94vw,32rem)] max-w-2xl border border-border/70 bg-background p-0">
+          <DialogHeader className="border-b border-border/70 px-5 py-4">
+            <DialogTitle>New Milestone</DialogTitle>
+          </DialogHeader>
+
+          <div className="grid gap-3 px-5 py-5">
             <div className="grid gap-2">
               <Label>Title</Label>
               <Input value={milestoneForm.title} onChange={(event) => setMilestoneForm((current) => ({ ...current, title: event.target.value }))} placeholder="Ex: Product launch pricing review" />
@@ -1100,7 +1229,7 @@ export function TaskFormPage() {
             </div>
           </div>
 
-          <DialogFooter className="border-t border-border/70 px-6 py-4">
+          <DialogFooter className="border-t border-border/70 px-5 py-3">
             <Button type="button" variant="outline" onClick={() => setMilestoneDialogOpen(false)}>Cancel</Button>
             <Button type="button" onClick={() => { void handleCreateMilestone() }} disabled={milestoneSaving}>
               {milestoneSaving ? 'Creating...' : 'Create Milestone'}

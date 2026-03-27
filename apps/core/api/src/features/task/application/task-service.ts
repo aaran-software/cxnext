@@ -4,6 +4,9 @@ import type {
   TaskAuditItem,
   TaskAuditListResponse,
   TaskBulkCreateResponse,
+  TaskContext,
+  TaskContextInput,
+  TaskHealth,
   TaskInsights,
   TaskInsightsResponse,
   TaskListResponse,
@@ -31,6 +34,7 @@ import { ApplicationError } from '@framework-core/runtime/errors/application-err
 import { ProductRepository } from '@ecommerce-api/features/product/data/product-repository'
 import type { NotificationService } from '../../notification/application/notification-service'
 import type { MilestoneRepository } from '../data/milestone-repository'
+import type { TaskGroupRepository } from '../data/task-group-repository'
 import { randomUUID } from 'node:crypto'
 
 interface PersistenceError {
@@ -71,32 +75,14 @@ function getVerificationState(task: { checklistCompletionCount: number; checklis
   return 'partial'
 }
 
-function isOverdueTask(task: { dueDate: string | null; status: string }, today = startOfDay()) {
-  const dueDate = parseDate(task.dueDate)
-  if (!dueDate || task.status === 'finalized') {
-    return false
-  }
-
-  return dueDate < today
-}
-
-function isStuckTask(task: { status: string; updatedAt: string }, today = startOfDay(), thresholdDays = 3) {
-  if (task.status !== 'in_progress') {
-    return false
-  }
-
-  const updatedAt = parseDate(task.updatedAt)
-  if (!updatedAt) {
-    return false
-  }
-
-  return updatedAt < addDays(today, -thresholdDays)
-}
-
 function toAuditItem(task: TaskAuditItem | {
   id: string
   title: string
   description: string | null
+  taskContext: Task['taskContext']
+  taskHealth: Task['taskHealth']
+  taskGroupId: string | null
+  taskGroupTitle: string | null
   milestoneId: string | null
   milestoneTitle: string | null
   status: TaskAuditItem['status']
@@ -121,16 +107,18 @@ function toAuditItem(task: TaskAuditItem | {
   dueDate: string | null
   checklistCompletionCount: number
   checklistTotalCount: number
+  statusChangedAt: string
   createdAt: string
   updatedAt: string
 }): TaskAuditItem {
   const verificationState = getVerificationState(task)
+  const healthSignals = toBooleanSignals(task.taskHealth)
   return {
     ...task,
     verificationState,
-    isOverdue: isOverdueTask(task),
-    isStuck: isStuckTask(task),
-    isIncompleteVerification: task.checklistTotalCount > 0 && task.checklistCompletionCount < task.checklistTotalCount,
+    isOverdue: healthSignals.overdue,
+    isStuck: task.taskHealth.status === 'stuck' || healthSignals.inactive || healthSignals.longInSameState,
+    isIncompleteVerification: healthSignals.checklistIncomplete,
   }
 }
 
@@ -168,6 +156,98 @@ function isChecklistComplete(checklistCompletionCount: number, checklistTotalCou
   return checklistTotalCount === 0 || checklistCompletionCount >= checklistTotalCount
 }
 
+function inferTaskDomain(scopeType: Task['scopeType'], tags: string[], taskContext?: TaskContextInput | TaskContext | null) {
+  return taskContext?.domain?.trim() || tags.find((tag) => tag.trim().length > 0) || scopeType || 'general'
+}
+
+function resolveTaskContext(input: {
+  title: string
+  scopeType: Task['scopeType']
+  tags: string[]
+  checklistTotalCount: number
+  taskContext?: TaskContextInput | TaskContext | null
+}): TaskContext {
+  return {
+    objective: input.taskContext?.objective?.trim() || input.title,
+    outcome: input.taskContext?.outcome?.trim() || (
+      input.checklistTotalCount > 0
+        ? 'Complete all checklist items and move the task through a valid workflow state.'
+        : 'Move the task to a valid completed state.'
+    ),
+    domain: inferTaskDomain(input.scopeType, input.tags, input.taskContext),
+  }
+}
+
+function toBooleanSignals(taskHealth: TaskHealth) {
+  return {
+    overdue: taskHealth.signals.overdue === true,
+    inactive: taskHealth.signals.inactive === true,
+    checklistIncomplete: taskHealth.signals.checklistIncomplete === true,
+    longInSameState: taskHealth.signals.longInSameState === true,
+  }
+}
+
+function areHealthSnapshotsEquivalent(left: TaskHealth, right: TaskHealth) {
+  const leftSignals = toBooleanSignals(left)
+  const rightSignals = toBooleanSignals(right)
+  return (
+    left.status === right.status
+    && leftSignals.overdue === rightSignals.overdue
+    && leftSignals.inactive === rightSignals.inactive
+    && leftSignals.checklistIncomplete === rightSignals.checklistIncomplete
+    && leftSignals.longInSameState === rightSignals.longInSameState
+  )
+}
+
+function evaluateTaskHealth(input: {
+  status: Task['status']
+  dueDate: string | null
+  updatedAt: string
+  statusChangedAt: string
+  checklistCompletionCount: number
+  checklistTotalCount: number
+  now?: Date
+}): TaskHealth {
+  const now = input.now ?? new Date()
+  const updatedAt = parseDate(input.updatedAt)
+  const statusChangedAt = parseDate(input.statusChangedAt)
+  const dueDate = parseDate(input.dueDate)
+
+  const overdue = Boolean(dueDate && input.status !== 'finalized' && dueDate < now)
+  const inactive = Boolean(
+    input.status === 'in_progress'
+    && updatedAt
+    && updatedAt.getTime() < now.getTime() - (24 * 60 * 60 * 1000),
+  )
+  const checklistIncomplete = Boolean(
+    input.status === 'review'
+    && input.checklistTotalCount > 0
+    && input.checklistCompletionCount < input.checklistTotalCount,
+  )
+  const longInSameState = Boolean(
+    statusChangedAt
+    && input.status !== 'finalized'
+    && statusChangedAt.getTime() < now.getTime() - (72 * 60 * 60 * 1000),
+  )
+
+  const status: TaskHealth['status'] = overdue || checklistIncomplete
+    ? 'at_risk'
+    : inactive || longInSameState
+      ? 'stuck'
+      : 'normal'
+
+  return {
+    status,
+    lastEvaluatedAt: now.toISOString(),
+    signals: {
+      ...(overdue ? { overdue: true } : {}),
+      ...(inactive ? { inactive: true } : {}),
+      ...(checklistIncomplete ? { checklistIncomplete: true } : {}),
+      ...(longInSameState ? { longInSameState: true } : {}),
+    },
+  }
+}
+
 function validateStatusTransition(previousStatus: TaskStatus, nextStatus: TaskStatus) {
   if (previousStatus === nextStatus) {
     return
@@ -193,9 +273,11 @@ function toTaskUpsertPayload(task: Task): TaskUpsertPayload {
   return {
     title: task.title,
     description: task.description,
+    taskContext: task.taskContext,
     status: task.status,
     priority: task.priority,
     tags: task.tags,
+    taskGroupId: task.taskGroupId,
     milestoneId: task.milestoneId,
     scopeType: task.scopeType,
     entityType: task.entityType,
@@ -233,6 +315,10 @@ function isMutationEquivalent(previousItem: Task, nextPayload: TaskUpsertPayload
   return (
     previousItem.title === nextPayload.title
     && previousItem.description === nextPayload.description
+    && previousItem.taskContext.objective === (nextPayload.taskContext?.objective?.trim() || previousItem.taskContext.objective)
+    && previousItem.taskContext.outcome === (nextPayload.taskContext?.outcome?.trim() || previousItem.taskContext.outcome)
+    && previousItem.taskContext.domain === (nextPayload.taskContext?.domain?.trim() || previousItem.taskContext.domain)
+    && previousItem.taskGroupId === nextPayload.taskGroupId
     && previousItem.milestoneId === nextPayload.milestoneId
     && previousItem.status === nextPayload.status
     && previousItem.priority === nextPayload.priority
@@ -255,23 +341,63 @@ export class TaskService {
     private readonly productRepository = new ProductRepository(),
     private readonly notificationService?: NotificationService,
     private readonly milestoneRepository?: MilestoneRepository,
+    private readonly taskGroupRepository?: TaskGroupRepository,
   ) {}
 
-  async listForUser(userId: string, filters?: { milestoneId?: string | null }) {
+  private async syncTaskHealthSnapshot<T extends Pick<Task, 'id' | 'status' | 'dueDate' | 'updatedAt' | 'statusChangedAt' | 'checklistCompletionCount' | 'checklistTotalCount' | 'taskHealth'>>(task: T) {
+    const evaluatedHealth = evaluateTaskHealth(task)
+    if (!areHealthSnapshotsEquivalent(task.taskHealth, evaluatedHealth)) {
+      await this.repository.saveHealthSnapshot(task.id, evaluatedHealth)
+      return {
+        ...task,
+        taskHealth: evaluatedHealth,
+      }
+    }
+    return task
+  }
+
+  private async listAllTasksWithHealth(filters?: { milestoneId?: string | null }) {
+    const items = await this.repository.listAllTasks(filters)
+    return Promise.all(items.map((item) => this.syncTaskHealthSnapshot(item)))
+  }
+
+  private async listVisibleTasksWithHealth(userId: string, filters?: { milestoneId?: string | null }) {
     const items = await this.repository.listVisibleTasks(userId, filters)
+    return Promise.all(items.map((item) => this.syncTaskHealthSnapshot(item)))
+  }
+
+  private async getTaskByIdWithHealth(id: string) {
+    const item = await this.repository.findById(id)
+    if (!item) {
+      return null
+    }
+    return this.syncTaskHealthSnapshot(item)
+  }
+
+  async listForUser(userId: string, filters?: { milestoneId?: string | null }) {
+    const items = await this.listVisibleTasksWithHealth(userId, filters)
     return taskListResponseSchema.parse({ items } satisfies TaskListResponse)
   }
 
   async listAll(filters?: { milestoneId?: string | null }) {
-    const items = await this.repository.listAllTasks(filters)
+    const items = await this.listAllTasksWithHealth(filters)
     return taskListResponseSchema.parse({ items } satisfies TaskListResponse)
   }
 
   async getInsights(userId: string) {
-    const items = await this.repository.listAllTasks()
+    const items = await this.listAllTasksWithHealth()
     const today = startOfDay()
     const weekBoundary = addDays(today, 7)
     const finalizedCount = items.filter((item) => item.status === 'finalized').length
+    const domainMap = new Map<string, { total: number; atRisk: number }>()
+    for (const item of items) {
+      const current = domainMap.get(item.taskContext.domain) ?? { total: 0, atRisk: 0 }
+      current.total += 1
+      if (item.taskHealth.status === 'at_risk') {
+        current.atRisk += 1
+      }
+      domainMap.set(item.taskContext.domain, current)
+    }
     const insights = {
       systemStatus: {
         totalTasks: items.length,
@@ -286,7 +412,7 @@ export class TaskService {
         unassigned: items.filter((item) => !item.assigneeId).length,
       },
       urgency: {
-        overdue: items.filter((item) => isOverdueTask(item, today)).length,
+        overdue: items.filter((item) => item.taskHealth.signals.overdue === true).length,
         dueToday: items.filter((item) => {
           const dueDate = parseDate(item.dueDate)
           return dueDate ? dueDate.getTime() === today.getTime() : false
@@ -297,10 +423,16 @@ export class TaskService {
         }).length,
       },
       signals: {
-        stuck: items.filter((item) => isStuckTask(item, today)).length,
-        incompleteVerification: items.filter((item) => item.checklistTotalCount > 0 && item.checklistCompletionCount < item.checklistTotalCount).length,
+        atRisk: items.filter((item) => item.taskHealth.status === 'at_risk').length,
+        stuck: items.filter((item) => item.taskHealth.status === 'stuck').length,
+        blocked: items.filter((item) => item.taskHealth.status === 'blocked').length,
+        incompleteVerification: items.filter((item) => item.taskHealth.signals.checklistIncomplete === true).length,
         completionRate: items.length === 0 ? 0 : finalizedCount / items.length,
       },
+      domains: [...domainMap.entries()]
+        .map(([domain, value]) => ({ domain, total: value.total, atRisk: value.atRisk }))
+        .sort((left, right) => right.total - left.total || left.domain.localeCompare(right.domain))
+        .slice(0, 5),
     } satisfies TaskInsights
 
     return taskInsightsResponseSchema.parse({ insights } satisfies TaskInsightsResponse)
@@ -314,7 +446,7 @@ export class TaskService {
     dateFrom?: string | null
     dateTo?: string | null
   }) {
-    const items = (await this.repository.listAllTasks()).map(toAuditItem)
+    const items = (await this.listAllTasksWithHealth()).map(toAuditItem)
     const filteredItems = items.filter((item) => {
       if (filters.templateId && item.templateId !== filters.templateId) {
         return false
@@ -352,11 +484,12 @@ export class TaskService {
 
   async listByEntity(entityType: string, entityId: string) {
     const items = await this.repository.listTasksByEntity(entityType, entityId)
-    return taskListResponseSchema.parse({ items } satisfies TaskListResponse)
+    const syncedItems = await Promise.all(items.map((item) => this.syncTaskHealthSnapshot(item)))
+    return taskListResponseSchema.parse({ items: syncedItems } satisfies TaskListResponse)
   }
 
   async getById(id: string) {
-    const item = await this.repository.findById(id)
+    const item = await this.getTaskByIdWithHealth(id)
     if (!item) {
       throw new ApplicationError('Task not found.', { id }, 404)
     }
@@ -367,13 +500,17 @@ export class TaskService {
     assertBackofficeUser(actor)
     const parsedPayload = taskUpsertPayloadSchema.parse(payload)
     try {
-      await this.validateTaskMutation({
+      const validationResult = await this.validateTaskMutation({
         action: 'create',
         actor,
         previousItem: null,
         nextPayload: parsedPayload,
       })
-      const item = await this.repository.create(actor.id, parsedPayload)
+      const item = await this.repository.create(actor.id, parsedPayload, {
+        taskContext: validationResult.taskContext,
+        taskHealth: validationResult.taskHealth,
+        statusChangedAt: validationResult.statusChangedAt,
+      })
       await this.notifyOnCreate(item, actor.id)
       return taskResponseSchema.parse({ item } satisfies TaskResponse)
     } catch (error) {
@@ -385,6 +522,7 @@ export class TaskService {
     assertBackofficeUser(actor)
     const parsedPayload = payload as {
       templateId: string
+      taskGroupId?: string | null
       milestoneId?: string | null
       assigneeId?: string | null
       dueDate?: string | null
@@ -407,6 +545,7 @@ export class TaskService {
       status: 'pending',
       priority: parsedPayload.priority ?? template.defaultPriority,
       tags: parsedPayload.tags?.length ? parsedPayload.tags : template.defaultTags,
+      taskGroupId: parsedPayload.taskGroupId ?? null,
       milestoneId: parsedPayload.milestoneId ?? null,
       scopeType: template.scopeType,
       entityType: parsedPayload.entityType ?? (template.scopeType === 'general' ? null : template.scopeType),
@@ -446,6 +585,7 @@ export class TaskService {
         entityType: parsedPayload.entityType,
         entityId,
         entityLabel,
+        taskGroupId: parsedPayload.taskGroupId ?? null,
         milestoneId: parsedPayload.milestoneId,
         tags: parsedPayload.tags,
         priority: parsedPayload.priority,
@@ -463,7 +603,7 @@ export class TaskService {
     assertBackofficeUser(actor)
     const parsedPayload = taskUpsertPayloadSchema.parse(payload)
     try {
-      const previousItem = await this.repository.findById(id)
+      const previousItem = await this.getTaskByIdWithHealth(id)
       if (!previousItem) {
         throw new ApplicationError('Task not found.', { id }, 404)
       }
@@ -486,6 +626,11 @@ export class TaskService {
         parsedPayload,
         validationResult.reviewState,
         validationResult.activityEntries,
+        {
+          taskContext: validationResult.taskContext,
+          taskHealth: validationResult.taskHealth,
+          statusChangedAt: validationResult.statusChangedAt,
+        },
       )
       await this.notificationService?.markReadByTask(actor.id, id)
       await this.notifyOnUpdate(previousItem, item, actor.id)
@@ -562,6 +707,7 @@ export class TaskService {
   }) {
     const { action, actor, previousItem, nextPayload } = input
     assertBackofficeUser(actor)
+    const evaluationTime = new Date()
 
     if (nextPayload.templateId) {
       const template = await this.repository.findTemplateById(nextPayload.templateId)
@@ -577,6 +723,13 @@ export class TaskService {
       }
     }
 
+    if (nextPayload.taskGroupId) {
+      const taskGroup = await this.taskGroupRepository?.findById(nextPayload.taskGroupId)
+      if (!taskGroup) {
+        throw new ApplicationError('Task group not found.', { taskGroupId: nextPayload.taskGroupId }, 404)
+      }
+    }
+
     if (action === 'create') {
       if (!canAssignTasks(actor) && nextPayload.assigneeId && nextPayload.assigneeId !== actor.id) {
         throw new ApplicationError('Permission denied to assign tasks to other users.', { assigneeId: nextPayload.assigneeId }, 403)
@@ -588,6 +741,15 @@ export class TaskService {
           400,
         )
       }
+      const checklistCompletionCount = nextPayload.checklistItems.filter((item) => item.isChecked).length
+      const checklistTotalCount = nextPayload.checklistItems.length
+      const taskContext = resolveTaskContext({
+        title: nextPayload.title,
+        scopeType: nextPayload.scopeType,
+        tags: nextPayload.tags,
+        checklistTotalCount,
+        taskContext: nextPayload.taskContext,
+      })
       return {
         reviewState: {
           reviewAssignedTo: null,
@@ -596,6 +758,17 @@ export class TaskService {
           reviewComment: null,
         },
         activityEntries: [],
+        taskContext,
+        taskHealth: evaluateTaskHealth({
+          status: nextPayload.status,
+          dueDate: nextPayload.dueDate,
+          updatedAt: evaluationTime.toISOString(),
+          statusChangedAt: evaluationTime.toISOString(),
+          checklistCompletionCount,
+          checklistTotalCount,
+          now: evaluationTime,
+        }),
+        statusChangedAt: evaluationTime,
       }
     }
 
@@ -632,6 +805,16 @@ export class TaskService {
     }
     const nextChecklistCompletionCount = Array.from(nextChecklistState.values()).filter(Boolean).length
     const nextChecklistTotalCount = nextChecklistState.size
+    const taskContext = resolveTaskContext({
+      title: nextPayload.title,
+      scopeType: nextPayload.scopeType,
+      tags: nextPayload.tags,
+      checklistTotalCount: nextChecklistTotalCount,
+      taskContext: nextPayload.taskContext ?? previousItem.taskContext,
+    })
+    const statusChangedAt = previousItem.status === nextPayload.status
+      ? parseDate(previousItem.statusChangedAt) ?? evaluationTime
+      : evaluationTime
     const activityEntries: Array<{ activityType: Task['activities'][number]['activityType']; content: string }> = []
 
     if (previousItem.status !== nextPayload.status) {
@@ -689,6 +872,17 @@ export class TaskService {
           reviewComment: nextPayload.reviewComment ?? previousItem.reviewComment,
         },
         activityEntries,
+        taskContext,
+        taskHealth: evaluateTaskHealth({
+          status: nextPayload.status,
+          dueDate: nextPayload.dueDate,
+          updatedAt: evaluationTime.toISOString(),
+          statusChangedAt: statusChangedAt.toISOString(),
+          checklistCompletionCount: nextChecklistCompletionCount,
+          checklistTotalCount: nextChecklistTotalCount,
+          now: evaluationTime,
+        }),
+        statusChangedAt,
       }
     }
 
@@ -711,6 +905,17 @@ export class TaskService {
           reviewComment: null,
         },
         activityEntries,
+        taskContext,
+        taskHealth: evaluateTaskHealth({
+          status: nextPayload.status,
+          dueDate: nextPayload.dueDate,
+          updatedAt: evaluationTime.toISOString(),
+          statusChangedAt: statusChangedAt.toISOString(),
+          checklistCompletionCount: nextChecklistCompletionCount,
+          checklistTotalCount: nextChecklistTotalCount,
+          now: evaluationTime,
+        }),
+        statusChangedAt,
       }
     }
 
@@ -724,6 +929,17 @@ export class TaskService {
         reviewComment: previousItem.reviewComment,
       },
       activityEntries,
+      taskContext,
+      taskHealth: evaluateTaskHealth({
+        status: nextPayload.status,
+        dueDate: nextPayload.dueDate,
+        updatedAt: evaluationTime.toISOString(),
+        statusChangedAt: statusChangedAt.toISOString(),
+        checklistCompletionCount: nextChecklistCompletionCount,
+        checklistTotalCount: nextChecklistTotalCount,
+        now: evaluationTime,
+      }),
+      statusChangedAt,
     }
   }
 

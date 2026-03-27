@@ -28,6 +28,13 @@ export const TaskVerificationStateEnum = z.enum([
   'completed',
 ])
 
+export const TaskHealthStatusEnum = z.enum([
+  'normal',
+  'at_risk',
+  'stuck',
+  'blocked',
+])
+
 export const TaskScopeTypeEnum = z.enum([
   'general',
   'product',
@@ -39,6 +46,31 @@ export const TaskScopeTypeEnum = z.enum([
 
 const trimmedNullableString = z.string().trim().nullish().transform((value) => value?.trim() || null)
 const trimmedStringArray = z.array(z.string().trim().min(1)).default([])
+
+export const taskContextSchema = z.object({
+  objective: z.string().min(1),
+  outcome: z.string().min(1),
+  domain: z.string().min(1),
+})
+
+export const taskContextInputSchema = z.object({
+  objective: trimmedNullableString.optional(),
+  outcome: trimmedNullableString.optional(),
+  domain: trimmedNullableString.optional(),
+})
+
+export const taskHealthSignalsSchema = z.object({
+  overdue: z.boolean().optional(),
+  inactive: z.boolean().optional(),
+  checklistIncomplete: z.boolean().optional(),
+  longInSameState: z.boolean().optional(),
+})
+
+export const taskHealthSchema = z.object({
+  status: TaskHealthStatusEnum,
+  lastEvaluatedAt: z.string().min(1),
+  signals: taskHealthSignalsSchema,
+})
 
 export const taskChecklistItemSchema = z.object({
   id: z.string().min(1),
@@ -91,6 +123,10 @@ export const taskSummarySchema = z.object({
   id: z.string().min(1),
   title: z.string().min(1),
   description: z.string().nullable(),
+  taskContext: taskContextSchema,
+  taskHealth: taskHealthSchema,
+  taskGroupId: z.string().nullable(),
+  taskGroupTitle: z.string().nullable(),
   milestoneId: z.string().nullable(),
   milestoneTitle: z.string().nullable(),
   status: TaskStatusEnum,
@@ -115,6 +151,7 @@ export const taskSummarySchema = z.object({
   dueDate: z.string().nullable(),
   checklistCompletionCount: z.number().int().nonnegative(),
   checklistTotalCount: z.number().int().nonnegative(),
+  statusChangedAt: z.string().min(1),
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),
 })
@@ -143,10 +180,17 @@ export const taskInsightsSchema = z.object({
     dueThisWeek: z.number().int().nonnegative(),
   }),
   signals: z.object({
+    atRisk: z.number().int().nonnegative(),
     stuck: z.number().int().nonnegative(),
+    blocked: z.number().int().nonnegative(),
     incompleteVerification: z.number().int().nonnegative(),
     completionRate: z.number().min(0).max(1),
   }),
+  domains: z.array(z.object({
+    domain: z.string().min(1),
+    total: z.number().int().nonnegative(),
+    atRisk: z.number().int().nonnegative(),
+  })),
 })
 
 export const taskAuditItemSchema = taskSummarySchema.extend({
@@ -192,9 +236,11 @@ export const taskActivityInputSchema = z.object({
 export const taskUpsertPayloadSchema = z.object({
   title: z.string().trim().min(3),
   description: trimmedNullableString,
+  taskContext: taskContextInputSchema.optional(),
   status: TaskStatusEnum.default('pending'),
   priority: TaskPriorityEnum.default('medium'),
   tags: trimmedStringArray,
+  taskGroupId: trimmedNullableString.optional().default(null),
   milestoneId: trimmedNullableString,
   scopeType: TaskScopeTypeEnum.default('general'),
   entityType: TaskScopeTypeEnum.nullable().optional().default(null),
@@ -216,6 +262,7 @@ export const taskBulkAssignmentModeEnum = z.enum([
 export const taskBulkCreatePayloadSchema = z.object({
   templateId: z.string().min(1),
   milestoneId: z.string().trim().min(1),
+  taskGroupId: trimmedNullableString.optional(),
   entityType: TaskScopeTypeEnum,
   entityIds: z.array(z.string().trim().min(1)).min(1),
   assigneeMode: taskBulkAssignmentModeEnum.default('unassigned'),
@@ -254,10 +301,15 @@ export type TaskStatus = z.infer<typeof TaskStatusEnum>
 export type TaskPriority = z.infer<typeof TaskPriorityEnum>
 export type TaskActivityType = z.infer<typeof TaskActivityTypeEnum>
 export type TaskVerificationState = z.infer<typeof TaskVerificationStateEnum>
+export type TaskHealthStatus = z.infer<typeof TaskHealthStatusEnum>
 export type TaskScopeType = z.infer<typeof TaskScopeTypeEnum>
 
 export type TaskActivity = z.infer<typeof taskActivitySchema>
 export type TaskChecklistItem = z.infer<typeof taskChecklistItemSchema>
+export type TaskContext = z.infer<typeof taskContextSchema>
+export type TaskContextInput = z.infer<typeof taskContextInputSchema>
+export type TaskHealthSignals = z.infer<typeof taskHealthSignalsSchema>
+export type TaskHealth = z.infer<typeof taskHealthSchema>
 export type TaskTemplateChecklistItem = z.infer<typeof taskTemplateChecklistItemSchema>
 export type TaskTemplateSummary = z.infer<typeof taskTemplateSummarySchema>
 export type TaskTemplate = z.infer<typeof taskTemplateSchema>

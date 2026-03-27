@@ -57,37 +57,6 @@ function getVerificationStatus(task: Task) {
   return { label: 'Partial', tone: 'featured' as const }
 }
 
-function isOverdueTask(task: Task) {
-  if (!task.dueDate || task.status === 'finalized') {
-    return false
-  }
-  const dueDate = new Date(task.dueDate)
-  if (Number.isNaN(dueDate.getTime())) {
-    return false
-  }
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  return dueDate < today
-}
-
-function isStuckTask(task: Task) {
-  if (task.status !== 'in_progress') {
-    return false
-  }
-  const updatedAt = new Date(task.updatedAt)
-  if (Number.isNaN(updatedAt.getTime())) {
-    return false
-  }
-  const threshold = new Date()
-  threshold.setHours(0, 0, 0, 0)
-  threshold.setDate(threshold.getDate() - 3)
-  return updatedAt < threshold
-}
-
-function isIncompleteVerificationTask(task: Task) {
-  return task.checklistTotalCount > 0 && task.checklistCompletionCount < task.checklistTotalCount
-}
-
 function parseTaskDescription(rawDescription: string | null | undefined) {
   if (!rawDescription?.trim()) {
     return {
@@ -215,6 +184,7 @@ function toTaskPayload(task: Task) {
     status: task.status,
     priority: task.priority,
     tags: task.tags,
+    taskGroupId: task.taskGroupId,
     milestoneId: task.milestoneId,
     scopeType: task.scopeType,
     entityType: task.entityType,
@@ -362,9 +332,9 @@ export function TaskDetailPage() {
   const systemActivity = useMemo(() => task?.activities.filter((item) => item.activityType !== 'comment') ?? [], [task])
   const userCanEdit = task ? canUserEditTask(task, session?.user ?? null) : false
   const userIsReviewer = task ? isReviewerForTask(task, session?.user ?? null) : false
-  const overdue = task ? isOverdueTask(task) : false
-  const incomplete = task ? isIncompleteVerificationTask(task) : false
-  const stuck = task ? isStuckTask(task) : false
+  const overdue = task?.taskHealth.signals.overdue === true
+  const incomplete = task?.taskHealth.signals.checklistIncomplete === true
+  const stuck = task?.taskHealth.status === 'stuck' || task?.taskHealth.signals.inactive === true || task?.taskHealth.signals.longInSameState === true
 
   async function handleWorkflowAction(nextStatus: Task['status']) {
     if (!taskId || !task || !session?.accessToken) {
@@ -480,20 +450,22 @@ export function TaskDetailPage() {
       label: 'Details',
       value: 'details',
       content: (
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(18rem,0.9fr)]">
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1.6fr)_minmax(17rem,0.88fr)]">
           <Card className="rounded-md border-border/70 shadow-none">
-            <CardHeader className="pb-4">
+            <CardHeader className="pb-3">
               <CardTitle>Task Details</CardTitle>
-              <CardDescription>Read the instruction, linked entity, and execution context without changing the record.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
               <div className="rounded-md border border-border/60 bg-muted/10 p-4">
                 <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Description</p>
                 <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{parsedDescription?.shortDescription || 'No task description added yet.'}</p>
               </div>
 
               <div className="grid gap-3 md:grid-cols-2">
-                <TaskInfoRow label="Milestone" value={task.milestoneTitle ?? 'No milestone'} />
+                <TaskInfoRow label="Objective" value={task.taskContext.objective} />
+                <TaskInfoRow label="Outcome" value={task.taskContext.outcome} />
+                <TaskInfoRow label="Domain" value={task.taskContext.domain} />
+                <TaskInfoRow label="Task Group" value={task.taskGroupTitle ?? 'No group'} />
                 <TaskInfoRow label="Entity Type" value={task.entityType ?? 'General'} />
                 <TaskInfoRow label="Entity Label" value={task.entityLabel ?? task.entityId ?? 'Not linked'} />
                 <TaskInfoRow label="Entity ID" value={task.entityId ?? 'Not linked'} />
@@ -501,7 +473,7 @@ export function TaskDetailPage() {
               </div>
               {task.milestoneId && task.milestoneTitle ? (
                 <div className="rounded-md border border-border/60 bg-muted/10 p-4">
-                  <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Milestone</p>
+                  <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Milestone Overlay</p>
                   <button
                     type="button"
                     onClick={() => { void navigate(`/admin/dashboard/task/milestones/${encodeURIComponent(task.milestoneId!)}`) }}
@@ -516,9 +488,8 @@ export function TaskDetailPage() {
 
           <div className="space-y-4">
             <Card className="rounded-md border-border/70 shadow-none">
-              <CardHeader className="pb-4">
+              <CardHeader className="pb-3">
                 <CardTitle>At A Glance</CardTitle>
-                <CardDescription>Current ownership, timing, and review state.</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-3">
                 <TaskInfoRow label="Status" value={task.status.replace('_', ' ')} />
@@ -529,13 +500,13 @@ export function TaskDetailPage() {
                 <TaskInfoRow label="Due Date" value={formatDate(task.dueDate)} />
                 <TaskInfoRow label="Tags" value={task.tags.length > 0 ? task.tags.join(', ') : 'No tags'} />
                 <TaskInfoRow label="Verification Status" value={verificationStatus?.label ?? 'Not started'} />
+                <TaskInfoRow label="Health" value={task.taskHealth.status.replace('_', ' ')} />
               </CardContent>
             </Card>
 
             <Card className="rounded-md border-border/70 shadow-none">
-              <CardHeader className="pb-4">
+              <CardHeader className="pb-3">
                 <CardTitle>Review</CardTitle>
-                <CardDescription>Approval ownership and final sign-off details.</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-3">
                 <TaskInfoRow label="Assigned Reviewer" value={task.reviewAssignedToName ?? 'Not assigned'} />
@@ -766,14 +737,14 @@ export function TaskDetailPage() {
   ].filter(Boolean)
 
   return (
-    <div className="space-y-4 pt-1">
+    <div className="mx-auto max-w-6xl space-y-3 px-1 pt-1 md:px-0">
       <div className="sticky top-3 z-20 rounded-md border border-border/70 bg-background/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/80">
-        <div className="flex flex-col justify-between gap-4 p-4 md:flex-row md:items-start">
-          <div className="space-y-2">
+        <div className="flex flex-col justify-between gap-3 p-3 md:flex-row md:items-start">
+          <div className="space-y-1.5">
             <Button variant="ghost" size="sm" asChild className="-ml-3">
               <Link to="/admin/dashboard/task/tasks"><ArrowLeft className="size-4" />Back to tasks</Link>
             </Button>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Task ID {task.id}</p>
                 <StatusBadge tone={verificationStatus?.tone ?? 'manual'}>{verificationStatus?.label ?? 'Not started'}</StatusBadge>
@@ -782,9 +753,6 @@ export function TaskDetailPage() {
                 {stuck ? <StatusBadge tone="publishing">Stuck</StatusBadge> : null}
               </div>
               <h1 className="text-2xl font-semibold tracking-tight">{task.title}</h1>
-              <p className="max-w-3xl text-sm text-muted-foreground">
-                Read the task record, proof, and activity before making controlled changes.
-              </p>
             </div>
           </div>
 
@@ -806,7 +774,7 @@ export function TaskDetailPage() {
       ) : null}
 
       <Card className="rounded-md border-border/70 shadow-none">
-        <CardContent className="flex flex-wrap items-center gap-3 p-4">
+        <CardContent className="flex flex-wrap items-center gap-2.5 p-3">
           <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-muted/20 px-3 py-1 text-xs uppercase tracking-[0.16em] text-muted-foreground">
             <ClipboardList className="size-3.5" />
             Task Record
@@ -820,7 +788,7 @@ export function TaskDetailPage() {
             </StatusBadge>
             {task.tags.map((tag) => <StatusBadge key={tag} tone="manual">{tag}</StatusBadge>)}
           </div>
-          <div className="ml-auto flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+          <div className="ml-auto flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
             <span className="inline-flex items-center gap-1.5"><UserRound className="size-4" />{task.assigneeName ?? 'Unassigned'}</span>
             <span className="inline-flex items-center gap-1.5"><CalendarClock className="size-4" />{formatDate(task.dueDate)}</span>
             <span className="inline-flex items-center gap-1.5"><Flag className="size-4" />{task.priority}</span>
@@ -829,11 +797,10 @@ export function TaskDetailPage() {
       </Card>
 
       <Card className="rounded-md border-border/70 shadow-none">
-        <CardContent className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
+        <CardContent className="flex flex-col gap-2.5 p-3 md:flex-row md:items-center md:justify-between">
           <div className="space-y-1">
             <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Progress</p>
             <p className="text-lg font-semibold text-foreground">{task.checklistCompletionCount} / {task.checklistTotalCount} completed</p>
-            <p className="text-sm text-muted-foreground">Status signal stays visible without needing to open the progress tab.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge tone={verificationStatus?.tone ?? 'manual'}>{verificationStatus?.label ?? 'Not started'}</StatusBadge>

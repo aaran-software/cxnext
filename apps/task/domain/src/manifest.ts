@@ -19,6 +19,12 @@ export const taskWorkspaceItems: TaskWorkspaceItem[] = [
     summary: 'Manage assigned work, linked entity tasks, and verification queues.',
   },
   {
+    id: 'groups',
+    name: 'Task Groups',
+    route: '/admin/dashboard/task/groups',
+    summary: 'Manage lightweight execution groups for focus, batches, and sprints.',
+  },
+  {
     id: 'milestones',
     name: 'Milestones',
     route: '/admin/dashboard/task/milestones',
@@ -28,13 +34,13 @@ export const taskWorkspaceItems: TaskWorkspaceItem[] = [
     id: 'templates',
     name: 'Templates',
     route: '/admin/dashboard/task/templates',
-    summary: 'Control reusable task logic, checklist rules, and scope-specific verification templates.',
+    summary: 'Manage starter templates that prefill task defaults and checklist items.',
   },
   {
     id: 'bulk',
     name: 'Bulk Generator',
     route: '/admin/dashboard/task/bulk',
-    summary: 'Generate template-backed product tasks in batches using category and tag filters.',
+    summary: 'Generate structured product task runs using milestone overlays, task groups, and starter templates.',
   },
   {
     id: 'insights',

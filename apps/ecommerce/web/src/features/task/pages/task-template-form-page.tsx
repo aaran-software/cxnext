@@ -215,14 +215,14 @@ export function TaskTemplateFormPage() {
   }
 
   return (
-    <form className="mx-auto max-w-7xl space-y-4 pt-1" onSubmit={(event) => { void handleSubmit(event) }}>
+    <form className="mx-auto max-w-6xl space-y-4 pt-1" onSubmit={(event) => { void handleSubmit(event) }}>
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
           <Button variant="ghost" size="sm" asChild className="-ml-3 mb-2">
             <Link to="/admin/dashboard/task/templates"><ArrowLeft className="size-4" />Back to templates</Link>
           </Button>
           <h1 className="text-2xl font-semibold tracking-tight">{isEditMode ? values.name || 'Edit Template' : 'New Task Template'}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Define the checklist, defaults, and scope that will drive repeatable task creation.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Define the starter defaults and checklist that will prefill new tasks.</p>
         </div>
         <div className="flex items-center gap-3">
           <Button type="button" variant="outline" onClick={() => { void navigate('/admin/dashboard/task/templates') }}>Cancel</Button>
@@ -236,7 +236,7 @@ export function TaskTemplateFormPage() {
         </Card>
       ) : null}
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(19rem,0.9fr)]">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(18rem,0.88fr)]">
         <Card className="rounded-md border-border/70 shadow-none">
           <CardContent className="grid gap-4 pt-6">
             <div className="grid gap-4 md:grid-cols-2">
@@ -257,7 +257,7 @@ export function TaskTemplateFormPage() {
 
             <div className="grid gap-2">
               <Label>Description Template</Label>
-              <Textarea value={values.descriptionTemplate ?? ''} onChange={(event) => setValues((current) => ({ ...current, descriptionTemplate: event.target.value || null }))} placeholder="Explain the expected verification outcome and what the assignee must confirm." className="min-h-32" />
+              <Textarea value={values.descriptionTemplate ?? ''} onChange={(event) => setValues((current) => ({ ...current, descriptionTemplate: event.target.value || null }))} placeholder="Starter context that will be copied into the new task." className="min-h-32" />
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -275,7 +275,7 @@ export function TaskTemplateFormPage() {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-foreground">Checklist Builder</p>
-                  <p className="text-xs text-muted-foreground">This is the verification engine. Reorder items, mark them required, and keep the checklist explicit.</p>
+                  <p className="text-xs text-muted-foreground">These checklist items are copied into each task created from this starter and can be changed per task later.</p>
                 </div>
                 <Button
                   type="button"
@@ -329,13 +329,13 @@ export function TaskTemplateFormPage() {
           <Card className="rounded-md border-border/70 shadow-none">
             <CardHeader className="pb-4">
               <CardTitle>Template Controls</CardTitle>
-              <CardDescription>Switch readiness, review checklist coverage, and confirm the template defaults.</CardDescription>
+              <CardDescription>Manage starter readiness, checklist coverage, and default values.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4">
               <div className="flex items-center justify-between rounded-md border border-border/60 bg-muted/10 p-3">
                 <div className="space-y-1">
                   <p className="text-sm font-medium text-foreground">Active</p>
-                  <p className="text-xs text-muted-foreground">Inactive templates stay editable but should not drive new operational work.</p>
+                  <p className="text-xs text-muted-foreground">Inactive starters stay editable but should not be used for new task creation.</p>
                 </div>
                 <Switch checked={values.isActive} onCheckedChange={(checked) => setValues((current) => ({ ...current, isActive: checked }))} />
               </div>
@@ -343,7 +343,7 @@ export function TaskTemplateFormPage() {
               <div className="rounded-md border border-border/60 bg-muted/10 p-3">
                 <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Checklist Coverage</p>
                 <p className="mt-2 text-lg font-semibold text-foreground">{checklistCompletionHint}</p>
-                <p className="mt-1 text-xs text-muted-foreground">Required checks should represent the non-negotiable proof points for this workflow.</p>
+                <p className="mt-1 text-xs text-muted-foreground">Required items mark the non-negotiable starter checks that should usually be copied into the task.</p>
               </div>
 
               <div className="rounded-md border border-border/60 bg-muted/10 p-3">

@@ -107,6 +107,9 @@ import type {
   TaskBulkCreateResponse,
   TaskAuditListResponse,
   TaskActivityInput,
+  TaskGroupListResponse,
+  TaskGroupResponse,
+  TaskGroupUpsertPayload,
   TaskInsightsResponse,
   TaskListResponse,
   TaskResponse,
@@ -974,6 +977,45 @@ export async function updateMilestone(token: string, id: string, payload: Milest
   return response.item
 }
 
+export async function listTaskGroups(token: string, filters?: {
+  status?: string
+  type?: string
+}) {
+  const searchParams = new URLSearchParams()
+  if (filters?.status) searchParams.set('status', filters.status)
+  if (filters?.type) searchParams.set('type', filters.type)
+  const suffix = searchParams.toString() ? `?${searchParams.toString()}` : ''
+  const response = await request<TaskGroupListResponse>(`/task-groups${suffix}`, {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.items
+}
+
+export async function getTaskGroup(token: string, id: string) {
+  const response = await request<TaskGroupResponse>(`/task-groups/${id}`, {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.item
+}
+
+export async function createTaskGroup(token: string, payload: TaskGroupUpsertPayload) {
+  const response = await request<TaskGroupResponse>('/task-groups', {
+    method: 'POST',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
+  })
+  return response.item
+}
+
+export async function updateTaskGroup(token: string, id: string, payload: TaskGroupUpsertPayload) {
+  const response = await request<TaskGroupResponse>(`/task-groups/${id}`, {
+    method: 'PATCH',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
+  })
+  return response.item
+}
+
 export async function listTasksByEntity(token: string, entityType: string, entityId: string) {
   const response = await request<TaskListResponse>(`/tasks?entityType=${encodeURIComponent(entityType)}&entityId=${encodeURIComponent(entityId)}`, {
     headers: createAuthorizationHeaders(token),
@@ -1050,6 +1092,7 @@ export async function updateTaskTemplate(token: string, id: string, payload: Tas
 
 export async function createTaskFromTemplate(token: string, payload: {
   templateId: string
+  taskGroupId?: string | null
   milestoneId?: string | null
   assigneeId?: string | null
   dueDate?: string | null
@@ -1072,6 +1115,7 @@ export async function createTaskFromTemplate(token: string, payload: {
 export async function createTasksFromTemplateBulk(token: string, payload: {
   templateId: string
   milestoneId: string
+  taskGroupId?: string | null
   entityType: string
   entityIds: string[]
   assigneeMode?: 'specific' | 'self' | 'unassigned'

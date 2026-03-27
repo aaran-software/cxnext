@@ -110,6 +110,12 @@ export function TaskInsightsPage() {
         description: 'Tasks in progress without movement for several days.',
         route: '/admin/dashboard/task/audit?isStuck=true',
       },
+      {
+        label: 'At Risk',
+        value: insights.signals.atRisk,
+        description: 'Tasks whose current health has shifted into risk.',
+        route: '/admin/dashboard/task/audit?isOverdue=true',
+      },
     ]
   }, [insights])
 
@@ -240,7 +246,7 @@ export function TaskInsightsPage() {
         <Card className="rounded-md border-border/70 shadow-none">
           <CardHeader className="pb-4">
             <CardTitle>Completion Rate</CardTitle>
-            <CardDescription>Finalized tasks divided by total tasks.</CardDescription>
+            <CardDescription>Finalized tasks divided by total tasks, with risk carried by task health.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -248,12 +254,31 @@ export function TaskInsightsPage() {
               <p className="mt-2 text-sm text-muted-foreground">This is a health signal, not a vanity metric. Use it together with overdue and incomplete verification counts.</p>
             </div>
             <div className="rounded-md border border-border/60 bg-muted/10 p-3 text-sm text-muted-foreground">
+              At risk: <span className="font-medium text-foreground">{insights.signals.atRisk}</span><br />
               Stuck tasks: <span className="font-medium text-foreground">{insights.signals.stuck}</span><br />
               Incomplete verification: <span className="font-medium text-foreground">{insights.signals.incompleteVerification}</span>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      <Card className="rounded-md border-border/70 shadow-none">
+        <CardHeader className="pb-4">
+          <CardTitle>Domain View</CardTitle>
+          <CardDescription>Task context domains replace milestone grouping for default operational visibility.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          {insights.domains.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No task domains have been inferred yet.</p>
+          ) : insights.domains.map((domain) => (
+            <div key={domain.domain} className="rounded-md border border-border/60 bg-muted/10 p-4">
+              <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">{domain.domain}</p>
+              <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">{domain.total}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{domain.atRisk} at risk</p>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
     </div>
   )
 }

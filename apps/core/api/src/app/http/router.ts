@@ -30,6 +30,8 @@ import { TaskService } from '../../features/task/application/task-service'
 import { TaskRepository } from '../../features/task/data/task-repository'
 import { MilestoneService } from '../../features/task/application/milestone-service'
 import { MilestoneRepository } from '../../features/task/data/milestone-repository'
+import { TaskGroupService } from '../../features/task/application/task-group-service'
+import { TaskGroupRepository } from '../../features/task/data/task-group-repository'
 import { NotificationService } from '../../features/notification/application/notification-service'
 import { NotificationRepository } from '../../features/notification/data/notification-repository'
 import {
@@ -112,7 +114,15 @@ const customerHelpdeskService = new CustomerHelpdeskService(
 const notificationService = new NotificationService(new NotificationRepository())
 const milestoneRepository = new MilestoneRepository()
 const milestoneService = new MilestoneService(milestoneRepository)
-const taskService = new TaskService(new TaskRepository(), new ProductRepository(), notificationService, milestoneRepository)
+const taskGroupRepository = new TaskGroupRepository()
+const taskGroupService = new TaskGroupService(taskGroupRepository)
+const taskService = new TaskService(
+  new TaskRepository(),
+  new ProductRepository(),
+  notificationService,
+  milestoneRepository,
+  taskGroupRepository,
+)
 
 function parseBooleanFlag(value: string | null) {
   if (!value) {
@@ -617,6 +627,15 @@ export async function routeRequest(
       return
     }
 
+    if (method === 'GET' && url.pathname === '/task-groups') {
+      const user = await requireAuthenticatedUser(request)
+      writeJson(response, 200, await taskGroupService.list(user, {
+        status: url.searchParams.get('status'),
+        type: url.searchParams.get('type'),
+      }))
+      return
+    }
+
     if (method === 'GET' && url.pathname === '/tasks/insights') {
       const user = await requireAuthenticatedUser(request)
       writeJson(response, 200, await taskService.getInsights(user.id))
@@ -671,6 +690,12 @@ export async function routeRequest(
     if (method === 'POST' && url.pathname === '/milestones') {
       const user = await requireAuthenticatedUser(request)
       writeJson(response, 201, await milestoneService.create(user, await readJsonBody(request)))
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/task-groups') {
+      const user = await requireAuthenticatedUser(request)
+      writeJson(response, 201, await taskGroupService.create(user, await readJsonBody(request)))
       return
     }
 
@@ -749,6 +774,22 @@ export async function routeRequest(
 
       if (method === 'PATCH') {
         writeJson(response, 200, await milestoneService.update(user, milestoneId, await readJsonBody(request)))
+        return
+      }
+    }
+
+    const taskGroupRecordMatch = url.pathname.match(/^\/task-groups\/([^/]+)$/)
+    if (taskGroupRecordMatch) {
+      const taskGroupId = taskGroupRecordMatch[1]
+      const user = await requireAuthenticatedUser(request)
+
+      if (method === 'GET') {
+        writeJson(response, 200, await taskGroupService.getById(user, taskGroupId))
+        return
+      }
+
+      if (method === 'PATCH') {
+        writeJson(response, 200, await taskGroupService.update(user, taskGroupId, await readJsonBody(request)))
         return
       }
     }

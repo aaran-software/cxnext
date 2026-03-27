@@ -1,4 +1,4 @@
-import type { MilestoneSummary, ProductSummary, TaskPriority, TaskTemplateSummary } from '@shared/index'
+import type { MilestoneSummary, ProductSummary, TaskGroupSummary, TaskPriority, TaskTemplateSummary } from '@shared/index'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Boxes, Layers3, Package, Users } from 'lucide-react'
@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { StatusBadge } from '@/components/ui/status-badge'
-import { createTasksFromTemplateBulk, HttpError, listMilestones, listProducts, listTaskTemplates, listUsers } from '@/shared/api/client'
+import { createTasksFromTemplateBulk, HttpError, listMilestones, listProducts, listTaskGroups, listTaskTemplates, listUsers } from '@/shared/api/client'
 import { showFailedActionToast, showSavedToast } from '@/shared/notifications/toast'
 import { useAuth } from '@framework-core/web/auth/components/auth-provider'
 
@@ -28,8 +28,10 @@ export function TaskBulkCreatePage() {
   const [products, setProducts] = useState<ProductSummary[]>([])
   const [users, setUsers] = useState<{ id: string; name: string }[]>([])
   const [milestones, setMilestones] = useState<MilestoneSummary[]>([])
+  const [taskGroups, setTaskGroups] = useState<TaskGroupSummary[]>([])
   const [selectedTemplateId, setSelectedTemplateId] = useState('')
   const [selectedMilestoneId, setSelectedMilestoneId] = useState('')
+  const [selectedTaskGroupId, setSelectedTaskGroupId] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedTag, setSelectedTag] = useState('all')
@@ -55,17 +57,19 @@ export function TaskBulkCreatePage() {
       setLoading(true)
       setErrorMessage(null)
       try {
-        const [templateItems, productItems, userItems, milestoneItems] = await Promise.all([
+        const [templateItems, productItems, userItems, milestoneItems, taskGroupItems] = await Promise.all([
           listTaskTemplates(accessToken, 'product'),
           listProducts(),
           listUsers(accessToken),
           listMilestones(accessToken),
+          listTaskGroups(accessToken, { status: 'active' }),
         ])
         if (!cancelled) {
           setTemplates(templateItems.filter((item) => (item.scopeType === 'general' || item.scopeType === 'product') && item.isActive))
           setProducts(productItems.filter((item) => item.isActive))
           setUsers(userItems.map((user) => ({ id: user.id, name: user.displayName || user.email })))
           setMilestones(milestoneItems)
+          setTaskGroups(taskGroupItems)
         }
       } catch (error) {
         if (!cancelled) {
@@ -98,6 +102,10 @@ export function TaskBulkCreatePage() {
   const milestoneOptions = useMemo(
     () => milestones.filter((milestone) => milestone.status === 'active').map((milestone) => ({ value: milestone.id, label: milestone.title })),
     [milestones],
+  )
+  const taskGroupOptions = useMemo(
+    () => taskGroups.filter((group) => group.status === 'active').map((group) => ({ value: group.id, label: group.title })),
+    [taskGroups],
   )
   const templateOptions = useMemo(
     () => templates.map((template) => ({ value: template.id, label: template.name })),
@@ -179,6 +187,7 @@ export function TaskBulkCreatePage() {
       const response = await createTasksFromTemplateBulk(session.accessToken, {
         templateId: selectedTemplateId,
         milestoneId: selectedMilestoneId,
+        taskGroupId: selectedTaskGroupId || null,
         entityType: 'product',
         entityIds: selectedProductIds,
         assigneeMode: assignmentMode,
@@ -218,8 +227,8 @@ export function TaskBulkCreatePage() {
           <Button variant="ghost" size="sm" asChild className="-ml-3 mb-2">
             <Link to="/admin/dashboard/task"><ArrowLeft className="size-4" />Back to task app</Link>
           </Button>
-          <h1 className="text-2xl font-semibold tracking-tight">Bulk Task Generator</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Select a product starter template, choose a milestone, filter the catalog, and generate task drafts at scale.</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Structured Bulk Generator</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Use a starter template plus milestone overlay to create many product tasks under one structured run.</p>
         </div>
         <div className="flex items-center gap-3">
           <Button type="button" variant="outline" onClick={() => { void navigate('/admin/dashboard/task/templates') }}>
@@ -240,12 +249,17 @@ export function TaskBulkCreatePage() {
           <Card className="rounded-md border-border/70 shadow-none">
             <CardHeader className="pb-4">
               <CardTitle>Generation Rules</CardTitle>
-              <CardDescription>Control the milestone context, starter template, ownership, deadline, and tags before generating tasks.</CardDescription>
+              <CardDescription>Choose the structured run context first, then apply a starter template, ownership, deadline, and tags.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4">
               <div className="grid gap-2">
-                <Label>Milestone</Label>
+                <Label>Milestone Overlay</Label>
                 <AutocompleteLookup value={selectedMilestoneId} onChange={setSelectedMilestoneId} options={milestoneOptions} placeholder="Select milestone" />
+              </div>
+
+              <div className="grid gap-2">
+                <Label>Task Group</Label>
+                <AutocompleteLookup value={selectedTaskGroupId} onChange={setSelectedTaskGroupId} options={taskGroupOptions} placeholder="Select task group" allowEmptyOption emptyOptionLabel="No group" />
               </div>
 
               <div className="grid gap-2">
@@ -314,7 +328,18 @@ export function TaskBulkCreatePage() {
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-foreground">{selectedTemplate?.name ?? 'No starter template selected'}</p>
-                    <p className="text-xs text-muted-foreground">{selectedTemplate?.checklistItemCount ?? 0} starter checklist items will be copied into each created task.</p>
+                    <p className="text-xs text-muted-foreground">{selectedTemplate?.checklistItemCount ?? 0} starter checklist items and defaults will be copied into each created task.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-md border border-border/60 bg-muted/10 p-3">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-full border border-border/70 bg-background p-2">
+                    <Boxes className="size-4 text-muted-foreground" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-foreground">{taskGroups.find((item) => item.id === selectedTaskGroupId)?.title ?? 'No task group selected'}</p>
+                    <p className="text-xs text-muted-foreground">New tasks can also be collected into a lightweight task group for execution views.</p>
                   </div>
                 </div>
               </div>
@@ -325,7 +350,7 @@ export function TaskBulkCreatePage() {
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-foreground">{milestones.find((item) => item.id === selectedMilestoneId)?.title ?? 'No milestone selected'}</p>
-                    <p className="text-xs text-muted-foreground">Bulk-created tasks will be grouped under this milestone.</p>
+                    <p className="text-xs text-muted-foreground">Bulk-created tasks will be created under this structured milestone context.</p>
                   </div>
                 </div>
               </div>
@@ -365,7 +390,7 @@ export function TaskBulkCreatePage() {
           <Card className="rounded-md border-border/70 shadow-none">
             <CardHeader className="pb-4">
               <CardTitle>Product Filter</CardTitle>
-              <CardDescription>Filter the catalog by name, category, and tag, then select the products that need verification tasks.</CardDescription>
+              <CardDescription>Filter the catalog by name, category, and tag, then select the products that need tasks from this structured run.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4">
               <div className="grid gap-4 md:grid-cols-[minmax(0,1.2fr)_220px_220px]">

@@ -1,7 +1,7 @@
-import type { TaskPriority, TaskStatus, TaskSummary } from '@shared/index'
+import type { TaskHealthStatus, TaskPriority, TaskStatus, TaskSummary } from '@shared/index'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowRight, CheckCircle2, Clock3, ListTodo, Plus, UserRound } from 'lucide-react'
+import { ArrowRight, CheckCircle2, Clock3, ListTodo, Plus, Target, UserRound } from 'lucide-react'
 import { useAuth } from '@framework-core/web/auth/components/auth-provider'
 import { AnimatedTabs, type AnimatedContentTab } from '@/components/ui/animated-tabs'
 import { Button } from '@/components/ui/button'
@@ -11,8 +11,8 @@ import { Label } from '@/components/ui/label'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { HttpError, listTasks } from '@/shared/api/client'
 
-type MetricFilterKey = 'all' | 'assigned' | 'open' | 'review' | 'finalized'
 type VerifiedFilterKey = 'all' | 'verified' | 'unverified'
+type ExecutionViewKey = 'now' | 'queue' | 'focus' | 'review' | 'done'
 
 function toErrorMessage(error: unknown) {
   if (error instanceof HttpError) return error.message
@@ -40,41 +40,6 @@ function toDateInputValue(value: string | null) {
   }
 
   return parsedValue.toISOString().slice(0, 10)
-}
-
-function isOverdueTask(item: Pick<TaskSummary, 'dueDate' | 'status'>) {
-  if (!item.dueDate || item.status === 'finalized') {
-    return false
-  }
-
-  const dueDate = new Date(item.dueDate)
-  if (Number.isNaN(dueDate.getTime())) {
-    return false
-  }
-
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  return dueDate < today
-}
-
-function isStuckTask(item: Pick<TaskSummary, 'status' | 'updatedAt'>) {
-  if (item.status !== 'in_progress') {
-    return false
-  }
-
-  const updatedAt = new Date(item.updatedAt)
-  if (Number.isNaN(updatedAt.getTime())) {
-    return false
-  }
-
-  const threshold = new Date()
-  threshold.setHours(0, 0, 0, 0)
-  threshold.setDate(threshold.getDate() - 3)
-  return updatedAt < threshold
-}
-
-function isIncompleteVerificationTask(item: Pick<TaskSummary, 'checklistCompletionCount' | 'checklistTotalCount'>) {
-  return item.checklistTotalCount > 0 && item.checklistCompletionCount < item.checklistTotalCount
 }
 
 function getStatusConfig(status: TaskStatus) {
@@ -184,7 +149,7 @@ function TaskListSection({
   const navigate = useNavigate()
 
   if (items.length === 0) {
-    return <EmptyTaskState title={`No ${title.toLowerCase()} yet`} description={description} />
+    return <EmptyTaskState title={`No ${title.toLowerCase()} tasks`} description={description} />
   }
 
   return (
@@ -194,9 +159,9 @@ function TaskListSection({
           const status = getStatusConfig(item.status)
           const priority = getPriorityConfig(item.priority)
           const taskHref = `/admin/dashboard/task/tasks/${item.id}`
-          const isOverdue = isOverdueTask(item)
-          const isStuck = isStuckTask(item)
-          const isIncompleteVerification = isIncompleteVerificationTask(item)
+          const isOverdue = item.taskHealth.signals.overdue === true
+          const isStuck = item.taskHealth.status === 'stuck' || item.taskHealth.signals.inactive === true || item.taskHealth.signals.longInSameState === true
+          const isIncompleteVerification = item.taskHealth.signals.checklistIncomplete === true
 
           return (
             <div key={item.id} className="relative">
@@ -223,20 +188,22 @@ function TaskListSection({
                     <div className="space-y-1">
                       <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Task ID {item.id}</p>
                       <CardTitle className="text-base">{item.title}</CardTitle>
-                    <p className="line-clamp-2 max-w-2xl text-sm text-muted-foreground">
-                      {item.description?.trim() || 'No task description added yet.'}
-                    </p>
-                    <div className="flex flex-wrap items-center gap-2 pt-1">
-                      <StatusBadge tone={priority.tone}>{priority.label}</StatusBadge>
-                      {isOverdue ? <StatusBadge tone="manual">Overdue</StatusBadge> : null}
-                      {isIncompleteVerification ? <StatusBadge tone="featured">Incomplete verification</StatusBadge> : null}
-                      {isStuck ? <StatusBadge tone="publishing">Stuck</StatusBadge> : null}
-                      {item.tags.map((tag) => (
-                        <StatusBadge key={tag} tone="manual">{tag}</StatusBadge>
-                      ))}
+                      <p className="line-clamp-2 max-w-2xl text-sm text-muted-foreground">
+                        {item.description?.trim() || 'No task description added yet.'}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <StatusBadge tone={priority.tone}>{priority.label}</StatusBadge>
+                        <StatusBadge tone="manual">{item.taskContext.domain}</StatusBadge>
+                        {item.taskGroupTitle ? <StatusBadge tone="manual">{item.taskGroupTitle}</StatusBadge> : null}
+                        {isOverdue ? <StatusBadge tone="manual">Overdue</StatusBadge> : null}
+                        {isIncompleteVerification ? <StatusBadge tone="featured">Incomplete verification</StatusBadge> : null}
+                        {isStuck ? <StatusBadge tone="publishing">Stuck</StatusBadge> : null}
+                        {item.tags.map((tag) => (
+                          <StatusBadge key={tag} tone="manual">{tag}</StatusBadge>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-2 text-right">
+                    <div className="flex flex-col items-end gap-2 text-right">
                       <StatusBadge tone={status.tone}>{status.label}</StatusBadge>
                       <CardDescription>
                         Created {formatDate(item.createdAt)} · Updated {formatDate(item.updatedAt)}
@@ -268,17 +235,30 @@ export function TaskWorkspacePage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const { session } = useAuth()
+  const requestedView = searchParams.get('view')
+  const initialView: ExecutionViewKey = requestedView === 'queue' || requestedView === 'focus' || requestedView === 'review' || requestedView === 'done'
+    ? requestedView
+    : 'now'
   const [items, setItems] = useState<TaskSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState('my')
-  const [metricFilter, setMetricFilter] = useState<MetricFilterKey>('all')
+  const [activeTab, setActiveTab] = useState<ExecutionViewKey>(initialView)
   const [selectedTag, setSelectedTag] = useState('all')
+  const [selectedTaskGroup, setSelectedTaskGroup] = useState('all')
   const [selectedTemplate, setSelectedTemplate] = useState('all')
   const [verifiedFilter, setVerifiedFilter] = useState<VerifiedFilterKey>('all')
   const [dueDateFrom, setDueDateFrom] = useState('')
   const [dueDateTo, setDueDateTo] = useState('')
   const selectedMilestoneId = searchParams.get('milestoneId') ?? ''
+
+  useEffect(() => {
+    const nextView = searchParams.get('view')
+    if (nextView === 'queue' || nextView === 'focus' || nextView === 'review' || nextView === 'done' || nextView === 'now') {
+      setActiveTab(nextView)
+      return
+    }
+    setActiveTab('now')
+  }, [searchParams])
 
   useEffect(() => {
     if (!session?.accessToken) {
@@ -318,16 +298,38 @@ export function TaskWorkspacePage() {
   }, [selectedMilestoneId, session?.accessToken])
 
   const currentUserId = session?.user.id ?? ''
-  const myTasks = useMemo(() => items.filter((item) => item.assigneeId === currentUserId), [currentUserId, items])
-  const openTasks = useMemo(
-    () => items.filter((item) => item.status !== 'finalized' && item.assigneeId !== currentUserId),
+  const today = new Date().toISOString().slice(0, 10)
+
+  const nowTasks = useMemo(
+    () => items.filter((item) => {
+      const dueDateValue = toDateInputValue(item.dueDate)
+      return (
+        item.status === 'in_progress'
+        || item.priority === 'urgent'
+        || item.taskHealth.status === 'at_risk'
+        || item.taskHealth.signals.overdue === true
+        || dueDateValue === today
+      )
+    }),
+    [items, today],
+  )
+  const queueTasks = useMemo(
+    () => items.filter((item) => item.status === 'pending' || (item.status === 'in_progress' && item.taskHealth.status === 'normal')),
+    [items],
+  )
+  const focusTasks = useMemo(
+    () => items.filter((item) => item.assigneeId === currentUserId && (item.priority === 'high' || item.priority === 'urgent' || item.taskHealth.status !== 'normal')),
     [currentUserId, items],
   )
-  const createdByMe = useMemo(() => items.filter((item) => item.creatorId === currentUserId), [currentUserId, items])
   const reviewTasks = useMemo(() => items.filter((item) => item.status === 'review'), [items])
-  const finalizedTasks = useMemo(() => items.filter((item) => item.status === 'finalized'), [items])
+  const doneTasks = useMemo(() => items.filter((item) => item.status === 'finalized'), [items])
+
   const tagOptions = useMemo(
     () => [...new Set(items.flatMap((item) => item.tags).filter((tag) => tag.trim().length > 0))].sort((left, right) => left.localeCompare(right)),
+    [items],
+  )
+  const taskGroupOptions = useMemo(
+    () => [...new Set(items.map((item) => item.taskGroupTitle).filter((value): value is string => Boolean(value?.trim())))].sort((left, right) => left.localeCompare(right)),
     [items],
   )
   const templateOptions = useMemo(
@@ -335,45 +337,20 @@ export function TaskWorkspacePage() {
     [items],
   )
 
-  const metricFilterLabel = useMemo(() => {
-    switch (metricFilter) {
-      case 'assigned':
-        return 'Assigned To Me'
-      case 'open':
-        return 'Open Queue'
-      case 'review':
-        return 'In Review'
-      case 'finalized':
-        return 'Finalized'
-      default:
-        return null
-    }
-  }, [metricFilter])
-
-  function applyMetricFilter(sourceItems: TaskSummary[]) {
-    switch (metricFilter) {
-      case 'assigned':
-        return sourceItems.filter((item) => item.assigneeId === currentUserId)
-      case 'open':
-        return sourceItems.filter((item) => item.status !== 'finalized')
-      case 'review':
-        return sourceItems.filter((item) => item.status === 'review')
-      case 'finalized':
-        return sourceItems.filter((item) => item.status === 'finalized')
-      default:
-        return sourceItems
-    }
-  }
-
   function applyWorkspaceFilters(sourceItems: TaskSummary[]) {
-    return applyMetricFilter(sourceItems).filter((item) => {
+    return sourceItems.filter((item) => {
       if (selectedTag !== 'all' && !item.tags.includes(selectedTag)) {
+        return false
+      }
+
+      if (selectedTaskGroup !== 'all' && item.taskGroupTitle !== selectedTaskGroup) {
         return false
       }
 
       if (selectedTemplate !== 'all' && item.templateName !== selectedTemplate) {
         return false
       }
+
       if (selectedMilestoneId && item.milestoneId !== selectedMilestoneId) {
         return false
       }
@@ -398,14 +375,9 @@ export function TaskWorkspacePage() {
     })
   }
 
-  function handleMetricClick(nextFilter: Exclude<MetricFilterKey, 'all'>, nextTab: string) {
-    setActiveTab(nextTab)
-    setMetricFilter((currentFilter) => (currentFilter === nextFilter ? 'all' : nextFilter))
-  }
-
   function clearWorkspaceFilters() {
-    setMetricFilter('all')
     setSelectedTag('all')
+    setSelectedTaskGroup('all')
     setSelectedTemplate('all')
     setVerifiedFilter('all')
     setDueDateFrom('')
@@ -417,44 +389,92 @@ export function TaskWorkspacePage() {
     })
   }
 
+  function handleViewChange(nextView: ExecutionViewKey) {
+    setActiveTab(nextView)
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current)
+      next.set('view', nextView)
+      return next
+    })
+  }
+
   const taskTabs: AnimatedContentTab[] = [
     {
-      label: 'My Tasks',
-      value: 'my',
+      label: 'Now',
+      value: 'now',
       content: (
         <TaskListSection
-          title="My Tasks"
-          description="Tasks assigned to you will appear here once work is distributed."
-          items={applyWorkspaceFilters(myTasks)}
+          title="Now"
+          description="Urgent, due-today, overdue, at-risk, and active execution work is collected here."
+          items={applyWorkspaceFilters(nowTasks)}
         />
       ),
       contentClassName: 'border-0 bg-transparent p-0 shadow-none',
     },
     {
-      label: 'Open Tasks',
-      value: 'open',
+      label: 'Queue',
+      value: 'queue',
       content: (
         <TaskListSection
-          title="Open Tasks"
-          description="No active queue items are waiting right now."
-          items={applyWorkspaceFilters(openTasks)}
+          title="Queue"
+          description="Pending and upcoming work stays here until it becomes active execution."
+          items={applyWorkspaceFilters(queueTasks)}
         />
       ),
       contentClassName: 'border-0 bg-transparent p-0 shadow-none',
     },
     {
-      label: 'Created By Me',
-      value: 'created',
+      label: 'Focus',
+      value: 'focus',
       content: (
         <TaskListSection
-          title="Created By Me"
-          description="Tasks you create for the team will be collected here."
-          items={applyWorkspaceFilters(createdByMe)}
+          title="Focus"
+          description="Your owned high-priority and non-normal health tasks stay in this focused lane."
+          items={applyWorkspaceFilters(focusTasks)}
+        />
+      ),
+      contentClassName: 'border-0 bg-transparent p-0 shadow-none',
+    },
+    {
+      label: 'Review',
+      value: 'review',
+      content: (
+        <TaskListSection
+          title="Review"
+          description="Tasks waiting for approval, rejection, or final sign-off are grouped here."
+          items={applyWorkspaceFilters(reviewTasks)}
+        />
+      ),
+      contentClassName: 'border-0 bg-transparent p-0 shadow-none',
+    },
+    {
+      label: 'Done',
+      value: 'done',
+      content: (
+        <TaskListSection
+          title="Done"
+          description="Finalized work records stay here once execution is closed."
+          items={applyWorkspaceFilters(doneTasks)}
         />
       ),
       contentClassName: 'border-0 bg-transparent p-0 shadow-none',
     },
   ]
+
+  const activeViewDescription: Record<ExecutionViewKey, string> = {
+    now: 'Triage what needs attention first.',
+    queue: 'Sequence upcoming work without opening every record.',
+    focus: 'Keep your critical owned work in one lane.',
+    review: 'Resolve approvals and feedback quickly.',
+    done: 'Inspect completed work without cluttering active execution.',
+  }
+
+  const healthCounts = useMemo(() => {
+    return items.reduce<Record<TaskHealthStatus, number>>((accumulator, item) => {
+      accumulator[item.taskHealth.status] += 1
+      return accumulator
+    }, { normal: 0, at_risk: 0, stuck: 0, blocked: 0 })
+  }, [items])
 
   if (loading) {
     return (
@@ -473,9 +493,9 @@ export function TaskWorkspacePage() {
             Task Management
           </div>
           <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight">Keep assignment, ownership, and follow-through in one place.</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Operate work by execution mode, not by list overload.</h1>
             <p className="max-w-3xl text-sm text-muted-foreground">
-              Review your queue, track active execution, and move tasks forward with the same operational rhythm used across product editing.
+              Move between active execution, queued work, focused ownership, review, and done without depending on project hierarchy.
             </p>
           </div>
         </div>
@@ -497,56 +517,83 @@ export function TaskWorkspacePage() {
         </Card>
       ) : null}
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
         <WorkspaceMetric
-          label="Assigned To Me"
-          value={myTasks.length}
-          hint="Items currently under your ownership."
-          icon={UserRound}
-          active={metricFilter === 'assigned'}
-          onClick={() => { handleMetricClick('assigned', 'my') }}
-        />
-        <WorkspaceMetric
-          label="Open Queue"
-          value={openTasks.length}
-          hint="All work that is not finalized yet."
+          label="Now"
+          value={nowTasks.length}
+          hint="Active, urgent, due-today, and at-risk work."
           icon={Clock3}
-          active={metricFilter === 'open'}
-          onClick={() => { handleMetricClick('open', 'open') }}
+          active={activeTab === 'now'}
+          onClick={() => handleViewChange('now')}
         />
         <WorkspaceMetric
-          label="In Review"
-          value={reviewTasks.length}
-          hint="Tasks waiting for sign-off or feedback."
+          label="Queue"
+          value={queueTasks.length}
+          hint="Pending and upcoming work waiting to start."
           icon={ListTodo}
-          active={metricFilter === 'review'}
-          onClick={() => { handleMetricClick('review', 'open') }}
+          active={activeTab === 'queue'}
+          onClick={() => handleViewChange('queue')}
         />
         <WorkspaceMetric
-          label="Finalized"
-          value={finalizedTasks.length}
-          hint="Completed tasks closed by the team."
+          label="Focus"
+          value={focusTasks.length}
+          hint="Your critical owned tasks with pressure signals."
+          icon={Target}
+          active={activeTab === 'focus'}
+          onClick={() => handleViewChange('focus')}
+        />
+        <WorkspaceMetric
+          label="Review"
+          value={reviewTasks.length}
+          hint="Tasks waiting for approval or feedback."
+          icon={UserRound}
+          active={activeTab === 'review'}
+          onClick={() => handleViewChange('review')}
+        />
+        <WorkspaceMetric
+          label="Done"
+          value={doneTasks.length}
+          hint="Closed work records already finalized."
           icon={CheckCircle2}
-          active={metricFilter === 'finalized'}
-          onClick={() => { handleMetricClick('finalized', 'open') }}
+          active={activeTab === 'done'}
+          onClick={() => handleViewChange('done')}
         />
       </div>
 
-      {metricFilterLabel ? (
-        <div className="flex items-center justify-between gap-3 rounded-md border border-border/70 bg-muted/15 px-4 py-3 text-sm">
-          <p className="text-muted-foreground">
-            Filtered by <span className="font-medium text-foreground">{metricFilterLabel}</span>
-          </p>
-          <Button type="button" variant="ghost" size="sm" onClick={() => setMetricFilter('all')}>
-            Clear filter
+      <Card className="rounded-md border-border/70 shadow-none">
+        <CardContent className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-[1.1fr_1fr_1fr_1fr_auto] xl:items-end">
+          <div className="rounded-md border border-border/60 bg-muted/15 p-3">
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Execution View</p>
+            <p className="mt-1 text-sm font-semibold text-foreground">{taskTabs.find((tab) => tab.value === activeTab)?.label}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{activeViewDescription[activeTab]}</p>
+          </div>
+          <div className="rounded-md border border-border/60 bg-muted/15 p-3">
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Health Signals</p>
+            <p className="mt-1 text-sm font-semibold text-foreground">
+              {healthCounts.at_risk} at risk · {healthCounts.stuck} stuck
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">{healthCounts.blocked} blocked · {healthCounts.normal} normal</p>
+          </div>
+          <div className="rounded-md border border-border/60 bg-muted/15 p-3">
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Assigned To You</p>
+            <p className="mt-1 text-sm font-semibold text-foreground">{items.filter((item) => item.assigneeId === currentUserId).length}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Owned work across all execution modes.</p>
+          </div>
+          <div className="rounded-md border border-border/60 bg-muted/15 p-3">
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Overdue</p>
+            <p className="mt-1 text-sm font-semibold text-foreground">{items.filter((item) => item.taskHealth.signals.overdue === true).length}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Tasks already past due and not finalized.</p>
+          </div>
+          <Button type="button" variant="outline" onClick={clearWorkspaceFilters}>
+            Reset filters
           </Button>
-        </div>
-      ) : null}
+        </CardContent>
+      </Card>
 
       {selectedMilestoneId ? (
         <div className="flex items-center justify-between gap-3 rounded-md border border-border/70 bg-muted/15 px-4 py-3 text-sm">
           <p className="text-muted-foreground">
-            Viewing tasks for milestone <span className="font-medium text-foreground">{selectedMilestoneId}</span>
+            Milestone overlay <span className="font-medium text-foreground">{selectedMilestoneId}</span>
           </p>
           <Button type="button" variant="ghost" size="sm" onClick={() => {
             setSearchParams((current) => {
@@ -561,7 +608,7 @@ export function TaskWorkspacePage() {
       ) : null}
 
       <Card className="rounded-md border-border/70 shadow-none">
-        <CardContent className="grid gap-4 p-4 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_180px_180px_auto] xl:items-end">
+        <CardContent className="grid gap-4 p-4 md:grid-cols-2 xl:grid-cols-6 xl:items-end">
           <div className="space-y-2">
             <Label htmlFor="task-filter-template">Template</Label>
             <select
@@ -593,6 +640,21 @@ export function TaskWorkspacePage() {
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="task-filter-group">Task Group</Label>
+            <select
+              id="task-filter-group"
+              className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              value={selectedTaskGroup}
+              onChange={(event) => setSelectedTaskGroup(event.target.value)}
+            >
+              <option value="all">All groups</option>
+              {taskGroupOptions.map((groupTitle) => (
+                <option key={groupTitle} value={groupTitle}>{groupTitle}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="task-filter-verified">Verification</Label>
             <select
               id="task-filter-verified"
@@ -615,14 +677,10 @@ export function TaskWorkspacePage() {
             <Label htmlFor="task-filter-due-to">Due date to</Label>
             <Input id="task-filter-due-to" type="date" value={dueDateTo} onChange={(event) => setDueDateTo(event.target.value)} />
           </div>
-
-          <Button type="button" variant="outline" onClick={clearWorkspaceFilters}>
-            Reset filters
-          </Button>
         </CardContent>
       </Card>
 
-      <AnimatedTabs defaultTabValue="my" selectedTabValue={activeTab} onTabChange={setActiveTab} tabs={taskTabs} />
+      <AnimatedTabs defaultTabValue="now" selectedTabValue={activeTab} onTabChange={(value) => handleViewChange(value as ExecutionViewKey)} tabs={taskTabs} />
     </div>
   )
 }

@@ -355,7 +355,12 @@ export function TaskAuditPage() {
                     </Link>
                   </TableCell>
                   <TableCell>{item.templateName ?? 'General task'}</TableCell>
-                  <TableCell>{item.entityLabel ?? item.entityId ?? '-'}</TableCell>
+                  <TableCell>
+                    <div className="space-y-1">
+                      <div>{item.entityLabel ?? item.entityId ?? '-'}</div>
+                      <div className="text-xs uppercase tracking-[0.14em] text-muted-foreground">{item.taskContext.domain}</div>
+                    </div>
+                  </TableCell>
                   <TableCell>{item.assigneeName ?? 'Unassigned'}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap items-center gap-2">

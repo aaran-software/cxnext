@@ -245,6 +245,10 @@ const TaskWorkspacePage = lazyPage(
   () => import('../../../../task/web/src/pages/task-workspace-page.tsx'),
   'TaskWorkspacePage',
 )
+const TaskGroupListPage = lazyPage(
+  () => import('../../../../task/web/src/pages/task-group-list-page.tsx'),
+  'TaskGroupListPage',
+)
 const TaskMilestoneListPage = lazyPage(
   () => import('../../../../task/web/src/pages/task-milestone-list-page.tsx'),
   'TaskMilestoneListPage',
@@ -340,6 +344,7 @@ const adminRoutes = {
         { path: 'frappe/todos', element: renderLazy(FrappeTodoPage) },
         { path: 'task', element: renderLazy(TaskAppWorkspacePage) },
         { path: 'task/tasks', element: renderLazy(TaskWorkspacePage) },
+        { path: 'task/groups', element: renderLazy(TaskGroupListPage) },
         { path: 'task/milestones', element: renderLazy(TaskMilestoneListPage) },
         { path: 'task/milestones/:milestoneId', element: renderLazy(TaskMilestoneDetailPage) },
         { path: 'task/tasks/new', element: renderLazy(TaskFormPage) },

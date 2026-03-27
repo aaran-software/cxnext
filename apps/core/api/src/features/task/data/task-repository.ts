@@ -2,6 +2,10 @@ import type {
   Task,
   TaskActivity,
   TaskChecklistItem,
+  TaskContext,
+  TaskContextInput,
+  TaskHealth,
+  TaskHealthSignals,
   TaskSummary,
   TaskTemplate,
   TaskTemplateChecklistItem,
@@ -20,9 +24,14 @@ interface TaskSummaryRow extends RowDataPacket {
   id: string
   title: string
   description: string | null
+  task_context_json: string | null
+  task_health_json: string | null
+  task_group_id: string | null
+  task_group_title: string | null
   milestone_id: string | null
   milestone_title: string | null
   status: string
+  status_changed_at: Date
   priority: string
   tags_json: string | null
   scope_type: string
@@ -111,16 +120,100 @@ function toStringArray(value: string | null) {
   }
 }
 
+function parseJsonRecord(value: string | null) {
+  if (!value) return null
+  try {
+    const parsedValue = JSON.parse(value) as unknown
+    return parsedValue && typeof parsedValue === 'object' ? parsedValue as Record<string, unknown> : null
+  } catch {
+    return null
+  }
+}
+
+function inferTaskDomain(scopeType: TaskSummary['scopeType'], tags: string[]) {
+  return tags.find((tag) => tag.trim().length > 0) ?? scopeType ?? 'general'
+}
+
+function toTaskContext(value: string | null, fallback: {
+  title: string
+  checklistTotalCount: number
+  scopeType: TaskSummary['scopeType']
+  tags: string[]
+}): TaskContext {
+  const parsedValue = parseJsonRecord(value)
+  return {
+    objective: typeof parsedValue?.objective === 'string' && parsedValue.objective.trim() ? parsedValue.objective.trim() : fallback.title,
+    outcome: typeof parsedValue?.outcome === 'string' && parsedValue.outcome.trim()
+      ? parsedValue.outcome.trim()
+      : fallback.checklistTotalCount > 0
+        ? 'Complete all checklist items and move the task through a valid workflow state.'
+        : 'Move the task to a valid completed state.',
+    domain: typeof parsedValue?.domain === 'string' && parsedValue.domain.trim()
+      ? parsedValue.domain.trim()
+      : inferTaskDomain(fallback.scopeType, fallback.tags),
+  }
+}
+
+function toTaskHealth(value: string | null, fallbackTimestamp: Date): TaskHealth {
+  const parsedValue = parseJsonRecord(value)
+  const parsedSignals = parsedValue?.signals && typeof parsedValue.signals === 'object'
+    ? parsedValue.signals as Record<string, unknown>
+    : null
+  const signals: TaskHealthSignals = {}
+
+  if (parsedSignals?.overdue === true) signals.overdue = true
+  if (parsedSignals?.inactive === true) signals.inactive = true
+  if (parsedSignals?.checklistIncomplete === true) signals.checklistIncomplete = true
+  if (parsedSignals?.longInSameState === true) signals.longInSameState = true
+
+  return {
+    status: parsedValue?.status === 'at_risk' || parsedValue?.status === 'stuck' || parsedValue?.status === 'blocked'
+      ? parsedValue.status
+      : 'normal',
+    lastEvaluatedAt: typeof parsedValue?.lastEvaluatedAt === 'string' && parsedValue.lastEvaluatedAt.trim()
+      ? parsedValue.lastEvaluatedAt.trim()
+      : toTimestamp(fallbackTimestamp),
+    signals,
+  }
+}
+
+function serializeTaskContext(value: TaskContextInput | TaskContext | null | undefined) {
+  return JSON.stringify({
+    objective: value?.objective?.trim() || null,
+    outcome: value?.outcome?.trim() || null,
+    domain: value?.domain?.trim() || null,
+  })
+}
+
+function serializeTaskHealth(value: TaskHealth) {
+  return JSON.stringify({
+    status: value.status,
+    lastEvaluatedAt: value.lastEvaluatedAt,
+    signals: value.signals,
+  })
+}
+
 function toTaskSummary(row: TaskSummaryRow): TaskSummary {
+  const tags = toStringArray(row.tags_json)
+  const checklistTotalCount = Number(row.checklist_total_count ?? 0)
   return {
     id: row.id,
     title: row.title,
     description: row.description,
+    taskContext: toTaskContext(row.task_context_json, {
+      title: row.title,
+      checklistTotalCount,
+      scopeType: row.scope_type as TaskSummary['scopeType'],
+      tags,
+    }),
+    taskHealth: toTaskHealth(row.task_health_json, row.updated_at),
+    taskGroupId: row.task_group_id,
+    taskGroupTitle: row.task_group_title,
     milestoneId: row.milestone_id,
     milestoneTitle: row.milestone_title,
     status: row.status as TaskSummary['status'],
     priority: row.priority as TaskSummary['priority'],
-    tags: toStringArray(row.tags_json),
+    tags,
     scopeType: row.scope_type as TaskSummary['scopeType'],
     entityType: row.entity_type as TaskSummary['entityType'],
     entityId: row.entity_id,
@@ -139,7 +232,8 @@ function toTaskSummary(row: TaskSummaryRow): TaskSummary {
     reviewComment: row.review_comment,
     dueDate: toDateString(row.due_date),
     checklistCompletionCount: Number(row.checklist_completion_count ?? 0),
-    checklistTotalCount: Number(row.checklist_total_count ?? 0),
+    checklistTotalCount,
+    statusChangedAt: toTimestamp(row.status_changed_at),
     createdAt: toTimestamp(row.created_at),
     updatedAt: toTimestamp(row.updated_at),
   }
@@ -201,9 +295,14 @@ const taskSummarySelect = `
     t.id,
     t.title,
     t.description,
+    CAST(t.task_context_json AS CHAR) AS task_context_json,
+    CAST(t.task_health_json AS CHAR) AS task_health_json,
+    t.task_group_id,
+    task_group.title AS task_group_title,
     t.milestone_id,
     milestone.title AS milestone_title,
     t.status,
+    t.status_changed_at,
     t.priority,
     CAST(t.tags_json AS CHAR) AS tags_json,
     t.scope_type,
@@ -242,6 +341,7 @@ const taskSummarySelect = `
   LEFT JOIN ${authTableNames.users} review_assignee ON review_assignee.id = t.review_assigned_to
   LEFT JOIN ${authTableNames.users} reviewer ON reviewer.id = t.reviewed_by
   LEFT JOIN ${taskTableNames.templates} template ON template.id = t.template_id
+  LEFT JOIN ${taskTableNames.groups} task_group ON task_group.id = t.task_group_id
   LEFT JOIN ${taskTableNames.milestones} milestone ON milestone.id = t.milestone_id
 `
 
@@ -547,7 +647,15 @@ export class TaskRepository {
     }
   }
 
-  async create(creatorId: string, payload: TaskUpsertPayload) {
+  async create(
+    creatorId: string,
+    payload: TaskUpsertPayload,
+    options?: {
+      taskContext?: TaskContext | TaskContextInput | null
+      taskHealth?: TaskHealth | null
+      statusChangedAt?: Date | null
+    },
+  ) {
     await ensureDatabaseSchema()
     const taskId = randomUUID()
 
@@ -558,8 +666,12 @@ export class TaskRepository {
             id,
             title,
             description,
+            task_context_json,
+            task_health_json,
+            task_group_id,
             milestone_id,
             status,
+            status_changed_at,
             priority,
             assignee_id,
             review_assigned_to,
@@ -572,14 +684,22 @@ export class TaskRepository {
             entity_label,
             template_id
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         [
           taskId,
           payload.title,
           payload.description,
+          serializeTaskContext(options?.taskContext ?? payload.taskContext),
+          serializeTaskHealth(options?.taskHealth ?? {
+            status: 'normal',
+            lastEvaluatedAt: new Date().toISOString(),
+            signals: {},
+          }),
+          payload.taskGroupId,
           payload.milestoneId,
           payload.status,
+          options?.statusChangedAt ?? new Date(),
           payload.priority,
           payload.assigneeId,
           null,
@@ -652,6 +772,11 @@ export class TaskRepository {
       reviewComment: string | null
     },
     activityEntries: Array<{ activityType: TaskActivity['activityType']; content: string }> = [],
+    options?: {
+      taskContext?: TaskContext | TaskContextInput | null
+      taskHealth?: TaskHealth | null
+      statusChangedAt?: Date | null
+    },
   ) {
     await ensureDatabaseSchema()
 
@@ -667,8 +792,12 @@ export class TaskRepository {
           SET
             title = ?,
             description = ?,
+            task_context_json = ?,
+            task_health_json = ?,
+            task_group_id = ?,
             milestone_id = ?,
             status = ?,
+            status_changed_at = ?,
             priority = ?,
             assignee_id = ?,
             review_assigned_to = ?,
@@ -687,8 +816,16 @@ export class TaskRepository {
         [
           payload.title,
           payload.description,
+          serializeTaskContext(options?.taskContext ?? payload.taskContext),
+          serializeTaskHealth(options?.taskHealth ?? {
+            status: 'normal',
+            lastEvaluatedAt: new Date().toISOString(),
+            signals: {},
+          }),
+          payload.taskGroupId,
           payload.milestoneId,
           payload.status,
+          options?.statusChangedAt ?? new Date(),
           payload.priority,
           payload.assigneeId,
           reviewState?.reviewAssignedTo ?? null,
@@ -793,8 +930,8 @@ export class TaskRepository {
 
     await db.transaction(async (transaction) => {
       const result = await transaction.execute(
-        `UPDATE ${taskTableNames.tasks} SET status = ? WHERE id = ?`,
-        [newStatus, id],
+        `UPDATE ${taskTableNames.tasks} SET status = ?, status_changed_at = ? WHERE id = ?`,
+        [newStatus, new Date(), id],
       )
 
       if (result.affectedRows === 0) {
@@ -819,6 +956,23 @@ export class TaskRepository {
     const task = await this.findById(id)
     if (!task) throw new ApplicationError('Expected task to be retrievable after status update.', { id }, 500)
     return task
+  }
+
+  async saveHealthSnapshot(id: string, taskHealth: TaskHealth) {
+    await ensureDatabaseSchema()
+
+    const result = await db.execute(
+      `
+        UPDATE ${taskTableNames.tasks}
+        SET task_health_json = ?
+        WHERE id = ?
+      `,
+      [serializeTaskHealth(taskHealth), id],
+    )
+
+    if (result.affectedRows === 0) {
+      throw new ApplicationError('Task not found.', { id }, 404)
+    }
   }
 
   async addActivity(taskId: string, authorId: string, activityType: string, content: string) {

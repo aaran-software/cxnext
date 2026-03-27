@@ -97,6 +97,7 @@ export function TaskTemplateListPage() {
   }), [items, query, scopeFilter, stateFilter])
 
   const activeCount = items.filter((item) => item.isActive).length
+  const inactiveCount = items.length - activeCount
   const totalChecklistItems = items.reduce((sum, item) => sum + item.checklistItemCount, 0)
 
   if (loading) {
@@ -116,9 +117,9 @@ export function TaskTemplateListPage() {
             Template Control
           </div>
           <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight">Turn repeatable checks into reusable task logic.</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Keep reusable starters ready for fast task creation.</h1>
             <p className="max-w-3xl text-sm text-muted-foreground">
-              Build verification templates once, keep their checklists structured, and use them across products and other scoped workflows.
+              Templates prefill task title, description, tags, and starter checklist items. After creation, each task stays fully independent.
             </p>
           </div>
         </div>
@@ -140,26 +141,33 @@ export function TaskTemplateListPage() {
         </Card>
       ) : null}
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <Card className="rounded-md border-border/70 shadow-none">
           <CardContent className="p-4">
             <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Templates</p>
             <p className="mt-1 text-2xl font-semibold tracking-tight">{items.length}</p>
-            <p className="mt-1 text-sm text-muted-foreground">Reusable task blueprints available to operations.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Reusable starters available to operations.</p>
           </CardContent>
         </Card>
         <Card className="rounded-md border-border/70 shadow-none">
           <CardContent className="p-4">
             <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Active</p>
             <p className="mt-1 text-2xl font-semibold tracking-tight">{activeCount}</p>
-            <p className="mt-1 text-sm text-muted-foreground">Templates ready for immediate task creation.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Starters ready for immediate task creation.</p>
           </CardContent>
         </Card>
         <Card className="rounded-md border-border/70 shadow-none">
           <CardContent className="p-4">
             <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Checklist Points</p>
             <p className="mt-1 text-2xl font-semibold tracking-tight">{totalChecklistItems}</p>
-            <p className="mt-1 text-sm text-muted-foreground">Structured checks spread across all templates.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Starter checklist items available for seeding new tasks.</p>
+          </CardContent>
+        </Card>
+        <Card className="rounded-md border-border/70 shadow-none">
+          <CardContent className="p-4">
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Inactive</p>
+            <p className="mt-1 text-2xl font-semibold tracking-tight">{inactiveCount}</p>
+            <p className="mt-1 text-sm text-muted-foreground">Templates kept as drafts or paused from active use.</p>
           </CardContent>
         </Card>
       </div>
@@ -222,7 +230,7 @@ export function TaskTemplateListPage() {
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1">
                   <CardTitle className="text-base">{item.name}</CardTitle>
-                  <CardDescription className="max-w-3xl">
+                  <CardDescription className="line-clamp-2 max-w-3xl">
                     {item.descriptionTemplate?.trim() || item.titleTemplate}
                   </CardDescription>
                 </div>
@@ -235,6 +243,7 @@ export function TaskTemplateListPage() {
             </CardHeader>
             <CardContent className="pt-0">
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border/60 pt-3 text-sm">
+                <span className="text-muted-foreground">Template ID <span className="font-medium text-foreground">{item.id}</span></span>
                 <span className="text-muted-foreground">Checklist <span className="font-medium text-foreground">{item.checklistItemCount}</span></span>
                 <span className="text-muted-foreground">Updated <span className="font-medium text-foreground">{formatDate(item.updatedAt)}</span></span>
                 <div className="flex flex-wrap items-center gap-2">
@@ -259,7 +268,7 @@ export function TaskTemplateListPage() {
               </div>
               <div className="space-y-1">
                 <p className="font-medium text-foreground">No templates matched these filters.</p>
-                <p className="max-w-md text-sm text-muted-foreground">Broaden the scope, clear a filter, or create the first checklist template for this workflow.</p>
+                <p className="max-w-md text-sm text-muted-foreground">Broaden the scope, clear a filter, or create the first starter template for this workflow.</p>
               </div>
               <div className="flex items-center gap-3">
                 <Button type="button" variant="outline" onClick={() => { setQuery(''); setScopeFilter('all'); setStateFilter('all') }}>

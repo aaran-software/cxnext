@@ -1,6 +1,6 @@
 import type { MilestoneSummary, TaskPriority, TaskScopeType, TaskTemplateSummary, TaskUpsertPayload } from '@shared/index'
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowRight, CalendarClock, ClipboardList, FileText, Flag, Layers3, Link2, Tag, UserRound } from 'lucide-react'
+import { ArrowRight, CalendarClock, ClipboardList, FileText, Flag, Link2, Tag, UserRound } from 'lucide-react'
 import { AutocompleteLookup } from '@/components/lookups/AutocompleteLookup'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { Textarea } from '@/components/ui/textarea'
 
-type WizardStep = 'title' | 'description' | 'milestone' | 'template' | 'scope' | 'assignment' | 'schedule' | 'review'
+type WizardStep = 'title' | 'description' | 'template' | 'scope' | 'assignment' | 'schedule' | 'review'
 
 interface TaskCreateWizardProps {
   open: boolean
@@ -39,7 +39,7 @@ interface WizardDraft {
   dueDate: string | null
 }
 
-const steps: WizardStep[] = ['title', 'description', 'milestone', 'template', 'scope', 'assignment', 'schedule', 'review']
+const steps: WizardStep[] = ['title', 'description', 'template', 'scope', 'assignment', 'schedule', 'review']
 
 const scopeOptions: Array<{ value: TaskScopeType; label: string; description: string }> = [
   { value: 'product', label: 'Product', description: 'Link the task to one product record.' },
@@ -125,10 +125,6 @@ export function TaskCreateWizard(props: TaskCreateWizardProps) {
   const templateOptions = useMemo(
     () => props.templates.filter((template) => template.isActive).map((template) => ({ value: template.id, label: template.name })),
     [props.templates],
-  )
-  const milestoneOptions = useMemo(
-    () => props.milestones.map((milestone) => ({ value: milestone.id, label: milestone.title })),
-    [props.milestones],
   )
   const productOptions = useMemo(
     () => props.products.map((product) => ({ value: product.id, label: product.name })),
@@ -222,6 +218,7 @@ export function TaskCreateWizard(props: TaskCreateWizardProps) {
       status: 'pending',
       priority: draft.priority,
       tags: draft.tags,
+      taskGroupId: null,
       milestoneId: draft.milestoneId,
       scopeType: draft.scopeType,
       entityType: draft.scopeType === 'general' ? null : draft.entityType ?? draft.scopeType,
@@ -249,7 +246,6 @@ export function TaskCreateWizard(props: TaskCreateWizardProps) {
               placeholder="Type task title"
               autoFocus
             />
-            <p className="text-xs text-muted-foreground">Use a direct instruction. This title will lead the task record.</p>
           </div>
 
           <div className="space-y-3">
@@ -284,9 +280,7 @@ export function TaskCreateWizard(props: TaskCreateWizardProps) {
                   </button>
                 ))}
               </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">No tags yet. Add any keyword that helps with filtering later.</p>
-            )}
+            ) : null}
 
             {suggestedTags.length > 0 ? (
               <div className="flex flex-wrap gap-2">
@@ -312,16 +306,14 @@ export function TaskCreateWizard(props: TaskCreateWizardProps) {
               value={draft.description}
               onChange={(event) => updateDraft({ description: event.target.value })}
               placeholder="Describe context, expected output, or verification notes."
-              className="min-h-40"
+              className="min-h-28"
               autoFocus
             />
-            <p className="text-xs text-muted-foreground">Optional. Use this for clarifying context, not for the core title.</p>
           </div>
 
           <div className="space-y-3 rounded-md border border-dashed border-border/70 bg-muted/10 p-4">
             <div>
               <p className="text-sm font-medium text-foreground">Attachments</p>
-              <p className="text-xs text-muted-foreground">Files are not added from the wizard yet. You can attach them after the draft opens in the full record.</p>
             </div>
             <Input
               type="file"
@@ -336,34 +328,6 @@ export function TaskCreateWizard(props: TaskCreateWizardProps) {
               <p className="text-xs text-muted-foreground">No files selected.</p>
             )}
           </div>
-        </div>
-      )
-    }
-
-    if (activeStep === 'milestone') {
-      return (
-        <div className="space-y-5">
-          <div className="space-y-2">
-            <Label>Which milestone does this belong to?</Label>
-            <AutocompleteLookup
-              value={draft.milestoneId ?? ''}
-              onChange={(value) => updateDraft({ milestoneId: value || null })}
-              options={milestoneOptions}
-              placeholder="Select milestone"
-              allowEmptyOption
-              emptyOptionLabel="No milestone"
-            />
-            <p className="text-xs text-muted-foreground">Milestone is the execution context for this task. You can still leave it empty and decide later in the full form.</p>
-          </div>
-
-          {draft.milestoneId ? (
-            <Card className="rounded-md border-border/70 shadow-none">
-              <CardContent className="p-4 text-sm">
-                <p className="font-medium text-foreground">{props.milestones.find((milestone) => milestone.id === draft.milestoneId)?.title ?? 'Selected milestone'}</p>
-                <p className="mt-1 text-muted-foreground">This draft will open already grouped under the selected milestone.</p>
-              </CardContent>
-            </Card>
-          ) : null}
         </div>
       )
     }
@@ -405,7 +369,6 @@ export function TaskCreateWizard(props: TaskCreateWizardProps) {
                       <p className="font-medium text-foreground">{selectedTemplate.name}</p>
                       <StatusBadge tone="featured">{selectedTemplate.scopeType}</StatusBadge>
                     </div>
-                    <p className="text-muted-foreground">{selectedTemplate.descriptionTemplate || 'This template will prefill a starting structure for the task.'}</p>
                     <div className="flex flex-wrap gap-2">
                       <StatusBadge tone="publishing">{selectedTemplate.defaultPriority}</StatusBadge>
                       <StatusBadge tone="manual">{selectedTemplate.checklistItemCount} checks</StatusBadge>
@@ -628,10 +591,6 @@ export function TaskCreateWizard(props: TaskCreateWizardProps) {
                 <p className="text-sm font-semibold text-foreground">{draft.title || 'Untitled task'}</p>
               </div>
               <div className="space-y-1">
-                <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Milestone</p>
-                <p className="text-sm text-foreground">{props.milestones.find((milestone) => milestone.id === draft.milestoneId)?.title ?? 'No milestone'}</p>
-              </div>
-              <div className="space-y-1">
                 <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Starter Template</p>
                 <p className="text-sm text-foreground">{selectedTemplate?.name ?? 'No starter template'}</p>
               </div>
@@ -668,7 +627,6 @@ export function TaskCreateWizard(props: TaskCreateWizardProps) {
               </div>
             ) : null}
 
-            <p className="text-xs text-muted-foreground">You can review and adjust everything again before the task is created.</p>
           </CardContent>
         </Card>
       </div>
@@ -677,13 +635,12 @@ export function TaskCreateWizard(props: TaskCreateWizardProps) {
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="flex max-h-[92vh] w-[min(92vw,54rem)] max-w-4xl flex-col overflow-hidden border border-border/70 bg-background p-0">
-        <div className="border-b border-border/70 px-6 py-5">
+      <DialogContent className="flex max-h-[92vh] w-[min(96vw,50rem)] max-w-4xl flex-col overflow-hidden border border-border/70 bg-background p-0">
+        <div className="border-b border-border/70 px-5 py-4">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
               <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">IFZ Beta</p>
               <h2 className="text-xl font-semibold tracking-tight text-foreground">Task setup flow</h2>
-              <p className="text-sm text-muted-foreground">Answer one focused question at a time. The full form stays in control after this handoff.</p>
             </div>
             <StatusBadge tone="publishing">Step {stepIndex + 1} of {steps.length}</StatusBadge>
           </div>
@@ -698,12 +655,12 @@ export function TaskCreateWizard(props: TaskCreateWizardProps) {
           </div>
         </div>
 
-        <div className="overflow-y-auto px-6 py-6">
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_18rem]">
-            <div className="space-y-6">
+        <div className="overflow-y-auto px-5 py-5">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.45fr)_16rem]">
+            <div className="space-y-4">
               {renderStep()}
 
-              <div className="flex items-center justify-between gap-3 border-t border-border/70 pt-4">
+              <div className="flex items-center justify-between gap-3 border-t border-border/70 pt-3">
                 <Button type="button" variant="ghost" onClick={goBack} disabled={stepIndex === 0}>Back</Button>
                 {activeStep === 'review' ? (
                   <Button type="button" onClick={() => { void handleContinueToEdit() }}>
@@ -720,7 +677,7 @@ export function TaskCreateWizard(props: TaskCreateWizardProps) {
             </div>
 
             <Card className="rounded-md border-border/70 bg-muted/10 shadow-none">
-              <CardContent className="grid gap-4 p-5">
+              <CardContent className="grid gap-3 p-4">
                 <div className="space-y-1">
                   <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Draft</p>
                   <p className="text-sm font-semibold text-foreground">{draft.title || 'Untitled task'}</p>
@@ -730,10 +687,6 @@ export function TaskCreateWizard(props: TaskCreateWizardProps) {
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Tag className="size-4" />
                     <span>{draft.tags.length > 0 ? draft.tags.join(', ') : 'No tags yet'}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Layers3 className="size-4" />
-                    <span>{props.milestones.find((milestone) => milestone.id === draft.milestoneId)?.title ?? 'No milestone selected'}</span>
                   </div>
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <ClipboardList className="size-4" />
