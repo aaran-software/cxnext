@@ -1881,7 +1881,7 @@ export function ProductFormPage() {
                 key={task.id}
                 type="button"
                 className="rounded-md border border-border/60 bg-background p-4 text-left transition-colors hover:bg-muted/10"
-                onClick={() => { void navigate(`/admin/dashboard/task/tasks/${task.id}/edit`) }}
+                onClick={() => { void navigate(`/admin/dashboard/task/tasks/${task.id}`) }}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-1">

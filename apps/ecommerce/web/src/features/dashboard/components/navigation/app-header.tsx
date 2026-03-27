@@ -31,6 +31,22 @@ function formatDateTime(value: string) {
   }).format(parsedValue)
 }
 
+function getTaskNotificationHref(notification: Notification) {
+  if (!notification.taskId) {
+    return null
+  }
+
+  const searchParams = new URLSearchParams()
+  if (notification.type === 'task_review_requested') {
+    searchParams.set('tab', 'progress')
+  } else if (notification.type === 'task_due_soon' || notification.type === 'task_overdue') {
+    searchParams.set('tab', 'details')
+  }
+
+  const suffix = searchParams.toString() ? `?${searchParams.toString()}` : ''
+  return `/admin/dashboard/task/tasks/${notification.taskId}${suffix}`
+}
+
 export function AppHeader() {
   const navigate = useNavigate()
   const { logout, session } = useAuth()
@@ -82,8 +98,9 @@ export function AppHeader() {
       setUnreadCount(response.unreadCount)
     }
 
-    if (notification.taskId) {
-      void navigate(`/admin/dashboard/task/tasks/${notification.taskId}/edit`)
+    const taskHref = getTaskNotificationHref(notification)
+    if (taskHref) {
+      void navigate(taskHref)
     }
   }
 

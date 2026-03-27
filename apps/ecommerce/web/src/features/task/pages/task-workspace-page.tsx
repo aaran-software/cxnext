@@ -193,7 +193,7 @@ function TaskListSection({
         {items.map((item, index) => {
           const status = getStatusConfig(item.status)
           const priority = getPriorityConfig(item.priority)
-          const taskHref = `/admin/dashboard/task/tasks/${item.id}/edit`
+          const taskHref = `/admin/dashboard/task/tasks/${item.id}`
           const isOverdue = isOverdueTask(item)
           const isStuck = isStuckTask(item)
           const isIncompleteVerification = isIncompleteVerificationTask(item)

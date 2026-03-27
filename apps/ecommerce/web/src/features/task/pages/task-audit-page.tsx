@@ -349,7 +349,7 @@ export function TaskAuditPage() {
               ) : filteredItems.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell>
-                    <Link to={`/admin/dashboard/task/tasks/${item.id}/edit`} className="space-y-1 hover:underline">
+                    <Link to={`/admin/dashboard/task/tasks/${item.id}`} className="space-y-1 hover:underline">
                       <div className="font-medium text-foreground">{item.title}</div>
                       <div className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Task ID {item.id}</div>
                     </Link>

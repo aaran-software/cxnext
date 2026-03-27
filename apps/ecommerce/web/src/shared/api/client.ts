@@ -103,6 +103,7 @@ import type {
   SystemUpdateCheckResponse,
   TaskBulkCreateResponse,
   TaskAuditListResponse,
+  TaskActivityInput,
   TaskInsightsResponse,
   TaskListResponse,
   TaskResponse,
@@ -950,6 +951,15 @@ export async function createTask(token: string, payload: TaskUpsertPayload) {
 export async function updateTask(token: string, id: string, payload: TaskUpsertPayload) {
   const response = await request<TaskResponse>(`/tasks/${id}`, {
     method: 'PATCH',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
+  })
+  return response.item
+}
+
+export async function addTaskActivity(token: string, id: string, payload: TaskActivityInput) {
+  const response = await request<TaskResponse>(`/tasks/${id}/activities`, {
+    method: 'POST',
     headers: createAuthorizationHeaders(token),
     body: JSON.stringify(payload),
   })

@@ -249,6 +249,10 @@ const TaskFormPage = lazyPage(
   () => import('../../../../task/web/src/pages/task-form-page.tsx'),
   'TaskFormPage',
 )
+const TaskDetailPage = lazyPage(
+  () => import('../../../../task/web/src/pages/task-detail-page.tsx'),
+  'TaskDetailPage',
+)
 const TaskTemplateListPage = lazyPage(
   () => import('../../../../task/web/src/pages/task-template-list-page.tsx'),
   'TaskTemplateListPage',
@@ -293,6 +297,12 @@ function LegacyTaskEditRedirect() {
   return <Navigate to={`${nextPath}${location.search}${location.hash}`} replace />
 }
 
+function LegacyTaskDetailRedirect() {
+  const location = useLocation()
+  const nextPath = location.pathname.replace('/admin/dashboard/tasks/', '/admin/dashboard/task/tasks/')
+  return <Navigate to={`${nextPath}${location.search}${location.hash}`} replace />
+}
+
 const adminRoutes = {
   element: <RequireAuth allow={['admin', 'staff', 'vendor']} />,
   children: [
@@ -323,6 +333,7 @@ const adminRoutes = {
         { path: 'task', element: renderLazy(TaskAppWorkspacePage) },
         { path: 'task/tasks', element: renderLazy(TaskWorkspacePage) },
         { path: 'task/tasks/new', element: renderLazy(TaskFormPage) },
+        { path: 'task/tasks/:taskId', element: renderLazy(TaskDetailPage) },
         { path: 'task/tasks/:taskId/edit', element: renderLazy(TaskFormPage) },
         { path: 'task/templates', element: renderLazy(TaskTemplateListPage) },
         { path: 'task/templates/new', element: renderLazy(TaskTemplateFormPage) },
@@ -386,6 +397,7 @@ const adminRoutes = {
         { path: 'common/:moduleKey', element: renderLazy(CommonModulePage) },
         { path: 'tasks', element: <Navigate to="/admin/dashboard/task/tasks" replace /> },
         { path: 'tasks/new', element: <Navigate to="/admin/dashboard/task/tasks/new" replace /> },
+        { path: 'tasks/:taskId', element: <LegacyTaskDetailRedirect /> },
         { path: 'tasks/:taskId/edit', element: <LegacyTaskEditRedirect /> },
         { path: '*', element: renderLazy(DashboardPage) },
       ],

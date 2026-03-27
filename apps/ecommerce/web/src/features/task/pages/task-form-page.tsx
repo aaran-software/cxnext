@@ -2,8 +2,9 @@ import type { LookupOption } from '@/shared/forms/common-lookup'
 import type { TaskPriority, TaskScopeType, TaskStatus, TaskTemplateSummary, TaskUpsertPayload } from '@shared/index'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, CalendarClock, CheckCircle2, ClipboardList, Flag, Tags, UserRound } from 'lucide-react'
+import { ArrowLeft, CalendarClock, CheckCircle2, ClipboardList, Flag, Sparkles, Tags, UserRound } from 'lucide-react'
 import { AutocompleteLookup } from '@/components/lookups/AutocompleteLookup'
+import { TaskCreateWizard } from '@/features/task/components/task-create-wizard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -12,11 +13,12 @@ import { Label } from '@/components/ui/label'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { Textarea } from '@/components/ui/textarea'
 import { createFieldErrors, inputErrorClassName, isBlank, setFieldError, summarizeFieldErrors, type FieldErrors, warningCardClassName } from '@/shared/forms/validation'
-import { HttpError, createTask, getTask, getTaskTemplate, listTaskTemplates, listUsers, markNotificationsReadByTask, updateTask } from '@/shared/api/client'
+import { HttpError, createTask, getTask, getTaskTemplate, listProducts, listTaskTemplates, listUsers, markNotificationsReadByTask, updateTask } from '@/shared/api/client'
 import { showFailedActionToast, showSavedToast, showValidationToast } from '@/shared/notifications/toast'
 import { useAuth } from '@framework-core/web/auth/components/auth-provider'
 
 type TaskFormValues = TaskUpsertPayload
+const TASK_DRAFT_STORAGE_KEY = 'task:create-draft'
 
 const taskStatusOptions: Array<LookupOption & { tone: 'manual' | 'publishing' | 'featured' | 'active' }> = [
   { value: 'pending', label: 'Pending', tone: 'manual' },
@@ -112,25 +114,31 @@ export function TaskFormPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>(createFieldErrors())
   const [users, setUsers] = useState<{ id: string; name: string }[]>([])
+  const [products, setProducts] = useState<{ id: string; name: string }[]>([])
   const [templates, setTemplates] = useState<TaskTemplateSummary[]>([])
   const [checklistLabels, setChecklistLabels] = useState<Record<string, string>>({})
+  const [wizardOpen, setWizardOpen] = useState(false)
+  const [draftLoaded, setDraftLoaded] = useState(false)
 
   useEffect(() => {
     let cancelled = false
     async function loadBootstrap() {
       if (!session?.accessToken) return
       try {
-        const [userList, templateList] = await Promise.all([
+        const [userList, templateList, productList] = await Promise.all([
           listUsers(session.accessToken),
           listTaskTemplates(session.accessToken),
+          listProducts(),
         ])
         if (!cancelled) {
           setUsers(userList.map((user) => ({ id: user.id, name: user.displayName || user.email })))
           setTemplates(templateList)
+          setProducts(productList.map((product) => ({ id: product.id, name: product.name })))
         }
       } catch {
         if (!cancelled) {
           setUsers([])
+          setProducts([])
           setTemplates([])
         }
       }
@@ -138,6 +146,31 @@ export function TaskFormPage() {
     void loadBootstrap()
     return () => { cancelled = true }
   }, [session?.accessToken])
+
+  useEffect(() => {
+    if (taskId) {
+      return
+    }
+
+    const rawDraft = sessionStorage.getItem(TASK_DRAFT_STORAGE_KEY)
+    if (!rawDraft) {
+      return
+    }
+
+    try {
+      const draft = JSON.parse(rawDraft) as TaskUpsertPayload
+      setValues((current) => ({
+        ...current,
+        ...draft,
+      }))
+      setDraftLoaded(true)
+    } catch {
+      sessionStorage.removeItem(TASK_DRAFT_STORAGE_KEY)
+      return
+    }
+
+    sessionStorage.removeItem(TASK_DRAFT_STORAGE_KEY)
+  }, [taskId])
 
   useEffect(() => {
     let cancelled = false
@@ -244,7 +277,7 @@ export function TaskFormPage() {
         referenceId: savedTask.id,
         mode: taskId ? 'update' : 'create',
       })
-      void navigate('/admin/dashboard/task/tasks')
+      void navigate(taskId ? `/admin/dashboard/task/tasks/${savedTask.id}` : `/admin/dashboard/task/tasks/${savedTask.id}`)
     } catch (error) {
       const message = toErrorMessage(error)
       setErrorMessage(message)
@@ -252,6 +285,11 @@ export function TaskFormPage() {
     } finally {
       setSaving(false)
     }
+  }
+
+  async function handleWizardContinue(payload: TaskUpsertPayload) {
+    sessionStorage.setItem(TASK_DRAFT_STORAGE_KEY, JSON.stringify(payload))
+    await navigate('/admin/dashboard/task/tasks/new')
   }
 
   if (loading) {
@@ -263,16 +301,49 @@ export function TaskFormPage() {
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
           <Button variant="ghost" size="sm" asChild className="-ml-3 mb-2">
-            <Link to="/admin/dashboard/task/tasks"><ArrowLeft className="size-4" />Back to tasks</Link>
+            <Link to={taskId ? `/admin/dashboard/task/tasks/${taskId}` : '/admin/dashboard/task/tasks'}><ArrowLeft className="size-4" />Back to tasks</Link>
           </Button>
           <h1 className="text-2xl font-semibold tracking-tight">{headerTitle}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{isEditMode ? 'Task Brief' : 'Create a task with template, ownership, checklist, and due date.'}</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button type="button" variant="outline" onClick={() => { void navigate('/admin/dashboard/task/tasks') }}>Cancel</Button>
+          {!isEditMode ? (
+            <Button type="button" variant="outline" onClick={() => setWizardOpen(true)}>
+              <Sparkles className="size-4" />
+              Try IFZ Beta
+            </Button>
+          ) : null}
+          <Button type="button" variant="outline" onClick={() => { void navigate(taskId ? `/admin/dashboard/task/tasks/${taskId}` : '/admin/dashboard/task/tasks') }}>Cancel</Button>
           <Button type="submit" disabled={saving}>{saving ? 'Saving...' : isEditMode ? 'Save Changes' : 'Create Task'}</Button>
         </div>
       </div>
+
+      {!isEditMode ? (
+        <TaskCreateWizard
+          open={wizardOpen}
+          onOpenChange={setWizardOpen}
+          templates={templates}
+          users={users}
+          products={products}
+          currentUserId={session?.user.id ?? null}
+          currentUserName={session?.user.displayName ?? null}
+          onContinue={handleWizardContinue}
+        />
+      ) : null}
+
+      {!isEditMode && draftLoaded ? (
+        <Card className="rounded-md border-border/70 bg-muted/10 shadow-none">
+          <CardContent className="flex items-center gap-3 p-4 text-sm">
+            <div className="rounded-full border border-border/70 bg-background p-2">
+              <Sparkles className="size-4 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="font-medium text-foreground">Prefilled from IFZ Beta</p>
+              <p className="text-muted-foreground">Review and adjust the draft before creating the task.</p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {errorMessage ? (
         <Card className={`${warningCardClassName} rounded-md`}>
