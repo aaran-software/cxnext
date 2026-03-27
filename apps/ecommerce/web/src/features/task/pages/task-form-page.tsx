@@ -1,17 +1,18 @@
 import type { LookupOption } from '@/shared/forms/common-lookup'
-import type { TaskPriority, TaskStatus, TaskUpsertPayload } from '@shared/index'
+import type { TaskPriority, TaskScopeType, TaskStatus, TaskTemplateSummary, TaskUpsertPayload } from '@shared/index'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, CalendarClock, CheckCircle2, ClipboardList, Flag, Tags, UserRound } from 'lucide-react'
 import { AutocompleteLookup } from '@/components/lookups/AutocompleteLookup'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { Textarea } from '@/components/ui/textarea'
 import { createFieldErrors, inputErrorClassName, isBlank, setFieldError, summarizeFieldErrors, type FieldErrors, warningCardClassName } from '@/shared/forms/validation'
-import { HttpError, createTask, getTask, listUsers, updateTask } from '@/shared/api/client'
+import { HttpError, createTask, getTask, getTaskTemplate, listTaskTemplates, listUsers, updateTask } from '@/shared/api/client'
 import { showFailedActionToast, showSavedToast, showValidationToast } from '@/shared/notifications/toast'
 import { useAuth } from '@framework-core/web/auth/components/auth-provider'
 
@@ -31,15 +32,30 @@ const taskPriorityOptions: Array<LookupOption & { tone: 'manual' | 'publishing' 
   { value: 'urgent', label: 'Urgent', tone: 'active' },
 ]
 
+const taskScopeOptions: LookupOption[] = [
+  { value: 'general', label: 'General' },
+  { value: 'product', label: 'Product' },
+  { value: 'invoice', label: 'Invoice' },
+  { value: 'order', label: 'Order' },
+  { value: 'customer', label: 'Customer' },
+  { value: 'user', label: 'User' },
+]
+
 function createDefaultValues(): TaskFormValues {
   return {
     title: '',
-    description: '',
+    description: null,
     status: 'pending',
     priority: 'medium',
     tags: [],
+    scopeType: 'general',
+    entityType: null,
+    entityId: null,
+    entityLabel: null,
+    templateId: null,
     assigneeId: null,
     dueDate: null,
+    checklistItems: [],
   }
 }
 
@@ -55,9 +71,7 @@ function FieldError({ message }: { message?: string }) {
 
 function validateTask(values: TaskFormValues) {
   const errors = createFieldErrors()
-
   if (isBlank(values.title)) setFieldError(errors, 'title', 'Title is required.')
-
   return errors
 }
 
@@ -69,17 +83,7 @@ function getPriorityMeta(priority: TaskPriority) {
   return taskPriorityOptions.find((option) => option.value === priority) ?? taskPriorityOptions[1]
 }
 
-function TaskStat({
-  label,
-  value,
-  hint,
-  icon: Icon,
-}: {
-  label: string
-  value: string
-  hint: string
-  icon: typeof ClipboardList
-}) {
+function TaskStat({ label, value, hint, icon: Icon }: { label: string; value: string; hint: string; icon: typeof ClipboardList }) {
   return (
     <div className="rounded-md border border-border/60 bg-muted/15 p-3">
       <div className="flex items-start justify-between gap-3">
@@ -107,83 +111,102 @@ export function TaskFormPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>(createFieldErrors())
   const [users, setUsers] = useState<{ id: string; name: string }[]>([])
+  const [templates, setTemplates] = useState<TaskTemplateSummary[]>([])
+  const [checklistLabels, setChecklistLabels] = useState<Record<string, string>>({})
 
   useEffect(() => {
     let cancelled = false
-
-    async function loadUsers() {
-      if (!session?.accessToken) {
-        return
-      }
-
+    async function loadBootstrap() {
+      if (!session?.accessToken) return
       try {
-        const userList = await listUsers(session.accessToken)
+        const [userList, templateList] = await Promise.all([
+          listUsers(session.accessToken),
+          listTaskTemplates(session.accessToken),
+        ])
         if (!cancelled) {
           setUsers(userList.map((user) => ({ id: user.id, name: user.displayName || user.email })))
+          setTemplates(templateList)
         }
       } catch {
         if (!cancelled) {
           setUsers([])
+          setTemplates([])
         }
       }
     }
-
-    void loadUsers()
-    return () => {
-      cancelled = true
-    }
+    void loadBootstrap()
+    return () => { cancelled = true }
   }, [session?.accessToken])
 
   useEffect(() => {
     let cancelled = false
-
     async function loadTask() {
-      if (!taskId || !session?.accessToken) {
-        return
-      }
-
-      const accessToken = session.accessToken
+      if (!taskId || !session?.accessToken) return
       setLoading(true)
       setErrorMessage(null)
-
       try {
-        const task = await getTask(accessToken, taskId)
+        const task = await getTask(session.accessToken, taskId)
         if (!cancelled) {
+          setChecklistLabels(Object.fromEntries(task.checklistItems.map((item) => [item.id, item.label])))
           setValues({
             title: task.title,
-            description: task.description ?? '',
+            description: task.description,
             status: task.status,
             priority: task.priority,
             tags: task.tags,
+            scopeType: task.scopeType,
+            entityType: task.entityType,
+            entityId: task.entityId,
+            entityLabel: task.entityLabel,
+            templateId: task.templateId,
             assigneeId: task.assigneeId,
             dueDate: task.dueDate,
+            checklistItems: task.checklistItems.map((item) => ({
+              id: item.id,
+              isChecked: item.isChecked,
+              note: item.note,
+            })),
           })
         }
       } catch (error) {
-        if (!cancelled) {
-          setErrorMessage(toErrorMessage(error))
-        }
+        if (!cancelled) setErrorMessage(toErrorMessage(error))
       } finally {
-        if (!cancelled) {
-          setLoading(false)
-        }
+        if (!cancelled) setLoading(false)
       }
     }
-
     void loadTask()
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [session?.accessToken, taskId])
 
-  const assigneeOptions = useMemo<LookupOption[]>(
-    () => users.map((user) => ({ value: user.id, label: user.name })),
-    [users],
-  )
+  const assigneeOptions = useMemo<LookupOption[]>(() => users.map((user) => ({ value: user.id, label: user.name })), [users])
+  const templateOptions = useMemo<LookupOption[]>(() => templates.map((template) => ({ value: template.id, label: template.name })), [templates])
   const selectedStatus = getStatusMeta(values.status)
   const selectedPriority = getPriorityMeta(values.priority)
   const selectedAssigneeLabel = users.find((user) => user.id === values.assigneeId)?.name ?? 'Unassigned'
-  const headerTitle = values.title.trim() || (isEditMode ? 'Untitled Task' : 'New Task')
+  const headerTitle = values.title?.trim() || (isEditMode ? 'Untitled Task' : 'New Task')
+
+  async function handleTemplateSelect(templateId: string) {
+    if (!session?.accessToken) return
+    setValues((current) => ({ ...current, templateId: templateId || null }))
+    if (!templateId) return
+    const template = await getTaskTemplate(session.accessToken, templateId)
+    setChecklistLabels(Object.fromEntries(template.checklistItems.map((item) => [item.id, item.label])))
+    setValues((current) => ({
+      ...current,
+      templateId: template.id,
+      title: current.title.trim() ? current.title : template.titleTemplate,
+      description: current.description?.trim() ? current.description : template.descriptionTemplate,
+      priority: template.defaultPriority,
+      tags: template.defaultTags,
+      scopeType: template.scopeType,
+      entityType: template.scopeType === 'general' ? null : template.scopeType,
+      checklistItems: template.checklistItems.map((item) => ({
+        id: item.id,
+        isChecked: false,
+        note: null,
+      })),
+    }))
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -191,9 +214,6 @@ export function TaskFormPage() {
       setErrorMessage('Authorization token is required.')
       return
     }
-
-    const accessToken = session.accessToken
-
     const nextFieldErrors = validateTask(values)
     setFieldErrors(nextFieldErrors)
     if (Object.keys(nextFieldErrors).length > 0) {
@@ -204,39 +224,28 @@ export function TaskFormPage() {
 
     setSaving(true)
     setErrorMessage(null)
-
     try {
       const savedTask = taskId
-        ? await updateTask(accessToken, taskId, values)
-        : await createTask(accessToken, values)
-
+        ? await updateTask(session.accessToken, taskId, values)
+        : await createTask(session.accessToken, values)
       showSavedToast({
         entityLabel: 'task',
         recordName: savedTask.title,
         referenceId: savedTask.id,
         mode: taskId ? 'update' : 'create',
       })
-
-      void navigate('/admin/dashboard/tasks')
+      void navigate('/admin/dashboard/task/tasks')
     } catch (error) {
       const message = toErrorMessage(error)
       setErrorMessage(message)
-      showFailedActionToast({
-        entityLabel: 'task',
-        action: taskId ? 'update' : 'save',
-        detail: message,
-      })
+      showFailedActionToast({ entityLabel: 'task', action: taskId ? 'update' : 'save', detail: message })
     } finally {
       setSaving(false)
     }
   }
 
   if (loading) {
-    return (
-      <Card className="rounded-md border-border/70 shadow-none">
-        <CardContent className="p-8 text-sm text-muted-foreground">Loading task...</CardContent>
-      </Card>
-    )
+    return <Card className="rounded-md border-border/70 shadow-none"><CardContent className="p-8 text-sm text-muted-foreground">Loading task...</CardContent></Card>
   }
 
   return (
@@ -244,20 +253,13 @@ export function TaskFormPage() {
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
           <Button variant="ghost" size="sm" asChild className="-ml-3 mb-2">
-            <Link to="/admin/dashboard/tasks">
-              <ArrowLeft className="size-4" />
-              Back to tasks
-            </Link>
+            <Link to="/admin/dashboard/task/tasks"><ArrowLeft className="size-4" />Back to tasks</Link>
           </Button>
           <h1 className="text-2xl font-semibold tracking-tight">{headerTitle}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {isEditMode
-              ? 'Task Brief'
-              : 'Create a task with clear ownership, status, and due date from the start.'}
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{isEditMode ? 'Task Brief' : 'Create a task with template, ownership, checklist, and due date.'}</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button type="button" variant="outline" onClick={() => { void navigate('/admin/dashboard/tasks') }}>Cancel</Button>
+          <Button type="button" variant="outline" onClick={() => { void navigate('/admin/dashboard/task/tasks') }}>Cancel</Button>
           <Button type="submit" disabled={saving}>{saving ? 'Saving...' : isEditMode ? 'Save Changes' : 'Create Task'}</Button>
         </div>
       </div>
@@ -266,13 +268,7 @@ export function TaskFormPage() {
         <Card className={`${warningCardClassName} rounded-md`}>
           <CardContent className="rounded-md p-3 text-sm">
             <p className="font-medium">{errorMessage}</p>
-            {Object.keys(fieldErrors).length > 0 ? (
-              <ul className="mt-2 list-disc space-y-1 pl-5">
-                {summarizeFieldErrors(fieldErrors).map((message) => (
-                  <li key={message}>{message}</li>
-                ))}
-              </ul>
-            ) : null}
+            {Object.keys(fieldErrors).length > 0 ? <ul className="mt-2 list-disc space-y-1 pl-5">{summarizeFieldErrors(fieldErrors).map((message) => <li key={message}>{message}</li>)}</ul> : null}
           </CardContent>
         </Card>
       ) : null}
@@ -280,44 +276,67 @@ export function TaskFormPage() {
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(19rem,0.9fr)]">
         <Card className="rounded-md border-border/70 shadow-none">
           <CardContent className="grid gap-4 pt-6">
+            <div className="grid gap-2 md:grid-cols-2">
+              <div className="grid gap-2">
+                <Label>Template</Label>
+                <AutocompleteLookup value={values.templateId ?? ''} onChange={(value) => { void handleTemplateSelect(value) }} options={templateOptions} placeholder="Select task template" allowEmptyOption emptyOptionLabel="No template" />
+              </div>
+              <div className="grid gap-2">
+                <Label>Scope</Label>
+                <AutocompleteLookup value={values.scopeType} onChange={(value) => setValues((current) => ({ ...current, scopeType: value as TaskScopeType, entityType: value === 'general' ? null : value as TaskScopeType }))} options={taskScopeOptions} placeholder="Select scope" />
+              </div>
+            </div>
+
             <div className="grid gap-2">
               <Label className={fieldErrors.title ? 'text-destructive' : undefined}>Title</Label>
-              <Input
-                className={inputErrorClassName(Boolean(fieldErrors.title))}
-                value={values.title}
-                onChange={(event) => setValues((current) => ({ ...current, title: event.target.value }))}
-                placeholder="Ex: Review product imagery for summer capsule"
-              />
+              <Input className={inputErrorClassName(Boolean(fieldErrors.title))} value={values.title} onChange={(event) => setValues((current) => ({ ...current, title: event.target.value }))} placeholder="Ex: Verify product price update" />
               <FieldError message={fieldErrors.title} />
+            </div>
+
+            <div className="grid gap-2 md:grid-cols-2">
+              <div className="grid gap-2">
+                <Label>Entity ID</Label>
+                <Input value={values.entityId ?? ''} onChange={(event) => setValues((current) => ({ ...current, entityId: event.target.value || null }))} placeholder="Ex: product:cxnext-polo" />
+              </div>
+              <div className="grid gap-2">
+                <Label>Entity Label</Label>
+                <Input value={values.entityLabel ?? ''} onChange={(event) => setValues((current) => ({ ...current, entityLabel: event.target.value || null }))} placeholder="Ex: CXNext Polo" />
+              </div>
             </div>
 
             <div className="grid gap-2">
               <Label>Description</Label>
-              <Textarea
-                rows={10}
-                value={values.description ?? ''}
-                onChange={(event) => setValues((current) => ({ ...current, description: event.target.value }))}
-                placeholder="Add scope, expected output, dependencies, and any review notes."
-                className="min-h-48"
-              />
-              <p className="text-xs text-muted-foreground">Keep the brief operational: what needs to happen, what done looks like, and anything that blocks execution.</p>
+              <Textarea rows={8} value={values.description ?? ''} onChange={(event) => setValues((current) => ({ ...current, description: event.target.value || null }))} placeholder="Add scope, expected output, and verification notes." className="min-h-40" />
             </div>
 
             <div className="grid gap-2">
               <Label>Tags</Label>
-              <Input
-                value={values.tags.join(', ')}
-                onChange={(event) => setValues((current) => ({
-                  ...current,
-                  tags: event.target.value
-                    .split(',')
-                    .map((tag) => tag.trim())
-                    .filter(Boolean),
-                }))}
-                placeholder="Ex: content, catalog, review"
-              />
-              <p className="text-xs text-muted-foreground">Add comma-separated tags to group or filter similar tasks later.</p>
+              <Input value={values.tags.join(', ')} onChange={(event) => setValues((current) => ({ ...current, tags: event.target.value.split(',').map((tag) => tag.trim()).filter(Boolean) }))} placeholder="Ex: product, price, verification" />
             </div>
+
+            {values.checklistItems.length > 0 ? (
+              <div className="grid gap-3 rounded-md border border-border/60 bg-muted/10 p-4">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Checklist</p>
+                  <p className="text-xs text-muted-foreground">Required checks from the task template.</p>
+                </div>
+                {values.checklistItems.map((item, index) => (
+                  <div key={item.id} className="grid gap-2 rounded-md border border-border/50 bg-background p-3">
+                    <label className="flex items-center gap-3">
+                      <Checkbox checked={item.isChecked} onCheckedChange={(checked) => setValues((current) => ({
+                        ...current,
+                        checklistItems: current.checklistItems.map((entry, entryIndex) => entryIndex === index ? { ...entry, isChecked: Boolean(checked) } : entry),
+                      }))} />
+                      <span className="text-sm font-medium text-foreground">{checklistLabels[item.id] ?? item.id}</span>
+                    </label>
+                    <Input value={item.note ?? ''} onChange={(event) => setValues((current) => ({
+                      ...current,
+                      checklistItems: current.checklistItems.map((entry, entryIndex) => entryIndex === index ? { ...entry, note: event.target.value || null } : entry),
+                    }))} placeholder="Optional note" />
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </CardContent>
         </Card>
 
@@ -325,48 +344,36 @@ export function TaskFormPage() {
           <Card className="rounded-md border-border/70 shadow-none">
             <CardHeader className="pb-4">
               <CardTitle>Assignment</CardTitle>
-              <CardDescription>Use searchable dropdowns for workflow state and owner selection.</CardDescription>
+              <CardDescription>Set workflow, urgency, owner, and deadline.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4">
               <div className="grid gap-2">
                 <Label>Status</Label>
-                <AutocompleteLookup
-                  value={values.status}
-                  onChange={(value) => setValues((current) => ({ ...current, status: value as TaskStatus }))}
-                  options={taskStatusOptions}
-                  placeholder="Search status"
-                />
+                <AutocompleteLookup value={values.status} onChange={(value) => setValues((current) => ({ ...current, status: value as TaskStatus }))} options={taskStatusOptions} placeholder="Search status" />
               </div>
-
               <div className="grid gap-2">
                 <Label>Priority</Label>
-                <AutocompleteLookup
-                  value={values.priority}
-                  onChange={(value) => setValues((current) => ({ ...current, priority: value as TaskPriority }))}
-                  options={taskPriorityOptions}
-                  placeholder="Search priority"
-                />
+                <AutocompleteLookup value={values.priority} onChange={(value) => setValues((current) => ({ ...current, priority: value as TaskPriority }))} options={taskPriorityOptions} placeholder="Search priority" />
               </div>
-
               <div className="grid gap-2">
                 <Label>Assignee</Label>
-                <AutocompleteLookup
-                  value={values.assigneeId ?? ''}
-                  onChange={(value) => setValues((current) => ({ ...current, assigneeId: value || null }))}
-                  options={assigneeOptions}
-                  placeholder="Search assignee"
-                  allowEmptyOption
-                  emptyOptionLabel="Unassigned"
-                />
+                <AutocompleteLookup value={values.assigneeId ?? ''} onChange={(value) => setValues((current) => ({ ...current, assigneeId: value || null }))} options={assigneeOptions} placeholder="Search assignee" allowEmptyOption emptyOptionLabel="Unassigned" />
+                {session?.user.id ? (
+                  <div className="flex justify-start">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setValues((current) => ({ ...current, assigneeId: session.user.id }))}
+                    >
+                      My Self
+                    </Button>
+                  </div>
+                ) : null}
               </div>
-
               <div className="grid gap-2">
                 <Label>Due Date</Label>
-                <Input
-                  type="date"
-                  value={values.dueDate ?? ''}
-                  onChange={(event) => setValues((current) => ({ ...current, dueDate: event.target.value || null }))}
-                />
+                <Input type="date" value={values.dueDate ?? ''} onChange={(event) => setValues((current) => ({ ...current, dueDate: event.target.value || null }))} />
               </div>
             </CardContent>
           </Card>
@@ -374,7 +381,7 @@ export function TaskFormPage() {
           <Card className="rounded-md border-border/70 shadow-none">
             <CardHeader className="pb-4">
               <CardTitle>At A Glance</CardTitle>
-              <CardDescription>Quick readback of the task record before it is saved.</CardDescription>
+              <CardDescription>Quick readback before saving.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-3">
               <TaskStat label="Workflow State" value={selectedStatus.label} hint="Current execution phase for the task." icon={CheckCircle2} />
@@ -382,15 +389,14 @@ export function TaskFormPage() {
               <TaskStat label="Owner" value={selectedAssigneeLabel} hint="Person responsible for moving the task." icon={UserRound} />
               <TaskStat label="Due" value={values.dueDate || 'Not scheduled'} hint="Deadline visible to the team." icon={CalendarClock} />
               <TaskStat label="Tags" value={values.tags.length > 0 ? values.tags.join(', ') : 'No tags'} hint="Keywords attached to the task record." icon={Tags} />
+              <TaskStat label="Checklist" value={`${values.checklistItems.filter((item) => item.isChecked).length}/${values.checklistItems.length}`} hint="Completed checks from the selected template." icon={ClipboardList} />
 
               <div className="rounded-md border border-border/60 bg-muted/15 p-3">
                 <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">Status And Priority</p>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <StatusBadge tone={selectedStatus.tone}>{selectedStatus.label}</StatusBadge>
                   <StatusBadge tone={selectedPriority.tone}>{selectedPriority.label}</StatusBadge>
-                  {values.tags.map((tag) => (
-                    <StatusBadge key={tag} tone="manual">{tag}</StatusBadge>
-                  ))}
+                  {values.tags.map((tag) => <StatusBadge key={tag} tone="manual">{tag}</StatusBadge>)}
                 </div>
               </div>
             </CardContent>

@@ -102,6 +102,9 @@ import type {
   SystemUpdateCheckResponse,
   TaskListResponse,
   TaskResponse,
+  TaskTemplateListResponse,
+  TaskTemplateResponse,
+  TaskTemplateUpsertPayload,
   TaskUpsertPayload,
 } from '@shared/index'
 
@@ -917,6 +920,13 @@ export async function listTasks(token: string) {
   return response.items
 }
 
+export async function listTasksByEntity(token: string, entityType: string, entityId: string) {
+  const response = await request<TaskListResponse>(`/tasks?entityType=${encodeURIComponent(entityType)}&entityId=${encodeURIComponent(entityId)}`, {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.items
+}
+
 export async function getTask(token: string, id: string) {
   const response = await request<TaskResponse>(`/tasks/${id}`, {
     headers: createAuthorizationHeaders(token),
@@ -936,6 +946,59 @@ export async function createTask(token: string, payload: TaskUpsertPayload) {
 export async function updateTask(token: string, id: string, payload: TaskUpsertPayload) {
   const response = await request<TaskResponse>(`/tasks/${id}`, {
     method: 'PATCH',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
+  })
+  return response.item
+}
+
+export async function listTaskTemplates(token: string, scopeType?: string) {
+  const suffix = scopeType ? `?scopeType=${encodeURIComponent(scopeType)}` : ''
+  const response = await request<TaskTemplateListResponse>(`/task-templates${suffix}`, {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.items
+}
+
+export async function getTaskTemplate(token: string, id: string) {
+  const response = await request<TaskTemplateResponse>(`/task-templates/${id}`, {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.item
+}
+
+export async function createTaskTemplate(token: string, payload: TaskTemplateUpsertPayload) {
+  const response = await request<TaskTemplateResponse>('/task-templates', {
+    method: 'POST',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
+  })
+  return response.item
+}
+
+export async function updateTaskTemplate(token: string, id: string, payload: TaskTemplateUpsertPayload) {
+  const response = await request<TaskTemplateResponse>(`/task-templates/${id}`, {
+    method: 'PATCH',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
+  })
+  return response.item
+}
+
+export async function createTaskFromTemplate(token: string, payload: {
+  templateId: string
+  assigneeId?: string | null
+  dueDate?: string | null
+  entityType?: string | null
+  entityId?: string | null
+  entityLabel?: string | null
+  title?: string | null
+  description?: string | null
+  tags?: string[]
+  priority?: string
+}) {
+  const response = await request<TaskResponse>('/tasks/from-template', {
+    method: 'POST',
     headers: createAuthorizationHeaders(token),
     body: JSON.stringify(payload),
   })

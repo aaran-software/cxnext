@@ -585,6 +585,12 @@ export async function routeRequest(
 
     if (method === 'GET' && url.pathname === '/tasks') {
       const user = await requireAuthenticatedUser(request)
+      const entityType = url.searchParams.get('entityType')
+      const entityId = url.searchParams.get('entityId')
+      if (entityType && entityId) {
+        writeJson(response, 200, await taskService.listByEntity(entityType, entityId))
+        return
+      }
       if (user.actorType === 'admin') {
         writeJson(response, 200, await taskService.listAll())
       } else {
@@ -597,6 +603,40 @@ export async function routeRequest(
       const user = await requireAuthenticatedUser(request)
       writeJson(response, 201, await taskService.create(user.id, await readJsonBody(request)))
       return
+    }
+
+    if (method === 'POST' && url.pathname === '/tasks/from-template') {
+      const user = await requireAuthenticatedUser(request)
+      writeJson(response, 201, await taskService.createFromTemplate(user.id, await readJsonBody(request)))
+      return
+    }
+
+    if (method === 'GET' && url.pathname === '/task-templates') {
+      await requireAuthenticatedUser(request)
+      writeJson(response, 200, await taskService.listTemplates(url.searchParams.get('scopeType')))
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/task-templates') {
+      await requireAuthenticatedUser(request)
+      writeJson(response, 201, await taskService.createTemplate(await readJsonBody(request)))
+      return
+    }
+
+    const taskTemplateMatch = url.pathname.match(/^\/task-templates\/([^/]+)$/)
+    if (taskTemplateMatch) {
+      const templateId = taskTemplateMatch[1]
+      await requireAuthenticatedUser(request)
+
+      if (method === 'GET') {
+        writeJson(response, 200, await taskService.getTemplateById(templateId))
+        return
+      }
+
+      if (method === 'PATCH') {
+        writeJson(response, 200, await taskService.updateTemplate(templateId, await readJsonBody(request)))
+        return
+      }
     }
 
     const taskRecordMatch = url.pathname.match(/^\/tasks\/([^/]+)$/)

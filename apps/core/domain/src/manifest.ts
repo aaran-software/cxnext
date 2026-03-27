@@ -37,15 +37,9 @@ export const coreWorkspaceItems: CoreWorkspaceItem[] = [
     summary: 'Geography and reusable master data shared across apps.',
   },
   {
-    id: 'settings',
-    name: 'Settings',
-    route: '/admin/dashboard/settings',
-    summary: 'Shared system configuration and admin-level controls.',
-  },
-  {
-    id: 'tasks',
-    name: 'Tasks',
-    route: '/admin/dashboard/tasks',
-    summary: 'Manage your workload, assign tasks, and track organization progress.',
+    id: 'core-settings',
+    name: 'Core Settings',
+    route: '/admin/dashboard/core/settings',
+    summary: 'Core app defaults, operational guardrails, and shared foundation configuration.',
   },
 ]

@@ -29,6 +29,7 @@ import { frameworkServices, suiteApps } from '@framework-core/index'
 import { coreWorkspaceItems } from '@core-domain/index'
 import { ecommerceWorkspaceItems } from '@ecommerce-domain/index'
 import { frappeWorkspaceItems } from '@frappe-domain/index'
+import { taskWorkspaceItems } from '@task-domain/index'
 import { commonModuleMenuGroups, getCommonModuleHref } from '@/features/common-modules/config/common-module-navigation'
 
 export interface DeskWorkspaceLink {
@@ -91,6 +92,7 @@ const workspaceIconMap: Record<string, LucideIcon> = {
   contacts: Users,
   media: FileImage,
   'common-modules': Blocks,
+  'core-settings': Settings2,
   settings: Settings2,
   tasks: ListTodo,
   orders: Receipt,
@@ -112,6 +114,7 @@ const appIconMap: Record<SuiteAppId, LucideIcon> = {
   crm: BriefcaseBusiness,
   site: Globe,
   frappe: Database,
+  task: ListTodo,
   custom: Blocks,
 }
 
@@ -122,6 +125,7 @@ const appRouteMap: Record<SuiteAppId, string> = {
   crm: '/admin/dashboard/crm',
   site: '/admin/dashboard/site',
   frappe: '/admin/dashboard/frappe',
+  task: '/admin/dashboard/task',
   custom: '/admin/dashboard/custom',
 }
 
@@ -132,6 +136,7 @@ const appBadgeMap: Record<SuiteAppId, string> = {
   crm: 'Scaffold app',
   site: 'Presentation surface',
   frappe: 'Integration app',
+  task: 'Operations app',
   custom: 'Extension app',
 }
 
@@ -142,6 +147,7 @@ const appAccentClassMap: Record<SuiteAppId, string> = {
   crm: 'from-fuchsia-500/18 via-pink-500/10 to-transparent',
   site: 'from-cyan-500/18 via-teal-500/10 to-transparent',
   frappe: 'from-blue-500/18 via-sky-500/10 to-transparent',
+  task: 'from-slate-500/18 via-zinc-500/10 to-transparent',
   custom: 'from-violet-500/18 via-indigo-500/10 to-transparent',
 }
 
@@ -257,6 +263,7 @@ const placeholderModules: Record<Exclude<SuiteAppId, 'core' | 'ecommerce' | 'fra
       icon: FileImage,
     },
   ],
+  task: [],
   custom: [
     {
       id: 'custom-overview',
@@ -320,6 +327,10 @@ function getWorkspaceContent(appId: SuiteAppId) {
     return frappeWorkspaceItems.map(toWorkspaceLink)
   }
 
+  if (appId === 'task') {
+    return taskWorkspaceItems.map(toWorkspaceLink)
+  }
+
   return placeholderModules[appId]
 }
 
@@ -346,6 +357,10 @@ function getWorkspaceTitle(app: SuiteAppDefinition) {
 
   if (app.id === 'frappe') {
     return 'Frappe'
+  }
+
+  if (app.id === 'task') {
+    return 'Task'
   }
 
   if (app.id === 'custom') {
@@ -378,6 +393,10 @@ function getWorkspaceSummary(app: SuiteAppDefinition) {
 
   if (app.id === 'frappe') {
     return 'ERPNext connection, company defaults, and integration setup managed from one workspace.'
+  }
+
+  if (app.id === 'task') {
+    return 'Checklist-based verification and assignment flow managed as its own app workspace.'
   }
 
   return 'Future app extension point with workspace hooks, desk icon, and framework contract.'
@@ -511,6 +530,26 @@ function getMenuGroups(appId: SuiteAppId, modules: DeskWorkspaceLink[]): DeskMen
         label: 'Frappe',
         shared: false,
         items: modules.map((item) => createMenuItem(item)),
+      },
+    ]
+  }
+
+  if (appId === 'task') {
+    return [
+      {
+        id: 'task-workspace',
+        label: 'Task',
+        shared: false,
+        items: modules.map((item) => createMenuItem(item)),
+      },
+      {
+        id: 'task-shared',
+        label: 'Shared',
+        shared: true,
+        items: [
+          createSharedMenuItem('products', 'Products', '/admin/dashboard/products', 'Open products and assign verification tasks from their task tab.', Package),
+          createSharedMenuItem('users', 'Users', '/admin/dashboard/users', 'Assign operational tasks to staff and admins.', Users),
+        ],
       },
     ]
   }

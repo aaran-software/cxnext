@@ -22,6 +22,7 @@ import { productCategoryStorefrontFlagsMigration } from './020-product-category-
 import { companyTaglineMigration } from './021-company-tagline'
 import { taskFoundationMigration } from './022-task-foundation'
 import { taskPriorityTagsMigration } from './023-task-priority-tags'
+import { taskTemplatesAndChecklistsMigration } from './024-task-templates-and-checklists'
 import type { Migration } from './migration'
 
 export const migrations: Migration[] = [
@@ -49,4 +50,5 @@ export const migrations: Migration[] = [
   companyTaglineMigration,
   taskFoundationMigration,
   taskPriorityTagsMigration,
+  taskTemplatesAndChecklistsMigration,
 ]

@@ -6,8 +6,13 @@ import { useAuth } from '@framework-core/web/auth/components/auth-provider'
 import { AnimatedTabs, type AnimatedContentTab } from '@/components/ui/animated-tabs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { HttpError, listTasks } from '@/shared/api/client'
+
+type MetricFilterKey = 'all' | 'assigned' | 'open' | 'review' | 'finalized'
+type VerifiedFilterKey = 'all' | 'verified' | 'unverified'
 
 function toErrorMessage(error: unknown) {
   if (error instanceof HttpError) return error.message
@@ -24,6 +29,17 @@ function formatDate(value: string | null) {
   }
 
   return new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium' }).format(parsedValue)
+}
+
+function toDateInputValue(value: string | null) {
+  if (!value) return ''
+
+  const parsedValue = new Date(value)
+  if (Number.isNaN(parsedValue.getTime())) {
+    return ''
+  }
+
+  return parsedValue.toISOString().slice(0, 10)
 }
 
 function getStatusConfig(status: TaskStatus) {
@@ -57,22 +73,42 @@ function WorkspaceMetric({
   value,
   hint,
   icon: Icon,
+  active,
+  onClick,
 }: {
   label: string
   value: number
   hint: string
   icon: typeof ListTodo
+  active: boolean
+  onClick: () => void
 }) {
   return (
-    <Card className="rounded-md border-border/70 shadow-none">
+    <Card
+      className={[
+        'cursor-pointer rounded-md shadow-none transition-colors',
+        active
+          ? 'border-foreground bg-muted/25'
+          : 'border-border/70 hover:border-border hover:bg-muted/10',
+      ].join(' ')}
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onClick()
+        }
+      }}
+    >
       <CardContent className="flex items-start justify-between gap-4 p-4">
         <div className="space-y-1">
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
           <p className="text-2xl font-semibold tracking-tight text-foreground">{value}</p>
           <p className="text-sm text-muted-foreground">{hint}</p>
         </div>
-        <div className="rounded-full border border-border/70 bg-muted/30 p-2.5">
-          <Icon className="size-4 text-muted-foreground" />
+        <div className={active ? 'rounded-full border border-foreground/70 bg-foreground p-2.5' : 'rounded-full border border-border/70 bg-muted/30 p-2.5'}>
+          <Icon className={active ? 'size-4 text-background' : 'size-4 text-muted-foreground'} />
         </div>
       </CardContent>
     </Card>
@@ -122,7 +158,7 @@ function TaskListSection({
         {items.map((item, index) => {
           const status = getStatusConfig(item.status)
           const priority = getPriorityConfig(item.priority)
-          const taskHref = `/admin/dashboard/tasks/${item.id}/edit`
+          const taskHref = `/admin/dashboard/task/tasks/${item.id}/edit`
 
           return (
             <div key={item.id} className="relative">
@@ -193,6 +229,13 @@ export function TaskWorkspacePage() {
   const [items, setItems] = useState<TaskSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState('my')
+  const [metricFilter, setMetricFilter] = useState<MetricFilterKey>('all')
+  const [selectedTag, setSelectedTag] = useState('all')
+  const [selectedTemplate, setSelectedTemplate] = useState('all')
+  const [verifiedFilter, setVerifiedFilter] = useState<VerifiedFilterKey>('all')
+  const [dueDateFrom, setDueDateFrom] = useState('')
+  const [dueDateTo, setDueDateTo] = useState('')
 
   useEffect(() => {
     if (!session?.accessToken) {
@@ -233,10 +276,95 @@ export function TaskWorkspacePage() {
 
   const currentUserId = session?.user.id ?? ''
   const myTasks = useMemo(() => items.filter((item) => item.assigneeId === currentUserId), [currentUserId, items])
-  const openTasks = useMemo(() => items.filter((item) => item.status !== 'finalized'), [items])
+  const openTasks = useMemo(
+    () => items.filter((item) => item.status !== 'finalized' && item.assigneeId !== currentUserId),
+    [currentUserId, items],
+  )
   const createdByMe = useMemo(() => items.filter((item) => item.creatorId === currentUserId), [currentUserId, items])
   const reviewTasks = useMemo(() => items.filter((item) => item.status === 'review'), [items])
   const finalizedTasks = useMemo(() => items.filter((item) => item.status === 'finalized'), [items])
+  const tagOptions = useMemo(
+    () => [...new Set(items.flatMap((item) => item.tags).filter((tag) => tag.trim().length > 0))].sort((left, right) => left.localeCompare(right)),
+    [items],
+  )
+  const templateOptions = useMemo(
+    () => [...new Set(items.map((item) => item.templateName).filter((value): value is string => Boolean(value?.trim())))].sort((left, right) => left.localeCompare(right)),
+    [items],
+  )
+
+  const metricFilterLabel = useMemo(() => {
+    switch (metricFilter) {
+      case 'assigned':
+        return 'Assigned To Me'
+      case 'open':
+        return 'Open Queue'
+      case 'review':
+        return 'In Review'
+      case 'finalized':
+        return 'Finalized'
+      default:
+        return null
+    }
+  }, [metricFilter])
+
+  function applyMetricFilter(sourceItems: TaskSummary[]) {
+    switch (metricFilter) {
+      case 'assigned':
+        return sourceItems.filter((item) => item.assigneeId === currentUserId)
+      case 'open':
+        return sourceItems.filter((item) => item.status !== 'finalized')
+      case 'review':
+        return sourceItems.filter((item) => item.status === 'review')
+      case 'finalized':
+        return sourceItems.filter((item) => item.status === 'finalized')
+      default:
+        return sourceItems
+    }
+  }
+
+  function applyWorkspaceFilters(sourceItems: TaskSummary[]) {
+    return applyMetricFilter(sourceItems).filter((item) => {
+      if (selectedTag !== 'all' && !item.tags.includes(selectedTag)) {
+        return false
+      }
+
+      if (selectedTemplate !== 'all' && item.templateName !== selectedTemplate) {
+        return false
+      }
+
+      const isVerified = item.checklistTotalCount > 0 && item.checklistCompletionCount >= item.checklistTotalCount
+      if (verifiedFilter === 'verified' && !isVerified) {
+        return false
+      }
+      if (verifiedFilter === 'unverified' && isVerified) {
+        return false
+      }
+
+      const dueDateValue = toDateInputValue(item.dueDate)
+      if (dueDateFrom && (!dueDateValue || dueDateValue < dueDateFrom)) {
+        return false
+      }
+      if (dueDateTo && (!dueDateValue || dueDateValue > dueDateTo)) {
+        return false
+      }
+
+      return true
+    })
+  }
+
+  function handleMetricClick(nextFilter: Exclude<MetricFilterKey, 'all'>, nextTab: string) {
+    setActiveTab(nextTab)
+    setMetricFilter((currentFilter) => (currentFilter === nextFilter ? 'all' : nextFilter))
+  }
+
+  function clearWorkspaceFilters() {
+    setMetricFilter('all')
+    setSelectedTag('all')
+    setSelectedTemplate('all')
+    setVerifiedFilter('all')
+    setDueDateFrom('')
+    setDueDateTo('')
+  }
 
   const taskTabs: AnimatedContentTab[] = [
     {
@@ -246,7 +374,7 @@ export function TaskWorkspacePage() {
         <TaskListSection
           title="My Tasks"
           description="Tasks assigned to you will appear here once work is distributed."
-          items={myTasks}
+          items={applyWorkspaceFilters(myTasks)}
         />
       ),
       contentClassName: 'border-0 bg-transparent p-0 shadow-none',
@@ -258,7 +386,7 @@ export function TaskWorkspacePage() {
         <TaskListSection
           title="Open Tasks"
           description="No active queue items are waiting right now."
-          items={openTasks}
+          items={applyWorkspaceFilters(openTasks)}
         />
       ),
       contentClassName: 'border-0 bg-transparent p-0 shadow-none',
@@ -270,7 +398,7 @@ export function TaskWorkspacePage() {
         <TaskListSection
           title="Created By Me"
           description="Tasks you create for the team will be collected here."
-          items={createdByMe}
+          items={applyWorkspaceFilters(createdByMe)}
         />
       ),
       contentClassName: 'border-0 bg-transparent p-0 shadow-none',
@@ -305,7 +433,7 @@ export function TaskWorkspacePage() {
           <Button type="button" variant="outline" onClick={() => window.location.reload()}>
             Refresh
           </Button>
-          <Button type="button" onClick={() => { void navigate('/admin/dashboard/tasks/new') }}>
+          <Button type="button" onClick={() => { void navigate('/admin/dashboard/task/tasks/new') }}>
             <Plus className="size-4" />
             New Task
           </Button>
@@ -319,13 +447,114 @@ export function TaskWorkspacePage() {
       ) : null}
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <WorkspaceMetric label="Assigned To Me" value={myTasks.length} hint="Items currently under your ownership." icon={UserRound} />
-        <WorkspaceMetric label="Open Queue" value={openTasks.length} hint="All work that is not finalized yet." icon={Clock3} />
-        <WorkspaceMetric label="In Review" value={reviewTasks.length} hint="Tasks waiting for sign-off or feedback." icon={ListTodo} />
-        <WorkspaceMetric label="Finalized" value={finalizedTasks.length} hint="Completed tasks closed by the team." icon={CheckCircle2} />
+        <WorkspaceMetric
+          label="Assigned To Me"
+          value={myTasks.length}
+          hint="Items currently under your ownership."
+          icon={UserRound}
+          active={metricFilter === 'assigned'}
+          onClick={() => { handleMetricClick('assigned', 'my') }}
+        />
+        <WorkspaceMetric
+          label="Open Queue"
+          value={openTasks.length}
+          hint="All work that is not finalized yet."
+          icon={Clock3}
+          active={metricFilter === 'open'}
+          onClick={() => { handleMetricClick('open', 'open') }}
+        />
+        <WorkspaceMetric
+          label="In Review"
+          value={reviewTasks.length}
+          hint="Tasks waiting for sign-off or feedback."
+          icon={ListTodo}
+          active={metricFilter === 'review'}
+          onClick={() => { handleMetricClick('review', 'open') }}
+        />
+        <WorkspaceMetric
+          label="Finalized"
+          value={finalizedTasks.length}
+          hint="Completed tasks closed by the team."
+          icon={CheckCircle2}
+          active={metricFilter === 'finalized'}
+          onClick={() => { handleMetricClick('finalized', 'open') }}
+        />
       </div>
 
-      <AnimatedTabs defaultTabValue="my" tabs={taskTabs} />
+      {metricFilterLabel ? (
+        <div className="flex items-center justify-between gap-3 rounded-md border border-border/70 bg-muted/15 px-4 py-3 text-sm">
+          <p className="text-muted-foreground">
+            Filtered by <span className="font-medium text-foreground">{metricFilterLabel}</span>
+          </p>
+          <Button type="button" variant="ghost" size="sm" onClick={() => setMetricFilter('all')}>
+            Clear filter
+          </Button>
+        </div>
+      ) : null}
+
+      <Card className="rounded-md border-border/70 shadow-none">
+        <CardContent className="grid gap-4 p-4 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_180px_180px_auto] xl:items-end">
+          <div className="space-y-2">
+            <Label htmlFor="task-filter-template">Template</Label>
+            <select
+              id="task-filter-template"
+              className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              value={selectedTemplate}
+              onChange={(event) => setSelectedTemplate(event.target.value)}
+            >
+              <option value="all">All templates</option>
+              {templateOptions.map((templateName) => (
+                <option key={templateName} value={templateName}>{templateName}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="task-filter-tag">Tag</Label>
+            <select
+              id="task-filter-tag"
+              className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              value={selectedTag}
+              onChange={(event) => setSelectedTag(event.target.value)}
+            >
+              <option value="all">All tags</option>
+              {tagOptions.map((tag) => (
+                <option key={tag} value={tag}>{tag}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="task-filter-verified">Verification</Label>
+            <select
+              id="task-filter-verified"
+              className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              value={verifiedFilter}
+              onChange={(event) => setVerifiedFilter(event.target.value as VerifiedFilterKey)}
+            >
+              <option value="all">All tasks</option>
+              <option value="verified">Verified</option>
+              <option value="unverified">Unverified</option>
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="task-filter-due-from">Due date from</Label>
+            <Input id="task-filter-due-from" type="date" value={dueDateFrom} onChange={(event) => setDueDateFrom(event.target.value)} />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="task-filter-due-to">Due date to</Label>
+            <Input id="task-filter-due-to" type="date" value={dueDateTo} onChange={(event) => setDueDateTo(event.target.value)} />
+          </div>
+
+          <Button type="button" variant="outline" onClick={clearWorkspaceFilters}>
+            Reset filters
+          </Button>
+        </CardContent>
+      </Card>
+
+      <AnimatedTabs defaultTabValue="my" selectedTabValue={activeTab} onTabChange={setActiveTab} tabs={taskTabs} />
     </div>
   )
 }

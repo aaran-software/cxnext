@@ -27,6 +27,8 @@
       "@core-domain/*": ["apps/core/domain/src/*"],
       "@ecommerce-domain/*": ["apps/ecommerce/domain/src/*"],
       "@frappe-domain/*": ["apps/frappe/domain/src/*"],
+      "@task-domain/*": ["apps/task/domain/src/*"],
+      "@task-web/*": ["apps/task/web/src/*"],
       "@billing-core/*": ["apps/billing/core/src/*"],
       "@shared/*": ["apps/core/shared/src/*"],
       "@ui/*": ["apps/ui/src/*"]

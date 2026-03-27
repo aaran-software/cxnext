@@ -58,6 +58,8 @@ export default defineConfig(({ mode }) => {
         '@core-domain': path.resolve(import.meta.dirname, '../../core/domain/src'),
         '@ecommerce-domain': path.resolve(import.meta.dirname, '../domain/src'),
         '@frappe-domain': path.resolve(import.meta.dirname, '../../frappe/domain/src'),
+        '@task-domain': path.resolve(import.meta.dirname, '../../task/domain/src'),
+        '@task-web': path.resolve(import.meta.dirname, '../../task/web/src'),
         '@shared': path.resolve(import.meta.dirname, '../../core/shared/src'),
         '@ui': path.resolve(import.meta.dirname, '../../ui/src'),
       },

@@ -14,6 +14,8 @@ export interface AnimatedContentTab extends Tab {
 interface AnimatedTabsProps {
   tabs: AnimatedContentTab[]
   defaultTabValue?: string
+  selectedTabValue?: string
+  onTabChange?: (value: string) => void
 }
 
 const transition = {
@@ -146,26 +148,48 @@ function Tabs({
   )
 }
 
-export function AnimatedTabs({ tabs, defaultTabValue }: AnimatedTabsProps) {
+export function AnimatedTabs({ tabs, defaultTabValue, selectedTabValue, onTabChange }: AnimatedTabsProps) {
   const [hookProps] = React.useState(() => ({
     tabs: tabs.map(({ label, value, subRoutes }) => ({ label, value, subRoutes })),
-    initialTabId: defaultTabValue ?? tabs[0]?.value ?? 'tab-0',
+    initialTabId: selectedTabValue ?? defaultTabValue ?? tabs[0]?.value ?? 'tab-0',
   }))
 
   const framer = useTabs(hookProps)
-  const selectedTab = tabs.find((tab) => tab.value === framer.selectedTab.value) ?? tabs[0]
+  const selectedTabId = selectedTabValue ?? framer.selectedTab.value
+  const effectiveSelectedTab = tabs.find((tab) => tab.value === selectedTabId) ?? tabs[0]
+  const selectedTabIndex = Math.max(0, tabs.findIndex((tab) => tab.value === selectedTabId))
 
-  if (!selectedTab) {
+  React.useEffect(() => {
+    if (!selectedTabValue) {
+      return
+    }
+
+    const nextIndex = tabs.findIndex((tab) => tab.value === selectedTabValue)
+    if (nextIndex === -1 || nextIndex === framer.tabProps.selectedTabIndex) {
+      return
+    }
+
+    framer.tabProps.setSelectedTab([nextIndex, nextIndex > framer.tabProps.selectedTabIndex ? 1 : -1])
+  }, [framer, selectedTabValue, tabs])
+
+  if (!effectiveSelectedTab) {
     return null
   }
 
   return (
     <div className="w-full">
       <div className="relative flex w-full items-center justify-between overflow-x-auto overflow-y-hidden border-b border-border">
-        <Tabs {...framer.tabProps} />
+        <Tabs
+          tabs={framer.tabProps.tabs}
+          selectedTabIndex={selectedTabIndex}
+          setSelectedTab={framer.tabProps.setSelectedTab}
+          onChange={(value) => {
+            onTabChange?.(value)
+          }}
+        />
       </div>
       <AnimatePresence mode="wait">
-        <TabContent key={selectedTab.value} tab={selectedTab} />
+        <TabContent key={effectiveSelectedTab.value} tab={effectiveSelectedTab} />
       </AnimatePresence>
     </div>
   )

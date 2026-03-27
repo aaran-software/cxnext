@@ -74,6 +74,10 @@ const CoreWorkspacePage = lazyPage(
   () => import('@/features/core/pages/core-workspace-page'),
   'CoreWorkspacePage',
 )
+const CoreSettingsPage = lazyPage(
+  () => import('@/features/core/pages/core-settings-page'),
+  'CoreSettingsPage',
+)
 const BillingWorkspacePage = lazyPage(
   () => import('@/features/framework/pages/billing-workspace-page'),
   'BillingWorkspacePage',
@@ -226,6 +230,10 @@ const FrappeItemPage = lazyPage(() => import('@/features/frappe/pages/frappe-ite
 const FrappePurchaseReceiptPage = lazyPage(() => import('@/features/frappe/pages/frappe-purchase-receipt-page'), 'FrappePurchaseReceiptPage')
 const FrappePurchaseReceiptShowPage = lazyPage(() => import('@/features/frappe/pages/frappe-purchase-receipt-show-page'), 'FrappePurchaseReceiptShowPage')
 const FrappeTodoPage = lazyPage(() => import('@/features/frappe/pages/frappe-todo-page'), 'FrappeTodoPage')
+const TaskAppWorkspacePage = lazyPage(
+  () => import('../../../../task/web/src/pages/task-app-workspace-page.tsx'),
+  'TaskAppWorkspacePage',
+)
 const SystemEnvironmentPage = lazyPage(() => import('@/features/settings/pages/system-environment-page'), 'SystemEnvironmentPage')
 const DatabaseManagerPage = lazyPage(() => import('@/features/settings/pages/database-manager-page'), 'DatabaseManagerPage')
 const SystemSettingsPage = lazyPage(() => import('@/features/settings/pages/system-settings-page'), 'SystemSettingsPage')
@@ -234,11 +242,11 @@ const EcommerceSettingsPage = lazyPage(() => import('@/features/settings/pages/e
 const UserFormPage = lazyPage(() => import('@/features/users/pages/user-form-page'), 'UserFormPage')
 const UserListPage = lazyPage(() => import('@/features/users/pages/user-list-page'), 'UserListPage')
 const TaskWorkspacePage = lazyPage(
-  () => import('@/features/task/pages/task-workspace-page'),
+  () => import('../../../../task/web/src/pages/task-workspace-page.tsx'),
   'TaskWorkspacePage',
 )
 const TaskFormPage = lazyPage(
-  () => import('@/features/task/pages/task-form-page'),
+  () => import('../../../../task/web/src/pages/task-form-page.tsx'),
   'TaskFormPage',
 )
 
@@ -259,6 +267,12 @@ function LegacyAdminDashboardRedirect() {
   return <Navigate to={`${buildAdminPortalPath(nextPath)}${location.search}${location.hash}`} replace />
 }
 
+function LegacyTaskEditRedirect() {
+  const location = useLocation()
+  const nextPath = location.pathname.replace('/admin/dashboard/tasks/', '/admin/dashboard/task/tasks/')
+  return <Navigate to={`${nextPath}${location.search}${location.hash}`} replace />
+}
+
 const adminRoutes = {
   element: <RequireAuth allow={['admin', 'staff', 'vendor']} />,
   children: [
@@ -268,6 +282,7 @@ const adminRoutes = {
       children: [
         { index: true, element: renderLazy(DashboardPage) },
         { path: 'core', element: renderLazy(CoreWorkspacePage) },
+        { path: 'core/settings', element: renderLazy(CoreSettingsPage) },
         { path: 'ecommerce', element: renderLazy(EcommerceWorkspacePage) },
         { path: 'billing', element: renderLazy(BillingWorkspacePage) },
         { path: 'billing/ledgers', element: renderLazy(BillingLedgerListPage) },
@@ -285,6 +300,10 @@ const adminRoutes = {
         { path: 'frappe/purchase-receipts', element: renderLazy(FrappePurchaseReceiptPage) },
         { path: 'frappe/purchase-receipts/:receiptId', element: renderLazy(FrappePurchaseReceiptShowPage) },
         { path: 'frappe/todos', element: renderLazy(FrappeTodoPage) },
+        { path: 'task', element: renderLazy(TaskAppWorkspacePage) },
+        { path: 'task/tasks', element: renderLazy(TaskWorkspacePage) },
+        { path: 'task/tasks/new', element: renderLazy(TaskFormPage) },
+        { path: 'task/tasks/:taskId/edit', element: renderLazy(TaskFormPage) },
         { path: 'site', element: renderLazy(SiteWorkspacePage) },
         { path: 'orders', element: renderLazy(OrderOperationsPage) },
         { path: 'orders/:orderId', element: renderLazy(OrderShowPage) },
@@ -339,9 +358,9 @@ const adminRoutes = {
         },
         { path: 'common', element: renderLazy(CommonModulesHomePage) },
         { path: 'common/:moduleKey', element: renderLazy(CommonModulePage) },
-        { path: 'tasks', element: renderLazy(TaskWorkspacePage) },
-        { path: 'tasks/new', element: renderLazy(TaskFormPage) },
-        { path: 'tasks/:taskId/edit', element: renderLazy(TaskFormPage) },
+        { path: 'tasks', element: <Navigate to="/admin/dashboard/task/tasks" replace /> },
+        { path: 'tasks/new', element: <Navigate to="/admin/dashboard/task/tasks/new" replace /> },
+        { path: 'tasks/:taskId/edit', element: <LegacyTaskEditRedirect /> },
         { path: '*', element: renderLazy(DashboardPage) },
       ],
     },

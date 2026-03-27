@@ -17,7 +17,7 @@ export interface FrameworkServiceDefinition {
   readiness: 'scaffold' | 'active'
 }
 
-export type SuiteAppId = 'core' | 'ecommerce' | 'billing' | 'crm' | 'site' | 'frappe' | 'custom'
+export type SuiteAppId = 'core' | 'ecommerce' | 'billing' | 'crm' | 'site' | 'frappe' | 'task' | 'custom'
 
 export interface SuiteAppDefinition {
   id: SuiteAppId
@@ -130,6 +130,13 @@ export const suiteApps: SuiteAppDefinition[] = [
     id: 'frappe',
     name: 'Frappe',
     summary: 'ERPNext connection, integration defaults, and operational bridge into the shared framework shell.',
+    mode: 'standalone-app',
+    readiness: 'active',
+  },
+  {
+    id: 'task',
+    name: 'Task',
+    summary: 'Checklist-driven assignment, verification, and linked operational follow-through.',
     mode: 'standalone-app',
     readiness: 'active',
   },

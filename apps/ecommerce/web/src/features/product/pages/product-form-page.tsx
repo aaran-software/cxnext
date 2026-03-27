@@ -13,6 +13,8 @@ import type {
   ProductStockItemInput,
   ProductTagInput,
   ProductUpsertPayload,
+  TaskSummary,
+  TaskTemplateSummary,
   ProductVariantAttributeInput,
   ProductVariantImageInput,
   ProductVariantInput,
@@ -31,15 +33,20 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { AutocompleteLookup } from '@/components/lookups/AutocompleteLookup'
 import { useAuth } from '@framework-core/web/auth/components/auth-provider'
+import { StatusBadge } from '@/components/ui/status-badge'
 import { createFieldErrors, inputErrorClassName, isBlank, setFieldError, summarizeFieldErrors, type FieldErrors, warningCardClassName } from '@/shared/forms/validation'
 import { createCommonLookupOption, toLookupOption } from '@/shared/forms/common-lookup'
 import { showFailedActionToast, showSavedToast, showValidationToast } from '@/shared/notifications/toast'
 import {
+  createTaskFromTemplate,
   createProduct,
   getEcommerceSettings,
   getProduct,
   HttpError,
   listCommonModuleItems,
+  listTaskTemplates,
+  listTasksByEntity,
+  listUsers,
   uploadMediaImage,
   updateProduct,
 } from '@/shared/api/client'
@@ -172,6 +179,13 @@ function toErrorMessage(error: unknown) {
   if (error instanceof HttpError) return error.message
   if (error instanceof Error) return error.message
   return 'Failed to save product.'
+}
+
+function formatTaskDate(value: string | null) {
+  if (!value) return 'Not scheduled'
+  const parsedValue = new Date(value)
+  if (Number.isNaN(parsedValue.getTime())) return value
+  return new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium' }).format(parsedValue)
 }
 
 function FieldError({ message }: { message?: string }) {
@@ -581,6 +595,13 @@ export function ProductFormPage() {
   const [skuNextNumber, setSkuNextNumber] = useState('1')
   const [skuDigits, setSkuDigits] = useState(4)
   const [variantPricingDraft, setVariantPricingDraft] = useState<VariantPricingDraft>(emptyVariantPricingDraft())
+  const [productTasks, setProductTasks] = useState<TaskSummary[]>([])
+  const [taskTemplates, setTaskTemplates] = useState<TaskTemplateSummary[]>([])
+  const [taskUsers, setTaskUsers] = useState<{ id: string; name: string }[]>([])
+  const [selectedTaskTemplateId, setSelectedTaskTemplateId] = useState('')
+  const [selectedTaskAssigneeId, setSelectedTaskAssigneeId] = useState('')
+  const [selectedTaskDueDate, setSelectedTaskDueDate] = useState('')
+  const [creatingProductTask, setCreatingProductTask] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -651,6 +672,70 @@ export function ProductFormPage() {
       cancelled = true
     }
   }, [accessToken])
+
+  useEffect(() => {
+    if (!accessToken || !productId) {
+      setProductTasks([])
+      return
+    }
+
+    const taskAccessToken = accessToken
+    const activeProductId = productId
+    let cancelled = false
+
+    async function loadProductTasks() {
+      try {
+        const items = await listTasksByEntity(taskAccessToken, 'product', activeProductId)
+        if (!cancelled) {
+          setProductTasks(items)
+        }
+      } catch {
+        if (!cancelled) {
+          setProductTasks([])
+        }
+      }
+    }
+
+    void loadProductTasks()
+    return () => { cancelled = true }
+  }, [accessToken, productId])
+
+  useEffect(() => {
+    if (!accessToken) {
+      setTaskTemplates([])
+      setTaskUsers([])
+      return
+    }
+
+    const taskAccessToken = accessToken
+    let cancelled = false
+
+    async function loadTaskSupport() {
+      try {
+        const [templates, users] = await Promise.all([
+          listTaskTemplates(taskAccessToken, 'product'),
+          listUsers(taskAccessToken),
+        ])
+
+        if (!cancelled) {
+          setTaskTemplates(templates)
+          setTaskUsers(users.map((user) => ({ id: user.id, name: user.displayName || user.email })))
+          if (!selectedTaskTemplateId) {
+            const defaultTemplate = templates.find((template) => template.id === 'task-template:verify-product-price') ?? templates[0]
+            setSelectedTaskTemplateId(defaultTemplate?.id ?? '')
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setTaskTemplates([])
+          setTaskUsers([])
+        }
+      }
+    }
+
+    void loadTaskSupport()
+    return () => { cancelled = true }
+  }, [accessToken, selectedTaskTemplateId])
 
   useEffect(() => {
     if (loading) {
@@ -763,6 +848,47 @@ export function ProductFormPage() {
       })
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleCreateProductTask() {
+    if (!accessToken || !productId || !selectedTaskTemplateId) {
+      return
+    }
+
+    setCreatingProductTask(true)
+    setErrorMessage(null)
+
+    try {
+      const createdTask = await createTaskFromTemplate(accessToken, {
+        templateId: selectedTaskTemplateId,
+        assigneeId: selectedTaskAssigneeId || null,
+        dueDate: selectedTaskDueDate || null,
+        entityType: 'product',
+        entityId: productId,
+        entityLabel: values.name.trim() || values.slug.trim() || productId,
+        title: values.name.trim() ? `Verify ${values.name.trim()} price update` : null,
+      })
+
+      setProductTasks((current) => [...current, createdTask].sort((left, right) => left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id)))
+      setSelectedTaskAssigneeId('')
+      setSelectedTaskDueDate('')
+      showSavedToast({
+        entityLabel: 'task',
+        recordName: createdTask.title,
+        referenceId: createdTask.id,
+        mode: 'create',
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to create product task.'
+      setErrorMessage(message)
+      showFailedActionToast({
+        entityLabel: 'task',
+        action: 'create',
+        detail: message,
+      })
+    } finally {
+      setCreatingProductTask(false)
     }
   }
 
@@ -1690,7 +1816,102 @@ export function ProductFormPage() {
     ),
   }
 
-  const productTabs = [overviewTab, settingsTab, contentTab, attributesTab, variantsTab, pricingTab, stockTab, publishingTab]
+  const tasksTab: AnimatedContentTab = {
+    label: 'Tasks',
+    value: 'tasks',
+    content: !isEditMode ? (
+      <Card className="rounded-md border-border/70 shadow-none">
+        <CardContent className="p-4 text-sm text-muted-foreground">Save the product first to start assigning verification tasks.</CardContent>
+      </Card>
+    ) : (
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+        <Card className="rounded-md border-border/70 shadow-none">
+          <CardHeader className="pb-4">
+            <CardTitle>Assign Product Task</CardTitle>
+            <CardDescription>Create a checklist-driven verification task for this product.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            <div className="grid gap-2">
+              <Label>Task Template</Label>
+              <AutocompleteLookup
+                value={selectedTaskTemplateId}
+                onChange={setSelectedTaskTemplateId}
+                options={taskTemplates.map((template) => ({ value: template.id, label: template.name }))}
+                placeholder="Select product task template"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Assign To</Label>
+              <AutocompleteLookup
+                value={selectedTaskAssigneeId}
+                onChange={setSelectedTaskAssigneeId}
+                options={taskUsers.map((user) => ({ value: user.id, label: user.name }))}
+                placeholder="Select staff user"
+                allowEmptyOption
+                emptyOptionLabel="Unassigned"
+              />
+              {session?.user.id ? (
+                <div className="flex justify-start">
+                  <Button type="button" variant="outline" size="sm" onClick={() => setSelectedTaskAssigneeId(session.user.id)}>
+                    My Self
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+            <div className="grid gap-2">
+              <Label>Due Date</Label>
+              <Input type="date" value={selectedTaskDueDate} onChange={(event) => setSelectedTaskDueDate(event.target.value)} />
+            </div>
+            <Button type="button" onClick={() => { void handleCreateProductTask() }} disabled={creatingProductTask || !selectedTaskTemplateId}>
+              {creatingProductTask ? 'Creating task...' : 'Create Product Task'}
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-md border-border/70 shadow-none">
+          <CardHeader className="pb-4">
+            <CardTitle>Linked Tasks</CardTitle>
+            <CardDescription>Tasks created specifically for this product verification and follow-through.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3">
+            {productTasks.length === 0 ? (
+              <div className="rounded-md border border-border/60 bg-muted/10 p-4 text-sm text-muted-foreground">No product-linked tasks yet.</div>
+            ) : productTasks.map((task) => (
+              <button
+                key={task.id}
+                type="button"
+                className="rounded-md border border-border/60 bg-background p-4 text-left transition-colors hover:bg-muted/10"
+                onClick={() => { void navigate(`/admin/dashboard/task/tasks/${task.id}/edit`) }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{task.templateName ?? 'Linked task'}</p>
+                    <p className="font-medium text-foreground">{task.title}</p>
+                    <p className="line-clamp-2 text-sm text-muted-foreground">{task.description ?? 'No description added.'}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <StatusBadge tone={task.status === 'finalized' ? 'active' : task.status === 'review' ? 'featured' : task.status === 'in_progress' ? 'publishing' : 'manual'}>
+                      {task.status.replace('_', ' ')}
+                    </StatusBadge>
+                    <StatusBadge tone={task.priority === 'urgent' ? 'active' : task.priority === 'high' ? 'featured' : task.priority === 'medium' ? 'publishing' : 'manual'}>
+                      {task.priority}
+                    </StatusBadge>
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border/60 pt-3 text-sm text-muted-foreground">
+                  <span>Assignee <span className="font-medium text-foreground">{task.assigneeName ?? 'Unassigned'}</span></span>
+                  <span>Checklist <span className="font-medium text-foreground">{task.checklistCompletionCount}/{task.checklistTotalCount}</span></span>
+                  <span>Due <span className="font-medium text-foreground">{formatTaskDate(task.dueDate)}</span></span>
+                </div>
+              </button>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    ),
+  }
+
+  const productTabs = [overviewTab, settingsTab, contentTab, attributesTab, variantsTab, pricingTab, stockTab, publishingTab, tasksTab]
 
   if (loading) {
     return <Card><CardContent className="p-8 text-sm text-muted-foreground">Loading product...</CardContent></Card>
