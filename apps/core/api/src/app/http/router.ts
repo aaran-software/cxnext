@@ -28,6 +28,8 @@ import { CustomerHelpdeskRepository } from '@ecommerce-api/features/customer-hel
 import { UserManagementService } from '../../features/users/application/user-management-service'
 import { TaskService } from '../../features/task/application/task-service'
 import { TaskRepository } from '../../features/task/data/task-repository'
+import { NotificationService } from '../../features/notification/application/notification-service'
+import { NotificationRepository } from '../../features/notification/data/notification-repository'
 import {
   createFrappeItem,
   getFrappeItem,
@@ -105,7 +107,8 @@ const customerHelpdeskService = new CustomerHelpdeskService(
   customerProfileRepository,
   authService,
 )
-const taskService = new TaskService(new TaskRepository())
+const notificationService = new NotificationService(new NotificationRepository())
+const taskService = new TaskService(new TaskRepository(), new ProductRepository(), notificationService)
 
 function parseBooleanFlag(value: string | null) {
   if (!value) {
@@ -599,15 +602,66 @@ export async function routeRequest(
       return
     }
 
+    if (method === 'GET' && url.pathname === '/tasks/insights') {
+      const user = await requireAuthenticatedUser(request)
+      writeJson(response, 200, await taskService.getInsights(user.id))
+      return
+    }
+
+    if (method === 'GET' && url.pathname === '/notifications') {
+      const user = await requireAuthenticatedUser(request)
+      writeJson(response, 200, await notificationService.listForUser(user.id))
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/notifications/read-all') {
+      const user = await requireAuthenticatedUser(request)
+      writeJson(response, 200, await notificationService.markAllRead(user.id))
+      return
+    }
+
+    const notificationTaskReadMatch = url.pathname.match(/^\/notifications\/tasks\/([^/]+)\/read$/)
+    if (method === 'POST' && notificationTaskReadMatch) {
+      const user = await requireAuthenticatedUser(request)
+      writeJson(response, 200, await notificationService.markReadByTask(user.id, notificationTaskReadMatch[1]))
+      return
+    }
+
+    if (method === 'GET' && url.pathname === '/tasks/audit') {
+      await requireAuthenticatedUser(request)
+      writeJson(response, 200, await taskService.getAuditList({
+        templateId: url.searchParams.get('templateId'),
+        assigneeId: url.searchParams.get('assigneeId'),
+        status: url.searchParams.get('status'),
+        verificationState: url.searchParams.get('verificationState'),
+        dateFrom: url.searchParams.get('dateFrom'),
+        dateTo: url.searchParams.get('dateTo'),
+      }))
+      return
+    }
+
+    const notificationRecordMatch = url.pathname.match(/^\/notifications\/([^/]+)\/read$/)
+    if (method === 'POST' && notificationRecordMatch) {
+      const user = await requireAuthenticatedUser(request)
+      writeJson(response, 200, await notificationService.markRead(user.id, notificationRecordMatch[1]))
+      return
+    }
+
     if (method === 'POST' && url.pathname === '/tasks') {
       const user = await requireAuthenticatedUser(request)
-      writeJson(response, 201, await taskService.create(user.id, await readJsonBody(request)))
+      writeJson(response, 201, await taskService.create(user, await readJsonBody(request)))
       return
     }
 
     if (method === 'POST' && url.pathname === '/tasks/from-template') {
       const user = await requireAuthenticatedUser(request)
-      writeJson(response, 201, await taskService.createFromTemplate(user.id, await readJsonBody(request)))
+      writeJson(response, 201, await taskService.createFromTemplate(user, await readJsonBody(request)))
+      return
+    }
+
+    if (method === 'POST' && url.pathname === '/tasks/from-template/bulk') {
+      const user = await requireAuthenticatedUser(request)
+      writeJson(response, 201, await taskService.createBulkFromTemplate(user, await readJsonBody(request)))
       return
     }
 
@@ -650,7 +704,7 @@ export async function routeRequest(
       }
 
       if (method === 'PATCH') {
-        writeJson(response, 200, await taskService.update(taskId, user.id, await readJsonBody(request)))
+        writeJson(response, 200, await taskService.update(taskId, user, await readJsonBody(request)))
         return
       }
     }
@@ -658,7 +712,7 @@ export async function routeRequest(
     const taskFinalizeMatch = url.pathname.match(/^\/tasks\/([^/]+)\/finalize$/)
     if (method === 'POST' && taskFinalizeMatch) {
       const user = await requireAuthenticatedUser(request)
-      writeJson(response, 200, await taskService.finalize(taskFinalizeMatch[1], user.id))
+      writeJson(response, 200, await taskService.finalize(taskFinalizeMatch[1], user))
       return
     }
 

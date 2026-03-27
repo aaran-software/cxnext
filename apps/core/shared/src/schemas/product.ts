@@ -234,6 +234,7 @@ export const productSummarySchema = z.object({
   primaryImageUrl: z.string().nullable(),
   variantCount: z.number().int(),
   tagCount: z.number().int(),
+  tagNames: z.array(z.string().min(1)).default([]),
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),
 })

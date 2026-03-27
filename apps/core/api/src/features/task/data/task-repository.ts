@@ -31,8 +31,14 @@ interface TaskSummaryRow extends RowDataPacket {
   template_name: string | null
   assignee_id: string | null
   assignee_name: string | null
+  review_assigned_to: string | null
+  review_assigned_to_name: string | null
   creator_id: string
   creator_name: string
+  reviewed_by: string | null
+  reviewed_by_name: string | null
+  reviewed_at: Date | null
+  review_comment: string | null
   due_date: Date | null
   checklist_completion_count: number
   checklist_total_count: number
@@ -119,8 +125,14 @@ function toTaskSummary(row: TaskSummaryRow): TaskSummary {
     templateName: row.template_name,
     assigneeId: row.assignee_id,
     assigneeName: row.assignee_name,
+    reviewAssignedTo: row.review_assigned_to,
+    reviewAssignedToName: row.review_assigned_to_name,
     creatorId: row.creator_id,
     creatorName: row.creator_name,
+    reviewedBy: row.reviewed_by,
+    reviewedByName: row.reviewed_by_name,
+    reviewedAt: row.reviewed_at ? toTimestamp(row.reviewed_at) : null,
+    reviewComment: row.review_comment,
     dueDate: toDateString(row.due_date),
     checklistCompletionCount: Number(row.checklist_completion_count ?? 0),
     checklistTotalCount: Number(row.checklist_total_count ?? 0),
@@ -196,8 +208,14 @@ const taskSummarySelect = `
     template.name AS template_name,
     t.assignee_id,
     assignee.display_name AS assignee_name,
+    t.review_assigned_to,
+    review_assignee.display_name AS review_assigned_to_name,
     t.creator_id,
     creator.display_name AS creator_name,
+    t.reviewed_by,
+    reviewer.display_name AS reviewed_by_name,
+    t.reviewed_at,
+    t.review_comment,
     t.due_date,
     (
       SELECT COUNT(*)
@@ -215,6 +233,8 @@ const taskSummarySelect = `
   FROM ${taskTableNames.tasks} t
   INNER JOIN ${authTableNames.users} creator ON creator.id = t.creator_id
   LEFT JOIN ${authTableNames.users} assignee ON assignee.id = t.assignee_id
+  LEFT JOIN ${authTableNames.users} review_assignee ON review_assignee.id = t.review_assigned_to
+  LEFT JOIN ${authTableNames.users} reviewer ON reviewer.id = t.reviewed_by
   LEFT JOIN ${taskTableNames.templates} template ON template.id = t.template_id
 `
 
@@ -527,6 +547,7 @@ export class TaskRepository {
             status,
             priority,
             assignee_id,
+            review_assigned_to,
             creator_id,
             due_date,
             tags_json,
@@ -545,6 +566,7 @@ export class TaskRepository {
           payload.status,
           payload.priority,
           payload.assigneeId,
+          null,
           creatorId,
           payload.dueDate,
           JSON.stringify(payload.tags),
@@ -626,7 +648,18 @@ export class TaskRepository {
     return task
   }
 
-  async update(id: string, authorId: string, payload: TaskUpsertPayload) {
+  async update(
+    id: string,
+    authorId: string,
+    payload: TaskUpsertPayload,
+    reviewState?: {
+      reviewAssignedTo: string | null
+      reviewedBy: string | null
+      reviewedAt: Date | null
+      reviewComment: string | null
+    },
+    activityEntries: Array<{ activityType: TaskActivity['activityType']; content: string }> = [],
+  ) {
     await ensureDatabaseSchema()
 
     await db.transaction(async (transaction) => {
@@ -644,6 +677,10 @@ export class TaskRepository {
             status = ?,
             priority = ?,
             assignee_id = ?,
+            review_assigned_to = ?,
+            reviewed_by = ?,
+            reviewed_at = ?,
+            review_comment = ?,
             due_date = ?,
             tags_json = ?,
             scope_type = ?,
@@ -659,6 +696,10 @@ export class TaskRepository {
           payload.status,
           payload.priority,
           payload.assigneeId,
+          reviewState?.reviewAssignedTo ?? null,
+          reviewState?.reviewedBy ?? null,
+          reviewState?.reviewedAt ?? null,
+          reviewState?.reviewComment ?? null,
           payload.dueDate,
           JSON.stringify(payload.tags),
           payload.scopeType,
@@ -694,19 +735,21 @@ export class TaskRepository {
         }
       }
 
-      await transaction.execute(
-        `
-          INSERT INTO ${taskTableNames.activities} (
-            id,
-            task_id,
-            author_id,
-            activity_type,
-            content
-          )
-          VALUES (?, ?, ?, ?, ?)
-        `,
-        [randomUUID(), id, authorId, 'status_change', 'Task updated'],
-      )
+      for (const entry of activityEntries) {
+        await transaction.execute(
+          `
+            INSERT INTO ${taskTableNames.activities} (
+              id,
+              task_id,
+              author_id,
+              activity_type,
+              content
+            )
+            VALUES (?, ?, ?, ?, ?)
+          `,
+          [randomUUID(), id, authorId, entry.activityType, entry.content],
+        )
+      }
     })
 
     const task = await this.findById(id)

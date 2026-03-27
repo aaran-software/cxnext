@@ -75,6 +75,7 @@ interface ProductSummaryRow extends RowDataPacket {
   primary_image_url: string | null
   variant_count: number
   tag_count: number
+  tag_names: string | null
   created_at: Date
   updated_at: Date
 }
@@ -213,6 +214,9 @@ function toProductSummary(row: ProductSummaryRow): ProductSummary {
     primaryImageUrl: row.primary_image_url,
     variantCount: Number(row.variant_count),
     tagCount: Number(row.tag_count),
+    tagNames: row.tag_names
+      ? row.tag_names.split('||').map((tag) => tag.trim()).filter(Boolean)
+      : [],
     createdAt: asTimestamp(row.created_at),
     updatedAt: asTimestamp(row.updated_at),
   }
@@ -454,7 +458,15 @@ export class ProductRepository {
           SELECT COUNT(*)
           FROM ${productTableNames.tagMap} ptm
           WHERE ptm.product_id = p.id AND ptm.is_active = 1
-        ) AS tag_count
+        ) AS tag_count,
+        (
+          SELECT GROUP_CONCAT(DISTINCT pt.name ORDER BY pt.name SEPARATOR '||')
+          FROM ${productTableNames.tagMap} ptm
+          INNER JOIN ${productTableNames.tags} pt ON pt.id = ptm.tag_id
+          WHERE ptm.product_id = p.id
+            AND ptm.is_active = 1
+            AND pt.is_active = 1
+        ) AS tag_names
       FROM ${productTableNames.products} p
       LEFT JOIN ${productTableNames.storefront} sf ON sf.product_id = p.id AND sf.is_active = 1
       LEFT JOIN ${commonTableNames.brands} brand ON brand.id = p.brand_id
@@ -500,7 +512,15 @@ export class ProductRepository {
           SELECT COUNT(*)
           FROM ${productTableNames.tagMap} ptm
           WHERE ptm.product_id = p.id AND ptm.is_active = 1
-        ) AS tag_count
+        ) AS tag_count,
+        (
+          SELECT GROUP_CONCAT(DISTINCT pt.name ORDER BY pt.name SEPARATOR '||')
+          FROM ${productTableNames.tagMap} ptm
+          INNER JOIN ${productTableNames.tags} pt ON pt.id = ptm.tag_id
+          WHERE ptm.product_id = p.id
+            AND ptm.is_active = 1
+            AND pt.is_active = 1
+        ) AS tag_names
       FROM ${productTableNames.products} p
       LEFT JOIN ${productTableNames.storefront} sf ON sf.product_id = p.id AND sf.is_active = 1
       LEFT JOIN ${commonTableNames.brands} brand ON brand.id = p.brand_id

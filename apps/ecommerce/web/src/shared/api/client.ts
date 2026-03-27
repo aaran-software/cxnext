@@ -52,6 +52,7 @@ import type {
   MailboxTemplateListResponse,
   MailboxTemplateResponse,
   MailboxTemplateUpsertPayload,
+  NotificationListResponse,
   StorefrontCatalogResponse,
   StorefrontCheckoutPayload,
   StorefrontCheckoutResponse,
@@ -100,6 +101,9 @@ import type {
   SystemUpdateRunResponse,
   SystemVersionResponse,
   SystemUpdateCheckResponse,
+  TaskBulkCreateResponse,
+  TaskAuditListResponse,
+  TaskInsightsResponse,
   TaskListResponse,
   TaskResponse,
   TaskTemplateListResponse,
@@ -1003,6 +1007,80 @@ export async function createTaskFromTemplate(token: string, payload: {
     body: JSON.stringify(payload),
   })
   return response.item
+}
+
+export async function createTasksFromTemplateBulk(token: string, payload: {
+  templateId: string
+  entityType: string
+  entityIds: string[]
+  assigneeMode?: 'specific' | 'self' | 'unassigned'
+  assigneeId?: string | null
+  dueDate?: string | null
+  tags?: string[]
+  priority?: string
+}) {
+  const response = await request<TaskBulkCreateResponse>('/tasks/from-template/bulk', {
+    method: 'POST',
+    headers: createAuthorizationHeaders(token),
+    body: JSON.stringify(payload),
+  })
+  return response
+}
+
+export async function getTaskInsights(token: string) {
+  const response = await request<TaskInsightsResponse>('/tasks/insights', {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.insights
+}
+
+export async function getTaskAuditList(token: string, filters?: {
+  templateId?: string
+  assigneeId?: string
+  status?: string
+  verificationState?: string
+  dateFrom?: string
+  dateTo?: string
+}) {
+  const searchParams = new URLSearchParams()
+  if (filters?.templateId) searchParams.set('templateId', filters.templateId)
+  if (filters?.assigneeId) searchParams.set('assigneeId', filters.assigneeId)
+  if (filters?.status) searchParams.set('status', filters.status)
+  if (filters?.verificationState) searchParams.set('verificationState', filters.verificationState)
+  if (filters?.dateFrom) searchParams.set('dateFrom', filters.dateFrom)
+  if (filters?.dateTo) searchParams.set('dateTo', filters.dateTo)
+  const suffix = searchParams.toString() ? `?${searchParams.toString()}` : ''
+  const response = await request<TaskAuditListResponse>(`/tasks/audit${suffix}`, {
+    headers: createAuthorizationHeaders(token),
+  })
+  return response.items
+}
+
+export async function listNotifications(token: string) {
+  return request<NotificationListResponse>('/notifications', {
+    headers: createAuthorizationHeaders(token),
+  })
+}
+
+export async function markNotificationRead(token: string, notificationId: string) {
+  return request<NotificationListResponse>(`/notifications/${notificationId}/read`, {
+    method: 'POST',
+    headers: createAuthorizationHeaders(token),
+  })
+}
+
+export async function markAllNotificationsRead(token: string) {
+  return request<NotificationListResponse>('/notifications/read-all', {
+    method: 'POST',
+    headers: createAuthorizationHeaders(token),
+  })
+}
+
+export async function markNotificationsReadByTask(token: string, taskId: string) {
+  return request<NotificationListResponse>(`/notifications/tasks/${encodeURIComponent(taskId)}/read`, {
+    method: 'POST',
+    headers: createAuthorizationHeaders(token),
+  })
 }
 
 export async function getCustomerOrderWorkflow(token: string, orderId: string) {

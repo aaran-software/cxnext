@@ -124,3 +124,7 @@ export const taskTableNames = {
   templateItems: 'task_template_items',
   checklistItems: 'task_checklist_items',
 } as const
+
+export const notificationTableNames = {
+  notifications: 'notifications',
+} as const

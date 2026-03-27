@@ -4,6 +4,10 @@ import { closeDatabasePool, initializeApplicationSetup } from '@framework-core/r
 import { environment } from '@framework-core/runtime/config/environment'
 import { ensureMediaStorage } from '@framework-core/runtime/media/storage'
 import { startAutomatedDatabaseBackupScheduler } from './features/settings/application/database-maintenance-service'
+import { NotificationService } from './features/notification/application/notification-service'
+import { NotificationRepository } from './features/notification/data/notification-repository'
+import { TaskRepository } from './features/task/data/task-repository'
+import { startTaskNotificationScheduler } from './features/notification/application/task-notification-scheduler'
 
 const server = createServer((request, response) => {
   void routeRequest(request, response)
@@ -11,6 +15,7 @@ const server = createServer((request, response) => {
 
 let isShuttingDown = false
 let shutdownTimer: NodeJS.Timeout | null = null
+let taskNotificationSchedulerTimer: NodeJS.Timeout | null = null
 
 function closeServer() {
   if (!server.listening) {
@@ -43,6 +48,10 @@ async function shutdown(signal: NodeJS.Signals | 'startup_error') {
   }, 10_000)
 
   try {
+    if (taskNotificationSchedulerTimer) {
+      clearInterval(taskNotificationSchedulerTimer)
+      taskNotificationSchedulerTimer = null
+    }
     await closeServer()
     await closeDatabasePool()
     console.log('API shutdown complete. Port released.')
@@ -94,6 +103,10 @@ async function startServer() {
   await ensureMediaStorage()
   await initializeApplicationSetup()
   startAutomatedDatabaseBackupScheduler()
+  taskNotificationSchedulerTimer = startTaskNotificationScheduler(
+    new TaskRepository(),
+    new NotificationService(new NotificationRepository()),
+  )
 
   await new Promise<void>((resolve) => {
     server.listen(environment.port, () => {

@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { Textarea } from '@/components/ui/textarea'
 import { createFieldErrors, inputErrorClassName, isBlank, setFieldError, summarizeFieldErrors, type FieldErrors, warningCardClassName } from '@/shared/forms/validation'
-import { HttpError, createTask, getTask, getTaskTemplate, listTaskTemplates, listUsers, updateTask } from '@/shared/api/client'
+import { HttpError, createTask, getTask, getTaskTemplate, listTaskTemplates, listUsers, markNotificationsReadByTask, updateTask } from '@/shared/api/client'
 import { showFailedActionToast, showSavedToast, showValidationToast } from '@/shared/notifications/toast'
 import { useAuth } from '@framework-core/web/auth/components/auth-provider'
 
@@ -55,6 +55,7 @@ function createDefaultValues(): TaskFormValues {
     templateId: null,
     assigneeId: null,
     dueDate: null,
+    reviewComment: null,
     checklistItems: [],
   }
 }
@@ -161,6 +162,7 @@ export function TaskFormPage() {
             templateId: task.templateId,
             assigneeId: task.assigneeId,
             dueDate: task.dueDate,
+            reviewComment: task.reviewComment,
             checklistItems: task.checklistItems.map((item) => ({
               id: item.id,
               isChecked: item.isChecked,
@@ -176,6 +178,14 @@ export function TaskFormPage() {
     }
     void loadTask()
     return () => { cancelled = true }
+  }, [session?.accessToken, taskId])
+
+  useEffect(() => {
+    if (!taskId || !session?.accessToken) {
+      return
+    }
+
+    void markNotificationsReadByTask(session.accessToken, taskId).catch(() => null)
   }, [session?.accessToken, taskId])
 
   const assigneeOptions = useMemo<LookupOption[]>(() => users.map((user) => ({ value: user.id, label: user.name })), [users])

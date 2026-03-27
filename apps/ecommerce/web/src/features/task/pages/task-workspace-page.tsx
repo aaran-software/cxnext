@@ -42,6 +42,41 @@ function toDateInputValue(value: string | null) {
   return parsedValue.toISOString().slice(0, 10)
 }
 
+function isOverdueTask(item: Pick<TaskSummary, 'dueDate' | 'status'>) {
+  if (!item.dueDate || item.status === 'finalized') {
+    return false
+  }
+
+  const dueDate = new Date(item.dueDate)
+  if (Number.isNaN(dueDate.getTime())) {
+    return false
+  }
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return dueDate < today
+}
+
+function isStuckTask(item: Pick<TaskSummary, 'status' | 'updatedAt'>) {
+  if (item.status !== 'in_progress') {
+    return false
+  }
+
+  const updatedAt = new Date(item.updatedAt)
+  if (Number.isNaN(updatedAt.getTime())) {
+    return false
+  }
+
+  const threshold = new Date()
+  threshold.setHours(0, 0, 0, 0)
+  threshold.setDate(threshold.getDate() - 3)
+  return updatedAt < threshold
+}
+
+function isIncompleteVerificationTask(item: Pick<TaskSummary, 'checklistCompletionCount' | 'checklistTotalCount'>) {
+  return item.checklistTotalCount > 0 && item.checklistCompletionCount < item.checklistTotalCount
+}
+
 function getStatusConfig(status: TaskStatus) {
   switch (status) {
     case 'pending':
@@ -159,6 +194,9 @@ function TaskListSection({
           const status = getStatusConfig(item.status)
           const priority = getPriorityConfig(item.priority)
           const taskHref = `/admin/dashboard/task/tasks/${item.id}/edit`
+          const isOverdue = isOverdueTask(item)
+          const isStuck = isStuckTask(item)
+          const isIncompleteVerification = isIncompleteVerificationTask(item)
 
           return (
             <div key={item.id} className="relative">
@@ -190,6 +228,9 @@ function TaskListSection({
                     </p>
                     <div className="flex flex-wrap items-center gap-2 pt-1">
                       <StatusBadge tone={priority.tone}>{priority.label}</StatusBadge>
+                      {isOverdue ? <StatusBadge tone="manual">Overdue</StatusBadge> : null}
+                      {isIncompleteVerification ? <StatusBadge tone="featured">Incomplete verification</StatusBadge> : null}
+                      {isStuck ? <StatusBadge tone="publishing">Stuck</StatusBadge> : null}
                       {item.tags.map((tag) => (
                         <StatusBadge key={tag} tone="manual">{tag}</StatusBadge>
                       ))}

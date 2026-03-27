@@ -249,6 +249,26 @@ const TaskFormPage = lazyPage(
   () => import('../../../../task/web/src/pages/task-form-page.tsx'),
   'TaskFormPage',
 )
+const TaskTemplateListPage = lazyPage(
+  () => import('../../../../task/web/src/pages/task-template-list-page.tsx'),
+  'TaskTemplateListPage',
+)
+const TaskTemplateFormPage = lazyPage(
+  () => import('../../../../task/web/src/pages/task-template-form-page.tsx'),
+  'TaskTemplateFormPage',
+)
+const TaskBulkCreatePage = lazyPage(
+  () => import('../../../../task/web/src/pages/task-bulk-create-page.tsx'),
+  'TaskBulkCreatePage',
+)
+const TaskInsightsPage = lazyPage(
+  () => import('../../../../task/web/src/pages/task-insights-page.tsx'),
+  'TaskInsightsPage',
+)
+const TaskAuditPage = lazyPage(
+  () => import('../../../../task/web/src/pages/task-audit-page.tsx'),
+  'TaskAuditPage',
+)
 
 function LegacyAdminDashboardRedirect() {
   const location = useLocation()
@@ -304,6 +324,12 @@ const adminRoutes = {
         { path: 'task/tasks', element: renderLazy(TaskWorkspacePage) },
         { path: 'task/tasks/new', element: renderLazy(TaskFormPage) },
         { path: 'task/tasks/:taskId/edit', element: renderLazy(TaskFormPage) },
+        { path: 'task/templates', element: renderLazy(TaskTemplateListPage) },
+        { path: 'task/templates/new', element: renderLazy(TaskTemplateFormPage) },
+        { path: 'task/templates/:templateId/edit', element: renderLazy(TaskTemplateFormPage) },
+        { path: 'task/bulk', element: renderLazy(TaskBulkCreatePage) },
+        { path: 'task/insights', element: renderLazy(TaskInsightsPage) },
+        { path: 'task/audit', element: renderLazy(TaskAuditPage) },
         { path: 'site', element: renderLazy(SiteWorkspacePage) },
         { path: 'orders', element: renderLazy(OrderOperationsPage) },
         { path: 'orders/:orderId', element: renderLazy(OrderShowPage) },
