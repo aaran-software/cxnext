@@ -11,7 +11,7 @@ function billingDesktopHtml() {
     <html lang="en">
       <head>
         <meta charset="UTF-8" />
-        <title>CXNext Billing</title>
+        <title>codexsun Billing</title>
         <style>
           body {
             margin: 0;
@@ -41,7 +41,7 @@ function billingDesktopHtml() {
       </head>
       <body>
         <main>
-          <h1>CXNext Billing</h1>
+          <h1>codexsun Billing</h1>
           <p>
             Standalone desktop-first billing, accounts, and inventory product scaffold.
             This shell reserves the Electron boundary while accounting and inventory workflows are built in billing-owned packages.

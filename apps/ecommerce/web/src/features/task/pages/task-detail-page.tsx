@@ -737,7 +737,7 @@ export function TaskDetailPage() {
   ].filter(Boolean)
 
   return (
-    <div className="mx-auto max-w-6xl space-y-3 px-1 pt-1 md:px-0">
+    <div className="space-y-3 pt-1">
       <div className="sticky top-3 z-20 rounded-md border border-border/70 bg-background/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="flex flex-col justify-between gap-3 p-3 md:flex-row md:items-start">
           <div className="space-y-1.5">

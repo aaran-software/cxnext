@@ -675,7 +675,7 @@ export class AuthService {
       subject: '',
       templateCode: 'customer_registration_otp',
       templateData: {
-        brandName: environment.notifications.email.fromName || 'CXNext',
+        brandName: environment.notifications.email.fromName || 'codexsun',
         otp: input.otp,
         expiryMinutes: environment.auth.otp.expiryMinutes,
       },
@@ -719,7 +719,7 @@ export class AuthService {
       subject: '',
       templateCode: 'customer_registration_otp',
       templateData: {
-        brandName: environment.notifications.email.fromName || 'CXNext',
+        brandName: environment.notifications.email.fromName || 'codexsun',
         otp,
         expiryMinutes: environment.auth.otp.expiryMinutes,
       },
@@ -779,7 +779,7 @@ export class AuthService {
       isSuperAdmin: true,
       avatarUrl: 'https://ui-avatars.com/api/?name=Recovery+Admin&background=1f2937&color=ffffff',
       isActive: true,
-      organizationName: 'CXNext Recovery',
+      organizationName: 'codexsun Recovery',
       roles: [
         {
           key: 'admin_owner',

@@ -4,6 +4,12 @@
 
 ### Changed
 
+1. reframed the platform docs around the `codexsun` brand and standalone multi-app delivery goal
+2. documented the target model of reusable framework services plus standalone applications composed through a clearer DI/composition-root direction
+3. promoted platform refinement as the active execution batch instead of treating the repo only as the current working suite
+4. reorganized framework database migrations into module-owned registries so schema changes no longer accumulate in one flat migration list
+5. moved frontend bootstrap ownership into `apps/framework/src/main.tsx` and added framework-side application selection for the current web shells
+6. introduced explicit app shell modules for ecommerce and billing so providers, routers, and shell composition stay app-owned instead of living in framework bootstrap
 1. rewrote ASSIST guidance around the current `apps/` architecture
 2. moved framework runtime infrastructure from `apps/core/api/src/shared` to `apps/framework/src/runtime`
 3. moved framework auth and mailbox modules into `apps/framework/src`

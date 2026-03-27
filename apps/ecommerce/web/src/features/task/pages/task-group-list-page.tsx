@@ -161,7 +161,7 @@ export function TaskGroupListPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-4 pt-1">
+    <div className="mx-auto max-w-7xl space-y-4 pt-1">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div className="space-y-2">
           <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border/70 bg-muted/20 px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">

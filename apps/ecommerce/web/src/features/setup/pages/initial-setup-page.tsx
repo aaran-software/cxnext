@@ -14,7 +14,7 @@ const initialFormState: DatabaseSetupPayload = {
   port: 3306,
   user: 'root',
   password: 'DbPass1@@',
-  name: 'cxnext_db',
+  name: 'codexsun_db',
 }
 
 function formatSetupMode(status: ReturnType<typeof useSetup>['status']) {
@@ -40,7 +40,7 @@ export function InitialSetupPage() {
 
   const connectionHint = useMemo(() => {
     if (!status?.database.configured) {
-      return 'Enter the MariaDB host, database name, and login that should hold the CXNext schema.'
+      return 'Enter the MariaDB host, database name, and login that should hold the codexsun schema.'
     }
 
     return `Current source: ${status.database.source === 'env_file' ? '.env file' : 'not configured yet'}.`
@@ -85,10 +85,10 @@ export function InitialSetupPage() {
             </div>
             <div className="space-y-4">
               <h1 className="max-w-xl text-4xl font-semibold tracking-tight sm:text-5xl">
-                Finish the first-run database setup before CXNext opens the workspace.
+                Finish the first-run database setup before codexsun opens the workspace.
               </h1>
               <p className="max-w-2xl text-base leading-7 text-slate-300">
-                The API is online in setup mode. If the target database does not exist yet, CXNext
+                The API is online in setup mode. If the target database does not exist yet, codexsun
                 will create it automatically after the credentials are verified.
               </p>
             </div>
@@ -116,7 +116,7 @@ export function InitialSetupPage() {
               <DatabaseZap className="size-4" />
               Database Setup
             </div>
-            <CardTitle>Connect CXNext to MariaDB</CardTitle>
+            <CardTitle>Connect codexsun to MariaDB</CardTitle>
             <CardDescription>{connectionHint}</CardDescription>
           </CardHeader>
           <CardContent>

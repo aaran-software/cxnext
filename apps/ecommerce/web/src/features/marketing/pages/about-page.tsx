@@ -7,7 +7,7 @@ export function AboutPage() {
     <div className="grid gap-6 lg:grid-cols-[1fr_0.9fr]">
       <Card className="mesh-panel">
         <CardHeader className="p-8 sm:p-10">
-          <Badge>About CXNext</Badge>
+          <Badge>About codexsun</Badge>
           <CardTitle className="text-4xl sm:text-5xl">
             A shared TypeScript platform for commerce, ERP, and desktop operations.
           </CardTitle>

@@ -11,7 +11,7 @@ export class CommerceNotificationService {
     return `
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #111827; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px;">
         <div style="text-align: center; margin-bottom: 24px;">
-          <h2 style="color: #6366f1; margin: 0; font-size: 24px;">CXNext</h2>
+          <h2 style="color: #6366f1; margin: 0; font-size: 24px;">codexsun</h2>
           <p style="font-size: 14px; color: #6b7280; margin-top: 4px;">Premium Storefront Experience</p>
         </div>
         ${content}

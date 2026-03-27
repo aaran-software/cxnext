@@ -237,7 +237,7 @@ export async function routeRequest(
 
       writeJson(response, 200, {
         status: 'ok',
-        service: 'cxnext-api',
+        service: 'codexsun-api',
         timestamp: new Date().toISOString(),
         database,
         setup: getSetupStatus(),
@@ -263,7 +263,7 @@ export async function routeRequest(
     if (method === 'GET' && url.pathname === '/admin/system/update-check') {
       if (getSetupStatus().status !== 'ready') {
         throw new ApplicationError(
-          'CXNext is running in setup recovery mode. Only setup and database migration tools are available.',
+          'codexsun is running in setup recovery mode. Only setup and database migration tools are available.',
           { setupStatus: getSetupStatus().status, detail: getSetupStatus().detail },
           503,
         )
@@ -309,7 +309,7 @@ export async function routeRequest(
 
     if (getSetupStatus().status !== 'ready' && isBlockedDuringSetupRecovery(url.pathname)) {
       throw new ApplicationError(
-        'CXNext is running in setup recovery mode. Only setup and database migration tools are available.',
+        'codexsun is running in setup recovery mode. Only setup and database migration tools are available.',
         { setupStatus: getSetupStatus().status, detail: getSetupStatus().detail },
         503,
       )

@@ -410,7 +410,7 @@ export function FrappeConnectionPage() {
           <CardContent className="grid gap-4 pt-5 md:grid-cols-2">
             <FormField
               label="Default Company"
-              description="ERPNext company to use when documents are pushed from CXNext."
+              description="ERPNext company to use when documents are pushed from codexsun."
               htmlFor="frappe-default-company"
             >
               <Input
@@ -434,7 +434,7 @@ export function FrappeConnectionPage() {
 
             <FormField
               label="Default Price List"
-              description="Selling price list that CXNext should map to in ERPNext."
+              description="Selling price list that codexsun should map to in ERPNext."
               htmlFor="frappe-default-price-list"
             >
               <Input
@@ -489,7 +489,7 @@ export function FrappeConnectionPage() {
                 </Button>
                 <CardTitle className="text-3xl">ERPNext connection and defaults</CardTitle>
                 <CardDescription className="mt-2 max-w-3xl text-sm leading-6">
-                  Connect CXNext to ERPNext with token-based authentication, verify the live endpoint, and store the default company and master mappings the integration should use.
+                  Connect codexsun to ERPNext with token-based authentication, verify the live endpoint, and store the default company and master mappings the integration should use.
                 </CardDescription>
               </div>
             </div>

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The task app is an operational execution system inside CXNext.
+The task app is an operational execution system inside codexsun.
 
 It is no longer a simple todo list.
 
@@ -844,4 +844,3 @@ Primary current references:
 - [task-bulk-create-page.tsx](/E:/Workspace/websites/cxnext/apps/ecommerce/web/src/features/task/pages/task-bulk-create-page.tsx)
 - [task-milestone-list-page.tsx](/E:/Workspace/websites/cxnext/apps/ecommerce/web/src/features/task/pages/task-milestone-list-page.tsx)
 - [task-milestone-detail-page.tsx](/E:/Workspace/websites/cxnext/apps/ecommerce/web/src/features/task/pages/task-milestone-detail-page.tsx)
-

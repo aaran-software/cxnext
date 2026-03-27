@@ -14,7 +14,7 @@ export function ShareButton({ productName, size = 'icon' }: ShareButtonProps) {
     if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
       await navigator.share({
         title: productName,
-        text: `Check out ${productName} on CXNext.`,
+        text: `Check out ${productName} on codexsun.`,
         url: shareUrl,
       })
       return

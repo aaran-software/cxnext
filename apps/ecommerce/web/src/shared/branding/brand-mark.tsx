@@ -1,5 +1,9 @@
 import { Orbit } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import {
+  buildPlatformLogoCandidates,
+  platformBrandingDefaults,
+} from '@framework-core/web/platform/default-branding'
 import { cn } from '@/lib/utils'
 import { useBranding } from './branding-provider'
 
@@ -16,15 +20,27 @@ interface BrandGlyphProps {
 
 export function BrandGlyph({ className, iconClassName, shadowless = false }: BrandGlyphProps) {
   const branding = useBranding()
-  const [lightLogoFailed, setLightLogoFailed] = useState(false)
-  const [darkLogoFailed, setDarkLogoFailed] = useState(false)
+  const lightLogoCandidates = buildPlatformLogoCandidates(
+    branding.logoUrl,
+    platformBrandingDefaults.logoUrl,
+  )
+  const darkLogoCandidates = buildPlatformLogoCandidates(
+    branding.logoDarkUrl,
+    platformBrandingDefaults.logoDarkUrl,
+    branding.logoUrl,
+    platformBrandingDefaults.logoUrl,
+  )
+  const [lightLogoIndex, setLightLogoIndex] = useState(0)
+  const [darkLogoIndex, setDarkLogoIndex] = useState(0)
 
   useEffect(() => {
-    setLightLogoFailed(false)
-    setDarkLogoFailed(false)
-  }, [branding.logoUrl, branding.logoDarkUrl])
+    setLightLogoIndex(0)
+    setDarkLogoIndex(0)
+  }, [branding.logoDarkUrl, branding.logoUrl])
 
-  const showImageLogo = !lightLogoFailed || !darkLogoFailed
+  const lightLogoSrc = lightLogoCandidates[lightLogoIndex] ?? null
+  const darkLogoSrc = darkLogoCandidates[darkLogoIndex] ?? null
+  const showImageLogo = lightLogoSrc !== null || darkLogoSrc !== null
 
   return (
     <div
@@ -36,24 +52,24 @@ export function BrandGlyph({ className, iconClassName, shadowless = false }: Bra
     >
       {showImageLogo ? (
         <>
-          {!lightLogoFailed ? (
+          {lightLogoSrc ? (
             <img
-              src={branding.logoUrl}
+              src={lightLogoSrc}
               alt={branding.brandName}
               className="block h-full w-full object-contain p-1 dark:hidden"
               loading="eager"
               decoding="async"
-              onError={() => setLightLogoFailed(true)}
+              onError={() => setLightLogoIndex((current) => current + 1)}
             />
           ) : null}
-          {!darkLogoFailed ? (
+          {darkLogoSrc ? (
             <img
-              src={branding.logoDarkUrl}
+              src={darkLogoSrc}
               alt={branding.brandName}
               className="hidden h-full w-full object-contain p-1 dark:block"
               loading="eager"
               decoding="async"
-              onError={() => setDarkLogoFailed(true)}
+              onError={() => setDarkLogoIndex((current) => current + 1)}
             />
           ) : null}
         </>

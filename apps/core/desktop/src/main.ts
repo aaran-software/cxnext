@@ -10,7 +10,7 @@ const __dirname = path.dirname(__filename)
 function readDesktopEnvironment() {
   const envFilePath = path.resolve(__dirname, '../../../.env')
   if (!existsSync(envFilePath)) {
-    throw new Error(`Missing .env file at ${envFilePath}. Copy .env.example to .env before starting CXNext.`)
+    throw new Error(`Missing .env file at ${envFilePath}. Copy .env.example to .env before starting codexsun.`)
   }
 
   return dotenv.parse(readFileSync(envFilePath, 'utf8'))

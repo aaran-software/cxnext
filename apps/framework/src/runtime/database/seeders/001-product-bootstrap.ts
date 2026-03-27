@@ -86,7 +86,7 @@ export const productBootstrapSeeder: Seeder = {
         [
           productId,
           productUuid,
-          'CXNext Polo',
+          'codexsun Polo',
           productSlug,
           'A Seeded apparel product used to bootstrap product, pricing, stock, and catalog flows.',
           'Seeded product with variants, images, stock, SEO, and tags.',
@@ -111,14 +111,14 @@ export const productBootstrapSeeder: Seeder = {
         {
           id: 'product-image:cxnext-polo-front',
           product_id: productId,
-          image_url: 'https://placehold.co/1200x1200?text=CXNext+Polo+Front',
+          image_url: 'https://placehold.co/1200x1200?text=codexsun+Polo+Front',
           is_primary: true,
           sort_order: 1,
         },
         {
           id: 'product-image:cxnext-polo-detail',
           product_id: productId,
-          image_url: 'https://placehold.co/1200x1200?text=CXNext+Polo+Detail',
+          image_url: 'https://placehold.co/1200x1200?text=codexsun+Polo+Detail',
           is_primary: false,
           sort_order: 2,
         },
@@ -212,13 +212,13 @@ export const productBootstrapSeeder: Seeder = {
         {
           id: 'product-variant-image:cxnext-polo-m',
           variant_id: 'product-variant:cxnext-polo-m',
-          image_url: 'https://placehold.co/1200x1200?text=CXNext+Polo+M',
+          image_url: 'https://placehold.co/1200x1200?text=codexsun+Polo+M',
           is_primary: true,
         },
         {
           id: 'product-variant-image:cxnext-polo-l',
           variant_id: 'product-variant:cxnext-polo-l',
-          image_url: 'https://placehold.co/1200x1200?text=CXNext+Polo+L',
+          image_url: 'https://placehold.co/1200x1200?text=codexsun+Polo+L',
           is_primary: true,
         },
       ])
@@ -305,9 +305,9 @@ export const productBootstrapSeeder: Seeder = {
         {
           id: 'product-seo:cxnext-polo',
           product_id: productId,
-          meta_title: 'CXNext Polo',
+          meta_title: 'codexsun Polo',
           meta_description: 'Seeded polo used to validate catalog, pricing, and stock experiences.',
-          meta_keywords: 'cxnext,polo,apparel',
+          meta_keywords: 'codexsun,polo,apparel',
         },
       ])
 

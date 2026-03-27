@@ -33,7 +33,7 @@ export function MailboxComposePage() {
   const [subject, setSubject] = useState('')
   const [htmlBody, setHtmlBody] = useState('')
   const [textBody, setTextBody] = useState('')
-  const [templateDataText, setTemplateDataText] = useState('{\n  "brandName": "CXNext"\n}')
+  const [templateDataText, setTemplateDataText] = useState('{\n  "brandName": "codexsun"\n}')
 
   useEffect(() => {
     let cancelled = false

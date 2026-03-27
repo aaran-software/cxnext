@@ -98,7 +98,7 @@ export const billingConnectors: BillingConnectorDefinition[] = [
 
 export const billingProductManifest: BillingProductManifest = {
   id: 'billing',
-  name: 'CXNext Billing',
+  name: 'codexsun Billing',
   runtime: 'desktop-first',
   tone: 'auditor-focused',
   summary:

@@ -54,6 +54,9 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(import.meta.dirname, './src'),
+        '@admin-web': path.resolve(import.meta.dirname, './src'),
+        '@ecommerce-web': path.resolve(import.meta.dirname, './src'),
+        '@billing-web': path.resolve(import.meta.dirname, '../../billing/web/src'),
         '@framework-core': path.resolve(import.meta.dirname, '../../framework/src'),
         '@core-domain': path.resolve(import.meta.dirname, '../../core/domain/src'),
         '@ecommerce-domain': path.resolve(import.meta.dirname, '../domain/src'),

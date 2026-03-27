@@ -8,7 +8,7 @@ import {
 export class SystemOverviewRepository {
   getSnapshot(): BootstrapSnapshot {
     const snapshot: BootstrapSnapshot = {
-      productName: 'CXNext',
+      productName: 'codexsun',
       mission:
         'Build a production-oriented ERP, CRM, commerce, billing, and reporting platform on a shared TypeScript codebase.',
       channels: deliveryChannels,

@@ -1304,7 +1304,7 @@ export function FrappeItemPage() {
                         return nextErrors
                       })
                     }}
-                    placeholder="CXNext Inventory Item"
+                    placeholder="codexsun Inventory Item"
                   />
                 </div>
                 <div className="grid gap-2">

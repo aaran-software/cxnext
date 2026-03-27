@@ -284,14 +284,14 @@ function getPriorityMeta(priority: TaskPriority) {
 
 function TaskStat({ label, value, hint, icon: Icon }: { label: string; value: string; hint: string; icon: typeof ClipboardList }) {
   return (
-    <div className="rounded-md border border-border/60 bg-muted/15 p-2.5">
+    <div className="min-w-0 rounded-md border border-border/60 bg-muted/15 p-2.5">
       <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1">
+        <div className="min-w-0 space-y-1">
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
-          <p className="text-sm font-semibold text-foreground">{value}</p>
-          {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+          <p className="break-words text-sm font-semibold text-foreground">{value}</p>
+          {hint ? <p className="whitespace-pre-wrap break-words text-xs text-muted-foreground">{hint}</p> : null}
         </div>
-        <div className="rounded-full border border-border/70 bg-background p-1.5">
+        <div className="shrink-0 rounded-full border border-border/70 bg-background p-1.5">
           <Icon className="size-4 text-muted-foreground" />
         </div>
       </div>
@@ -706,7 +706,7 @@ export function TaskFormPage() {
   }
 
   return (
-    <form className="mx-auto max-w-6xl space-y-3 px-1 pt-1 md:px-0" onSubmit={(event) => { void handleSubmit(event) }}>
+    <form className="mx-auto max-w-7xl space-y-3 pt-1" onSubmit={(event) => { void handleSubmit(event) }}>
       <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
         <div className="space-y-1">
           <Button variant="ghost" size="sm" asChild className="-ml-3 mb-2">
@@ -858,7 +858,8 @@ export function TaskFormPage() {
                       handlePlanFiles(event.clipboardData.files)
                     }}
                     placeholder="Type naturally or use light structure like ## Steps, 1. Step, and ## Notes."
-                    className="min-h-32 border-none bg-background font-mono text-sm shadow-none"
+                    className="min-h-32 w-full min-w-0 resize-none border-none bg-background font-mono text-sm shadow-none"
+                    style={{ fieldSizing: 'fixed' as 'fixed' }}
                   />
 
                   <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-3">
@@ -924,7 +925,7 @@ export function TaskFormPage() {
               </div>
               <div className="grid gap-2">
                 <Label>Entity Label</Label>
-                <Input value={values.entityLabel ?? ''} onChange={(event) => setValues((current) => ({ ...current, entityLabel: event.target.value || null }))} placeholder="Ex: CXNext Polo" />
+                <Input value={values.entityLabel ?? ''} onChange={(event) => setValues((current) => ({ ...current, entityLabel: event.target.value || null }))} placeholder="Ex: codexsun Polo" />
               </div>
             </div>
 
@@ -1076,7 +1077,7 @@ export function TaskFormPage() {
 
           <div className="overflow-y-auto px-5 py-5">
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,0.95fr)]">
-              <div className="space-y-3">
+              <div className="min-w-0 space-y-3">
                 <div className="rounded-md border border-border/60 bg-muted/10 p-3">
                   <Textarea
                     rows={20}
@@ -1097,19 +1098,35 @@ export function TaskFormPage() {
                       handlePlanFiles(event.dataTransfer.files)
                     }}
                     placeholder="Type naturally or use light syntax like ## Steps, 1. Step, and ## Notes."
-                    className="min-h-[24rem] border-none bg-background font-mono text-sm shadow-none"
+                    className="min-h-[24rem] w-full min-w-0 resize-none border-none bg-background font-mono text-sm shadow-none"
+                    style={{ fieldSizing: 'fixed' as 'fixed' }}
                   />
                 </div>
               </div>
 
-              <div className="space-y-3">
+              <div className="min-w-0 space-y-3">
                 <Card className="rounded-md border-border/70 shadow-none">
                   <CardHeader className="pb-3">
                     <CardTitle>Structure Panel</CardTitle>
                   </CardHeader>
                   <CardContent className="grid gap-3">
-                    <TaskStat label="Steps" value={`${plan.steps.length}`} hint={plan.steps.length > 0 ? plan.steps.map((step, index) => `${index + 1}. ${step.text}`).join(' | ') : 'No numbered steps detected yet.'} icon={ClipboardList} />
-                    <TaskStat label="Notes" value={plan.notes.trim() ? 'Captured' : 'Empty'} hint={plan.notes.trim() || 'Everything outside structure will land here.'} icon={Tags} />
+                    <TaskStat
+                      label="Steps"
+                      value={`${plan.steps.length}`}
+                      hint={plan.steps.length > 0
+                        ? plan.steps.slice(0, 3).map((step, index) => `${index + 1}. ${step.text || 'Untitled step'}`).join('\n')
+                          + (plan.steps.length > 3 ? `\n+${plan.steps.length - 3} more` : '')
+                        : 'No numbered steps detected yet.'}
+                      icon={ClipboardList}
+                    />
+                    <TaskStat
+                      label="Notes"
+                      value={plan.notes.trim() ? 'Captured' : 'Empty'}
+                      hint={plan.notes.trim()
+                        ? `${plan.notes.trim().slice(0, 140)}${plan.notes.trim().length > 140 ? '…' : ''}`
+                        : 'Everything outside structure will land here.'}
+                      icon={Tags}
+                    />
                     <TaskStat label="Summary" value={`${plan.steps.length} steps · ${plan.attachments.length} files`} hint="Live execution snapshot from the editor." icon={Flag} />
                   </CardContent>
                 </Card>

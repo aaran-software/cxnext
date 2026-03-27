@@ -60,7 +60,7 @@ const appRegistry: AppDescriptor[] = [
 ]
 
 function printHelp() {
-  console.log(`CXNext CLI
+  console.log(`codexsun CLI
 
 Usage:
   npm run cli -- help
@@ -76,14 +76,14 @@ Usage:
 }
 
 function printApps() {
-  console.log('CXNext app suite:\n')
+  console.log('codexsun app suite:\n')
   for (const app of appRegistry) {
     console.log(`- ${app.id}: ${app.summary}`)
   }
 }
 
 function printDoctor() {
-  console.log('CXNext doctor\n')
+  console.log('codexsun doctor\n')
   console.log(`node: ${process.version}`)
   console.log(`platform: ${process.platform}`)
   console.log(`cwd: ${process.cwd()}`)

@@ -89,7 +89,7 @@ export async function getSystemVersion() {
     return systemVersionResponseSchema.parse({
       version: {
         application: {
-          name: 'CXNext',
+          name: 'codexsun',
           version: applicationVersion,
           sourceMode: environment.runtime.git.syncEnabled ? 'git' : 'embedded',
           currentCommitSha,
@@ -116,7 +116,7 @@ export async function getSystemVersion() {
   return systemVersionResponseSchema.parse({
     version: {
       application: {
-        name: 'CXNext',
+        name: 'codexsun',
         version: applicationVersion,
         sourceMode: environment.runtime.git.syncEnabled ? 'git' : 'embedded',
         currentCommitSha,

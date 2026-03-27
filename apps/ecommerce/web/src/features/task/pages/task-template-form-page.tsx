@@ -215,7 +215,7 @@ export function TaskTemplateFormPage() {
   }
 
   return (
-    <form className="mx-auto max-w-6xl space-y-4 pt-1" onSubmit={(event) => { void handleSubmit(event) }}>
+    <form className="space-y-4 pt-1" onSubmit={(event) => { void handleSubmit(event) }}>
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
           <Button variant="ghost" size="sm" asChild className="-ml-3 mb-2">

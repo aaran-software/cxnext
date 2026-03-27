@@ -11,7 +11,7 @@ const billingServer = createServer((_request, response) => {
       domain: billingCoreManifest.domain,
       connectors: externalConnectorManifests,
       status: 'scaffold',
-      message: 'CXNext Billing API scaffold is online.',
+      message: 'codexsun Billing API scaffold is online.',
     }),
   )
 })

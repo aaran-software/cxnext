@@ -4,6 +4,32 @@
 
 ### Title
 
+`Refine Codexsun platform architecture, branding, and standalone app delivery model`
+
+### Checklist
+
+- [x] Replace public `CXNext` branding with `codexsun` across platform-facing docs and product messaging
+- [x] Rewrite the platform docs around reusable framework, shared core, standalone apps, and explicit connector boundaries
+- [x] Define the application model where apps compose framework services through a composition root and DI-style registration flow
+- [x] Define delivery modes for billing-only, ERP suite, commerce-only, CRM-only, and connector-led deployments
+- [x] Rework framework database migrations into module-owned registries instead of a single flat migration dump
+- [x] Move frontend bootstrap ownership to `apps/framework/src/main.tsx` and register current app shells under framework selection
+- [x] Split current web startup into explicit app shell modules so framework bootstrap no longer owns ecommerce-specific providers
+- [ ] Reduce hidden host coupling and document the extraction path from shared host to clearer standalone app boundaries
+- [ ] Move billing business rules toward reusable app services instead of UI-local state
+- [ ] Define packaging and customization rules so client-specific delivery does not fork the whole platform
+- [x] Validate docs and public brand consistency
+
+### Validation Note
+
+- Verify that the docs, manifests, and user-facing platform copy all reflect the Codexsun direction.
+- Verify that database migrations are grouped under module registries and still execute in a deterministic order.
+- Compatibility-sensitive technical identifiers such as storage keys, preload globals, backup file prefixes, and the current repository URL remain deferred to a dedicated migration batch.
+
+## Deferred Batch
+
+### Title
+
 `Implement Enterprise Task Management Module in apps/core`
 
 ### Checklist

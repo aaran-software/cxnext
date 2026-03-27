@@ -1,4 +1,4 @@
-import { BillingOverviewPage } from '../../../../../../billing/web/src/features/billing/pages/billing-pages.tsx'
+import { BillingOverviewPage } from '@billing-web/features/billing/pages/billing-pages'
 
 export function BillingWorkspacePage() {
   return <BillingOverviewPage />

@@ -83,35 +83,35 @@ const BillingWorkspacePage = lazyPage(
   'BillingWorkspacePage',
 )
 const BillingLedgerListPage = lazyPage(
-  () => import('../../../../billing/web/src/features/billing/pages/billing-pages.tsx'),
+  () => import('@billing-web/features/billing/pages/billing-pages'),
   'BillingLedgerListPage',
 )
 const BillingGstCenterPage = lazyPage(
-  () => import('../../../../billing/web/src/features/billing/pages/billing-pages.tsx'),
+  () => import('@billing-web/features/billing/pages/billing-pages'),
   'BillingGstCenterPage',
 )
 const BillingSalesInvoicePage = lazyPage(
-  () => import('../../../../billing/web/src/features/billing/pages/billing-pages.tsx'),
+  () => import('@billing-web/features/billing/pages/billing-pages'),
   'BillingSalesInvoicePage',
 )
 const BillingPurchaseVoucherPage = lazyPage(
-  () => import('../../../../billing/web/src/features/billing/pages/billing-pages.tsx'),
+  () => import('@billing-web/features/billing/pages/billing-pages'),
   'BillingPurchaseVoucherPage',
 )
 const BillingReceiptVoucherPage = lazyPage(
-  () => import('../../../../billing/web/src/features/billing/pages/billing-pages.tsx'),
+  () => import('@billing-web/features/billing/pages/billing-pages'),
   'BillingReceiptVoucherPage',
 )
 const BillingPaymentVoucherPage = lazyPage(
-  () => import('../../../../billing/web/src/features/billing/pages/billing-pages.tsx'),
+  () => import('@billing-web/features/billing/pages/billing-pages'),
   'BillingPaymentVoucherPage',
 )
 const BillingJournalVoucherPage = lazyPage(
-  () => import('../../../../billing/web/src/features/billing/pages/billing-pages.tsx'),
+  () => import('@billing-web/features/billing/pages/billing-pages'),
   'BillingJournalVoucherPage',
 )
 const BillingContraVoucherPage = lazyPage(
-  () => import('../../../../billing/web/src/features/billing/pages/billing-pages.tsx'),
+  () => import('@billing-web/features/billing/pages/billing-pages'),
   'BillingContraVoucherPage',
 )
 const CrmWorkspacePage = lazyPage(

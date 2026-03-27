@@ -38,11 +38,11 @@ export async function sendEmailOtp(input: SendEmailOtpInput) {
   await mailTransporter.sendMail({
     from: getFromAddress(),
     to: input.email,
-    subject: 'Your CXNext verification code',
-    text: `Your CXNext verification code is ${input.otp}. It expires in ${input.expiresInMinutes} minutes.`,
+    subject: 'Your codexsun verification code',
+    text: `Your codexsun verification code is ${input.otp}. It expires in ${input.expiresInMinutes} minutes.`,
     html: `
       <div style="font-family:Arial,sans-serif;line-height:1.5;color:#111827">
-        <p>Your CXNext verification code is:</p>
+        <p>Your codexsun verification code is:</p>
         <p style="font-size:28px;font-weight:700;letter-spacing:6px;margin:16px 0">${input.otp}</p>
         <p>This code expires in ${input.expiresInMinutes} minutes.</p>
       </div>

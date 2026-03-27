@@ -96,7 +96,7 @@ interface RestoreJobProgressState {
   totalUnits: number
 }
 
-const hardResetConfirmation = 'RESET CXNEXT DATABASE'
+const hardResetConfirmation = 'RESET CODEXSUN DATABASE'
 const backupDownloadBasePath = '/admin/database-manager/backups'
 const manualBackupPrefix = 'cxnext-database-backup'
 const scheduledBackupPrefix = 'cxnext-database-backup-auto'
@@ -774,8 +774,8 @@ async function sendBackupByEmail(fileName: string, fileBuffer: Buffer) {
 
   await sendSmtpMail({
     to: environment.runtime.backups.emailRecipients.map((email) => ({ email })),
-    subject: `CXNext automated database backup ${fileName}`,
-    text: `The automated CXNext database backup is attached.\n\nFile: ${fileName}`,
+    subject: `codexsun automated database backup ${fileName}`,
+    text: `The automated codexsun database backup is attached.\n\nFile: ${fileName}`,
     attachments: [{
       filename: fileName,
       content: fileBuffer,
@@ -1200,7 +1200,7 @@ export async function hardResetDatabase(user: AuthUser, payload: unknown) {
   await initializeApplicationSetup(true)
 
   return databaseManagerActionResponseSchema.parse({
-    message: 'Managed CXNext tables were dropped and rebuilt from the latest migrations.',
+    message: 'Managed codexsun tables were dropped and rebuilt from the latest migrations.',
     report: await buildDatabaseReport(),
   })
 }
@@ -1267,9 +1267,9 @@ async function runScheduledBackup() {
     }
 
     await deliverBackupExternally(backup.fileName)
-    console.log(`Scheduled CXNext backup created: ${backup.fileName}`)
+    console.log(`Scheduled codexsun backup created: ${backup.fileName}`)
   } catch (error) {
-    console.error('Scheduled CXNext backup failed.', error)
+    console.error('Scheduled codexsun backup failed.', error)
   } finally {
     automatedBackupRunning = false
     scheduleNextAutomatedBackup()
@@ -1282,7 +1282,7 @@ export function startAutomatedDatabaseBackupScheduler() {
   }
 
   scheduleNextAutomatedBackup()
-  console.log(`Automated CXNext backup scheduled daily at ${String(environment.runtime.backups.auto.hour).padStart(2, '0')}:00.`)
+  console.log(`Automated codexsun backup scheduled daily at ${String(environment.runtime.backups.auto.hour).padStart(2, '0')}:00.`)
 }
 
 export function getHardResetConfirmationText() {

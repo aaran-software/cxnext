@@ -1,4 +1,5 @@
 import type { Company, CompanySummary } from '@shared/index'
+import { platformBrandingDefaults } from '@framework-core/web/platform/default-branding'
 import {
   createContext,
   type PropsWithChildren,
@@ -30,17 +31,7 @@ interface BrandingContextValue extends BrandingSnapshot {
 const sessionStorageKey = 'cxnext.branding'
 
 const defaultBrandingSnapshot: BrandingSnapshot = {
-  brandName: 'CODEXSUN',
-  legalName: null,
-  tagline: 'Software Made Simple',
-  logoUrl: '/logo.svg',
-  logoDarkUrl: '/logo-dark.svg',
-  summary:
-    'Design systems, frontend architecture, and rollout support across web, commerce, and business applications.',
-  email: 'hello@codexsun.com',
-  phone: '+91 95141 41494',
-  website: null,
-  location: 'Chennai, India',
+  ...platformBrandingDefaults,
 }
 
 const BrandingContext = createContext<BrandingContextValue>({

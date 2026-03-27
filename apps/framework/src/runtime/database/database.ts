@@ -9,7 +9,7 @@ import { ApplicationError } from '../errors/application-error'
 
 let setupStatus = createSetupStatus(
   'required',
-  'Database setup is required before CXNext can use persistence.',
+  'Database setup is required before codexsun can use persistence.',
 )
 let setupPromise: Promise<SetupStatus> | null = null
 

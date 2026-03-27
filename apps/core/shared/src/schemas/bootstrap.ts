@@ -10,7 +10,7 @@ export const moduleSchema = z.object({
 })
 
 export const bootstrapSnapshotSchema = z.object({
-  productName: z.literal('CXNext'),
+  productName: z.literal('codexsun'),
   mission: z.string().min(1),
   channels: z.array(
     z.object({

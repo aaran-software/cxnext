@@ -18,7 +18,7 @@ export function ContactPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {[
-            { icon: Mail, label: 'Email', value: 'ops@cxnext.local' },
+            { icon: Mail, label: 'Email', value: 'ops@codexsun.local' },
             { icon: Phone, label: 'Phone', value: '+91 44 4000 2026' },
             { icon: MapPin, label: 'HQ', value: 'Chennai, India' },
           ].map((item) => (

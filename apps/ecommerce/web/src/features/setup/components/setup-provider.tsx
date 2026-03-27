@@ -69,7 +69,7 @@ export function SetupProvider({ children }: PropsWithChildren) {
       return nextStatus
     } catch (error) {
       const nextStatus = createUnreachableStatus(
-        error instanceof Error ? error.message : 'Unable to reach the CXNext API.',
+        error instanceof Error ? error.message : 'Unable to reach the codexsun API.',
       )
       startTransition(() => {
         setStatus(nextStatus)

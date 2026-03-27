@@ -37,7 +37,7 @@ export function MailboxTemplateFormPage() {
   const [subjectTemplate, setSubjectTemplate] = useState('')
   const [htmlTemplate, setHtmlTemplate] = useState('')
   const [textTemplate, setTextTemplate] = useState('')
-  const [sampleDataText, setSampleDataText] = useState('{\n  "brandName": "CXNext"\n}')
+  const [sampleDataText, setSampleDataText] = useState('{\n  "brandName": "codexsun"\n}')
   const [isSystem, setIsSystem] = useState(false)
   const [isActive, setIsActive] = useState(true)
 

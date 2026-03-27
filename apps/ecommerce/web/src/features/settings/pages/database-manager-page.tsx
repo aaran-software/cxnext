@@ -55,7 +55,7 @@ import {
 } from '@/shared/api/client'
 import { showErrorToast, showInfoToast, showSuccessToast } from '@/shared/notifications/toast'
 
-const hardResetConfirmationText = 'RESET CXNEXT DATABASE'
+const hardResetConfirmationText = 'RESET CODEXSUN DATABASE'
 
 function toErrorMessage(error: unknown) {
   if (error instanceof HttpError) {
@@ -777,7 +777,7 @@ export function DatabaseManagerPage() {
                       <CardHeader>
                         <CardTitle className="text-lg">Table comparison</CardTitle>
                         <CardDescription>
-                          Every expected CXNext table is compared with the live database. Unexpected tables are listed too so schema drift is visible before maintenance work.
+                          Every expected codexsun table is compared with the live database. Unexpected tables are listed too so schema drift is visible before maintenance work.
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
@@ -1130,7 +1130,7 @@ export function DatabaseManagerPage() {
           <DialogHeader>
             <DialogTitle>Confirm hard reset</DialogTitle>
             <DialogDescription>
-              This drops the managed CXNext tables and rebuilds them from the latest migrations and seeders. Unexpected tables stay as they are. Type the confirmation text exactly to continue.
+              This drops the managed codexsun tables and rebuilds them from the latest migrations and seeders. Unexpected tables stay as they are. Type the confirmation text exactly to continue.
             </DialogDescription>
           </DialogHeader>
 

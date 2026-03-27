@@ -142,7 +142,7 @@ const environmentSchema = z.object({
   SMTP_USER: optionalNonEmptyString,
   SMTP_PASS: optionalNonEmptyString,
   SMTP_FROM_EMAIL: optionalNonEmptyString,
-  SMTP_FROM_NAME: defaultNonEmptyString('CXNext'),
+  SMTP_FROM_NAME: defaultNonEmptyString('codexsun'),
   MSG91_AUTH_KEY: optionalNonEmptyString,
   MSG91_TEMPLATE_ID: optionalNonEmptyString,
   MSG91_OTP_BASE_URL: defaultNonEmptyString('https://api.msg91.com/api/v5/otp'),
@@ -155,7 +155,7 @@ const environmentSchema = z.object({
   WHATSAPP_GRAPH_API_VERSION: defaultNonEmptyString('v23.0'),
   RAZORPAY_KEY_ID: optionalNonEmptyString,
   RAZORPAY_KEY_SECRET: optionalNonEmptyString,
-  RAZORPAY_BUSINESS_NAME: defaultNonEmptyString('CXNext'),
+  RAZORPAY_BUSINESS_NAME: defaultNonEmptyString('codexsun'),
   RAZORPAY_CHECKOUT_IMAGE: optionalNonEmptyString,
   RAZORPAY_THEME_COLOR: optionalNonEmptyString,
   PAYMENT_TEST_BYPASS: defaultFalseBooleanFlag,
@@ -319,7 +319,7 @@ const envFilePath = path.resolve(process.cwd(), '.env')
 
 function readEnvironmentFile() {
   if (!fs.existsSync(envFilePath)) {
-    throw new Error(`Missing .env file at ${envFilePath}. Copy .env.example to .env before starting CXNext.`)
+    throw new Error(`Missing .env file at ${envFilePath}. Copy .env.example to .env before starting codexsun.`)
   }
 
   const rawValue = fs.readFileSync(envFilePath, 'utf8')
@@ -328,7 +328,7 @@ function readEnvironmentFile() {
 
 function readEnvironmentFileRaw() {
   if (!fs.existsSync(envFilePath)) {
-    throw new Error(`Missing .env file at ${envFilePath}. Copy .env.example to .env before starting CXNext.`)
+    throw new Error(`Missing .env file at ${envFilePath}. Copy .env.example to .env before starting codexsun.`)
   }
 
   return fs.readFileSync(envFilePath, 'utf8')
@@ -558,7 +558,7 @@ export function readManagedEnvironmentValues() {
 
 export function updateEnvironmentFile(updates: Record<string, string>) {
   if (!fs.existsSync(envFilePath)) {
-    throw new Error(`Missing .env file at ${envFilePath}. Copy .env.example to .env before starting CXNext.`)
+    throw new Error(`Missing .env file at ${envFilePath}. Copy .env.example to .env before starting codexsun.`)
   }
 
   const existingRaw = readEnvironmentFileRaw()

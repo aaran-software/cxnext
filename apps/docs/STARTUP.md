@@ -1,18 +1,20 @@
-# Suite Startup
+# Platform Startup
 
 ## Purpose
 
-This document explains how to start the current CXNext suite on a development machine or server.
+This document explains how to start the current Codexsun platform on a development machine or server.
 
 ## Current Runtime
 
-The current working suite runs through these app entry points:
+The current working platform runs through these entry points:
 
 1. `apps/core/api` for the suite API host
 2. `apps/ecommerce/web` for the active ecommerce web app
 3. `apps/core/desktop` for the current desktop shell
 4. `apps/billing/api`, `apps/billing/web`, and `apps/billing/desktop` for the billing base
 5. `apps/cli` for server-side control commands
+
+This is the current runtime shape, not the final platform target. The long-term goal is to support standalone delivery for billing, commerce, CRM, ERP-style suites, and connector-focused deployments from the same repository.
 
 ## Install
 
@@ -37,7 +39,7 @@ Minimum important keys:
 
 ## Development Startup
 
-Start the suite host API:
+Start the current suite host API:
 
 ```bash
 npm run dev:api
@@ -80,7 +82,7 @@ npm run build:billing-desktop
 
 ## Server Control CLI
 
-Use the suite CLI for operational commands:
+Use the platform CLI for operational commands:
 
 ```bash
 npm run cli -- help
@@ -91,4 +93,4 @@ npm run cli -- build all
 
 ## Current Constraint
 
-`apps/core/api` is still the suite host during extraction. That host may mount framework, core, and ecommerce functionality together, but business ownership must stay in the correct app folders.
+`apps/core/api` is still the shared host during extraction. That host may mount framework, core, and ecommerce functionality together, but business ownership must stay in the correct app folders and move toward standalone app composition over time.

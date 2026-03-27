@@ -3,7 +3,7 @@ import { z } from 'zod'
 export const databaseVersionStatusSchema = z.enum(['ready', 'disabled', 'error'])
 
 export const applicationVersionSummarySchema = z.object({
-  name: z.literal('CXNext'),
+  name: z.literal('codexsun'),
   version: z.string().min(1),
   sourceMode: z.enum(['embedded', 'git']),
   currentCommitSha: z.string().min(7).nullable(),

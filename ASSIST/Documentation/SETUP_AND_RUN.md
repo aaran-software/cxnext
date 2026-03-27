@@ -4,7 +4,7 @@
 
 1. Node.js 22 or later
 2. npm 10 or later
-3. MariaDB for the suite API runtime
+3. MariaDB for the current Codexsun shared host runtime
 
 ## Install
 
@@ -14,7 +14,7 @@ npm install
 
 ## Main Runtime Entry Points
 
-1. Suite API host: `apps/core/api`
+1. Shared API host: `apps/core/api`
 2. Ecommerce web app: `apps/ecommerce/web`
 3. Core desktop shell: `apps/core/desktop`
 4. Billing app bases: `apps/billing/api`, `apps/billing/web`, and `apps/billing/desktop`
@@ -71,5 +71,6 @@ npm run build:billing-desktop
 ## Notes
 
 1. `apps/core/api` currently hosts framework, core, and ecommerce routes together.
-2. Code ownership is still app-correct because framework code now lives in `apps/framework` and ecommerce backend code now lives in `apps/ecommerce/api`.
-3. Suite startup and server operation docs now live under `apps/docs`.
+2. Code ownership is still app-correct because framework code lives in `apps/framework` and ecommerce backend code lives in `apps/ecommerce/api`.
+3. The long-term target is standalone app delivery through framework composition, not permanent host-level coupling.
+4. Platform startup and server operation docs live under `apps/docs`.

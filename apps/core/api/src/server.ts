@@ -110,7 +110,7 @@ async function startServer() {
 
   await new Promise<void>((resolve) => {
     server.listen(environment.port, () => {
-      console.log(`CXNext API listening on http://localhost:${environment.port}`)
+      console.log(`codexsun API listening on http://localhost:${environment.port}`)
       resolve()
     })
   })
